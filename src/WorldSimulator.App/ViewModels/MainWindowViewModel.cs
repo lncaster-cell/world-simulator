@@ -34,6 +34,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     private DailyFoodFlowResult _dailyFoodFlowResult;
     private bool _isRandomEventGenerationEnabled = true;
     private string _lastImportantChange = "пока нет.";
+    private bool _isMapCalibrationModeEnabled;
+    private double? _lastMapCalibrationX;
+    private double? _lastMapCalibrationY;
 
     public MainWindowViewModel()
     {
@@ -62,6 +65,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         ToggleRandomEventGenerationCommand = new RelayCommand(ToggleRandomEventGeneration);
         SaveCommand = new AsyncRelayCommand(SaveStateAsync);
         LoadCommand = new AsyncRelayCommand(LoadStateAsync);
+        ToggleMapCalibrationModeCommand = new RelayCommand(ToggleMapCalibrationMode);
 
         _lastTickUtc = DateTimeOffset.UtcNow;
         _timer = new DispatcherTimer
@@ -100,6 +104,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     public ICommand ToggleRandomEventGenerationCommand { get; }
     public ICommand SaveCommand { get; }
     public ICommand LoadCommand { get; }
+    public ICommand ToggleMapCalibrationModeCommand { get; }
 
     public int Day => _clock.Day;
 
@@ -219,6 +224,30 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
 
     public string SelectedCityName => IsGothaSelected ? _city.Name : string.Empty;
 
+    public bool IsMapCalibrationModeEnabled
+    {
+        get => _isMapCalibrationModeEnabled;
+        private set
+        {
+            if (_isMapCalibrationModeEnabled == value)
+            {
+                return;
+            }
+
+            _isMapCalibrationModeEnabled = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(MapCalibrationToggleButtonText));
+        }
+    }
+
+    public string MapCalibrationToggleButtonText => IsMapCalibrationModeEnabled
+        ? "Выключить калибровку карты"
+        : "Включить калибровку карты";
+
+    public string LastMapCalibrationPointDisplay => _lastMapCalibrationX.HasValue && _lastMapCalibrationY.HasValue
+        ? $"Последняя точка карты: X={_lastMapCalibrationX.Value:0.0000}, Y={_lastMapCalibrationY.Value:0.0000}"
+        : "Последняя точка карты: нет";
+
     public string SelectedCityProfile => IsGothaSelected
         ? "Гота — малый пограничный прибрежный портовый город"
         : string.Empty;
@@ -245,6 +274,24 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         SelectedCityTabIndex = 0;
         OnPropertyChanged(nameof(IsCityPanelVisible));
         OnPropertyChanged(nameof(SelectedCityTabIndex));
+    }
+
+
+    public void RegisterMapCalibrationPoint(double relativeX, double relativeY)
+    {
+        _lastMapCalibrationX = relativeX;
+        _lastMapCalibrationY = relativeY;
+
+        AddTechnicalLogEntry($"Калибровка карты: Гота X={relativeX:0.0000}, Y={relativeY:0.0000}");
+        OnPropertyChanged(nameof(LastMapCalibrationPointDisplay));
+    }
+
+    private void ToggleMapCalibrationMode()
+    {
+        IsMapCalibrationModeEnabled = !IsMapCalibrationModeEnabled;
+        AddTechnicalLogEntry(IsMapCalibrationModeEnabled
+            ? "Режим калибровки карты включен."
+            : "Режим калибровки карты выключен.");
     }
 
     private void Start()

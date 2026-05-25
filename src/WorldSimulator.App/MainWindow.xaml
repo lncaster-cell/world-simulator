@@ -43,40 +43,33 @@
             </Grid.ColumnDefinitions>
 
             <Border Grid.Column="0" BorderBrush="LightGray" BorderThickness="1" CornerRadius="6" Padding="8">
-                <Grid x:Name="MapContainer" SizeChanged="MapContainer_SizeChanged">
-                    <Image x:Name="MapImage"
-                           Source="/Assets/Maps/world_map.png"
-                           Stretch="Uniform"
-                           SizeChanged="MapImage_SizeChanged"/>
+                <Grid x:Name="MapContainer" MouseLeftButtonDown="MapContainer_MouseLeftButtonDown">
+                    <Image x:Name="MapImage" Source="/Assets/Maps/world_map.png" Stretch="Uniform"/>
 
-                    <Canvas x:Name="MapOverlay" IsHitTestVisible="False">
-                        <Button x:Name="GothaHotspotButton"
-                                Width="28"
-                                Height="28"
-                                Command="{Binding SelectGothaCommand}"
-                                ToolTip="Гота"
-                                Canvas.Left="0"
-                                Canvas.Top="0"
-                                Background="Transparent"
-                                BorderBrush="Transparent"
-                                BorderThickness="0"
-                                Cursor="Hand"
-                                IsHitTestVisible="True">
-                            <Grid>
-                                <Ellipse Width="14"
-                                         Height="14"
-                                         Fill="#FFF78C1F"
-                                         Stroke="#AA7A3D00"
-                                         StrokeThickness="1.5"
-                                         HorizontalAlignment="Center"
-                                         VerticalAlignment="Center"/>
-                            </Grid>
-                        </Button>
-                    </Canvas>
+                    <!-- TODO: Convert fixed hotspot coordinates to a relative map coordinate model after MVP. -->
+                    <Button Width="58"
+                            Height="42"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Top"
+                            Margin="0,122,154,0"
+                            Command="{Binding SelectGothaCommand}"
+                            ToolTip="Гота"
+                            Background="#55FFAA00"
+                            BorderBrush="#AAFFAA00"
+                            BorderThickness="1"
+                            Opacity="0.75"
+                            Content="" />
                 </Grid>
             </Border>
 
             <StackPanel Grid.Column="2">
+                <Border BorderBrush="LightGray" BorderThickness="1" CornerRadius="6" Padding="12" Margin="0,0,0,12">
+                    <StackPanel>
+                        <Button Content="{Binding MapCalibrationToggleButtonText}" Command="{Binding ToggleMapCalibrationModeCommand}" Margin="0,0,0,8"/>
+                        <TextBlock Text="{Binding LastMapCalibrationPointDisplay}"/>
+                    </StackPanel>
+                </Border>
+
                 <Border BorderBrush="LightGray" BorderThickness="1" CornerRadius="6" Padding="12" Margin="0,0,0,12">
                     <StackPanel>
                         <TextBlock Text="{Binding SimulationSummaryTitle}" FontWeight="SemiBold" FontSize="16" Margin="0,0,0,8"/>
