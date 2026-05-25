@@ -1,0 +1,117 @@
+namespace WorldSimulator.Core.Cities;
+
+/// <summary>
+/// Core city model for MVP 0.1. Food is measured in storage units.
+/// </summary>
+public sealed class City
+{
+    private const int MetricMin = 0;
+    private const int MetricMax = 100;
+
+    private string _id;
+    private string _name;
+    private int _population;
+    private decimal _food;
+    private decimal _wealth;
+    private int _mood;
+    private int _security;
+    private int _crime;
+    private decimal _resources;
+    private decimal _goods;
+
+    public City(
+        string id,
+        string name,
+        int population,
+        decimal food,
+        decimal wealth,
+        int mood,
+        int security,
+        int crime,
+        decimal resources,
+        decimal goods,
+        CityState cityState)
+    {
+        Id = id;
+        Name = name;
+        Population = population;
+        Food = food;
+        Wealth = wealth;
+        Mood = mood;
+        Security = security;
+        Crime = crime;
+        Resources = resources;
+        Goods = goods;
+        CityState = cityState;
+    }
+
+    public string Id
+    {
+        get => _id;
+        set => _id = string.IsNullOrWhiteSpace(value)
+            ? throw new ArgumentException("City id must not be empty.", nameof(value))
+            : value;
+    }
+
+    public string Name
+    {
+        get => _name;
+        set => _name = string.IsNullOrWhiteSpace(value)
+            ? throw new ArgumentException("City name must not be empty.", nameof(value))
+            : value;
+    }
+
+    public int Population
+    {
+        get => _population;
+        set => _population = Math.Max(0, value);
+    }
+
+    public decimal Food
+    {
+        get => _food;
+        set => _food = Math.Max(0m, value);
+    }
+
+    public decimal Wealth
+    {
+        get => _wealth;
+        set => _wealth = Math.Max(0m, value);
+    }
+
+    public int Mood
+    {
+        get => _mood;
+        set => _mood = Math.Clamp(value, MetricMin, MetricMax);
+    }
+
+    public int Security
+    {
+        get => _security;
+        set => _security = Math.Clamp(value, MetricMin, MetricMax);
+    }
+
+    public int Crime
+    {
+        get => _crime;
+        set => _crime = Math.Clamp(value, MetricMin, MetricMax);
+    }
+
+    public decimal Resources
+    {
+        get => _resources;
+        set => _resources = Math.Max(0m, value);
+    }
+
+    public decimal Goods
+    {
+        get => _goods;
+        set => _goods = Math.Max(0m, value);
+    }
+
+    public CityState CityState { get; set; }
+
+    public const decimal DailyFoodConsumptionPerPerson = 0.2m;
+
+    public decimal CalculateDailyFoodConsumption() => Population * DailyFoodConsumptionPerPerson;
+}
