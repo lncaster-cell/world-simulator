@@ -5,8 +5,8 @@ namespace WorldSimulator.App;
 
 public partial class MainWindow : System.Windows.Window
 {
-    private const double GothaMapX = 0.72;
-    private const double GothaMapY = 0.23;
+    private const double GothaMapX = 0.6664;
+    private const double GothaMapY = 0.2322;
 
     private CityWindow? _cityWindow;
     private LogWindow? _logWindow;
