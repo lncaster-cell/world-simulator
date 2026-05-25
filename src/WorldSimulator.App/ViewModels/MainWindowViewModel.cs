@@ -51,11 +51,26 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
 
     public bool IsRunning => _clock.IsRunning;
 
-    public string SimulationState => IsRunning ? "Running" : "Paused";
+    public string SimulationState => IsRunning ? "Запущено" : "Пауза";
 
     public string CityName => _city.Name;
 
     public string CityState => _city.CityState.ToString();
+
+    public string CityStateDisplay => _city.CityState switch
+    {
+        CityState.Stable => "Стабильность",
+        CityState.Prosperous => "Процветание",
+        CityState.Stagnation => "Стагнация",
+        CityState.FoodShortage => "Нехватка пищи",
+        CityState.Famine => "Голод",
+        CityState.EconomicDecline => "Экономический спад",
+        CityState.CrimeProblem => "Проблемы с преступностью",
+        CityState.Unrest => "Беспорядки",
+        CityState.Recovery => "Восстановление",
+        CityState.Collapse => "Коллапс",
+        _ => _city.CityState.ToString()
+    };
 
     public int Population => _city.Population;
 
@@ -84,7 +99,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     public string SelectedCityName => IsGothaSelected ? _city.Name : string.Empty;
 
     public string SelectedCityProfile => IsGothaSelected
-        ? "Small border coastal port city"
+        ? "Гота — малый пограничный прибрежный портовый город"
         : string.Empty;
 
 
@@ -137,6 +152,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(Hour));
         OnPropertyChanged(nameof(IsRunning));
         OnPropertyChanged(nameof(SimulationState));
+        OnPropertyChanged(nameof(CityStateDisplay));
 
         if (StartCommand is RelayCommand startCommand)
         {
@@ -154,6 +170,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(IsGothaSelected));
         OnPropertyChanged(nameof(SelectedCityName));
         OnPropertyChanged(nameof(SelectedCityProfile));
+        OnPropertyChanged(nameof(CityStateDisplay));
 
         if (OpenSelectedCityCommand is RelayCommand openSelectedCityCommand)
         {
