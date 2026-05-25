@@ -333,7 +333,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     {
         try
         {
-            _saveService.SaveAsync(SaveFilePath, _city, _clock).GetAwaiter().GetResult();
+            _saveService.SaveAsync(SaveFilePath, _city, _clock, _eventManager).GetAwaiter().GetResult();
             TechnicalLogEntries.Add($"Состояние сохранено: {SaveFilePath}");
         }
         catch (Exception ex)
@@ -365,9 +365,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
                 loaded.Clock.RealTimePerGameHour);
             _lastTickUtc = DateTimeOffset.UtcNow;
 
-            _eventManager.Clear();
+            _eventManager.Restore(loaded.ActiveEvents, loaded.CompletedEvents);
             RefreshEventEntries();
-            TechnicalLogEntries.Add("События пока не сохраняются и были очищены после загрузки.");
+            TechnicalLogEntries.Add($"События загружены: активных {loaded.ActiveEvents.Count}, завершённых {loaded.CompletedEvents.Count}.");
             TechnicalLogEntries.Add($"Состояние загружено: {SaveFilePath}");
 
             RefreshAllCityProperties();
