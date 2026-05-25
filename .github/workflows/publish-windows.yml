@@ -1,0 +1,37 @@
+name: Publish Windows executable
+
+on:
+  workflow_dispatch:
+
+jobs:
+  publish-windows:
+    name: Publish Windows executable
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore
+        run: dotnet restore WorldSimulator.sln
+
+      - name: Build Release
+        run: dotnet build WorldSimulator.sln --configuration Release --no-restore
+
+      - name: Test Release
+        run: dotnet test WorldSimulator.sln --configuration Release --no-build --verbosity normal
+
+      - name: Publish Windows exe
+        run: dotnet publish src/WorldSimulator.App/WorldSimulator.App.csproj --configuration Release --runtime win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true --output publish/win-x64
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: world-simulator-win-x64
+          path: publish/win-x64/
+          retention-days: 14
