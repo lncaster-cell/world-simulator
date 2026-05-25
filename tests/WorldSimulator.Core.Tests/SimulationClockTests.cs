@@ -1,4 +1,5 @@
 using WorldSimulator.Core.Time;
+using Xunit;
 
 namespace WorldSimulator.Core.Tests;
 
