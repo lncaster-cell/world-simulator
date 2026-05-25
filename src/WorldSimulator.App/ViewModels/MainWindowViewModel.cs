@@ -60,8 +60,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         TriggerArtistsPerformanceEventCommand = new RelayCommand(() => TryStartEvent(CityEventPresets.CreateArtistsPerformance));
         TriggerPortStormEventCommand = new RelayCommand(() => TryStartEvent(CityEventPresets.CreatePortStorm));
         ToggleRandomEventGenerationCommand = new RelayCommand(ToggleRandomEventGeneration);
-        SaveCommand = new RelayCommand(SaveState);
-        LoadCommand = new RelayCommand(LoadState);
+        SaveCommand = new AsyncRelayCommand(SaveStateAsync);
+        LoadCommand = new AsyncRelayCommand(LoadStateAsync);
 
         _lastTickUtc = DateTimeOffset.UtcNow;
         _timer = new DispatcherTimer
@@ -393,11 +393,11 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         RefreshClockProperties();
     }
 
-    private void SaveState()
+    private async Task SaveStateAsync()
     {
         try
         {
-            _saveService.SaveAsync(SaveFilePath, _city, _clock, _eventManager).GetAwaiter().GetResult();
+            await _saveService.SaveAsync(SaveFilePath, _city, _clock, _eventManager);
             AddTechnicalLogEntry($"Состояние сохранено: {SaveFilePath}");
             SetLastImportantChange("состояние сохранено.");
             RefreshSimulationSummary();
@@ -406,10 +406,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         {
             AddTechnicalLogEntry($"Ошибка сохранения: {ex.Message}");
         }
-
     }
 
-    private void LoadState()
+    private async Task LoadStateAsync()
     {
         try
         {
@@ -419,7 +418,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
                 return;
             }
 
-            var loaded = _saveService.LoadAsync(SaveFilePath).GetAwaiter().GetResult();
+            var loaded = await _saveService.LoadAsync(SaveFilePath);
             _city = loaded.City;
             _clock.RestoreState(
                 loaded.Clock.Day,
