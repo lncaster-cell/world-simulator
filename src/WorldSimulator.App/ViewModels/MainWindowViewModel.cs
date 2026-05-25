@@ -60,6 +60,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         _timer.Tick += OnTick;
         _timer.Start();
 
+        RefreshCityState();
         RefreshDailyFoodFlowPreview();
         RefreshEventEntries();
     }
@@ -96,20 +97,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
 
     public string CityState => _city.CityState.ToString();
 
-    public string CityStateDisplay => _city.CityState switch
-    {
-        WorldSimulator.Core.Cities.CityState.Stable => "Стабильность",
-        WorldSimulator.Core.Cities.CityState.Prosperous => "Процветание",
-        WorldSimulator.Core.Cities.CityState.Stagnation => "Стагнация",
-        WorldSimulator.Core.Cities.CityState.FoodShortage => "Нехватка пищи",
-        WorldSimulator.Core.Cities.CityState.Famine => "Голод",
-        WorldSimulator.Core.Cities.CityState.EconomicDecline => "Экономический спад",
-        WorldSimulator.Core.Cities.CityState.CrimeProblem => "Проблемы с преступностью",
-        WorldSimulator.Core.Cities.CityState.Unrest => "Беспорядки",
-        WorldSimulator.Core.Cities.CityState.Recovery => "Восстановление",
-        WorldSimulator.Core.Cities.CityState.Collapse => "Коллапс",
-        _ => _city.CityState.ToString()
-    };
+    public string CityStateDisplay => ToRussianCityState(_city.CityState);
 
     public int Population => _city.Population;
 
@@ -257,7 +245,6 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         return $"{realTimePerGameHour.TotalSeconds:0.##} секунд = 1 игровой час";
     }
 
-
     private void OnDayAdvanced(int day)
     {
         var completedEvents = _eventManager.AdvanceDay();
@@ -284,7 +271,6 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         RefreshDailyFoodFlowPreview();
         RefreshEventEntries();
     }
-
 
     private void TryStartEvent(Func<int, CityEvent> factory)
     {
@@ -385,7 +371,6 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(DailyFoodTotalDeltaDisplay));
     }
 
-
     private DailyFoodFlowInputs BuildDailyFoodFlowInputs(CityEventEffectsResult? eventEffects = null)
     {
         var effects = eventEffects ?? _eventEffectCalculator.Calculate(_city, _eventManager.ActiveEvents);
@@ -459,8 +444,6 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(Resources));
     }
 
-
-
     private void RefreshCityState(int? day = null)
     {
         var previousState = _city.CityState;
@@ -483,20 +466,20 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(CityStateDisplay));
     }
 
-    private static string ToRussianCityState(CityState cityState)
+    private static string ToRussianCityState(WorldSimulator.Core.Cities.CityState cityState)
     {
         return cityState switch
         {
-            CityState.Stable => "Стабильность",
-            CityState.Prosperous => "Процветание",
-            CityState.Stagnation => "Стагнация",
-            CityState.FoodShortage => "Нехватка пищи",
-            CityState.Famine => "Голод",
-            CityState.EconomicDecline => "Экономический спад",
-            CityState.CrimeProblem => "Проблемы с преступностью",
-            CityState.Unrest => "Беспорядки",
-            CityState.Recovery => "Восстановление",
-            CityState.Collapse => "Коллапс",
+            WorldSimulator.Core.Cities.CityState.Stable => "Стабильность",
+            WorldSimulator.Core.Cities.CityState.Prosperous => "Процветание",
+            WorldSimulator.Core.Cities.CityState.Stagnation => "Стагнация",
+            WorldSimulator.Core.Cities.CityState.FoodShortage => "Нехватка пищи",
+            WorldSimulator.Core.Cities.CityState.Famine => "Голод",
+            WorldSimulator.Core.Cities.CityState.EconomicDecline => "Экономический спад",
+            WorldSimulator.Core.Cities.CityState.CrimeProblem => "Проблемы с преступностью",
+            WorldSimulator.Core.Cities.CityState.Unrest => "Беспорядки",
+            WorldSimulator.Core.Cities.CityState.Recovery => "Восстановление",
+            WorldSimulator.Core.Cities.CityState.Collapse => "Коллапс",
             _ => cityState.ToString()
         };
     }
