@@ -58,25 +58,22 @@ public sealed class CityEventManager
 
     public void Restore(IEnumerable<CityEvent>? activeEvents, IEnumerable<CityEvent>? completedEvents)
     {
+        var activeSnapshot = activeEvents?.ToList() ?? new List<CityEvent>();
+        var completedSnapshot = completedEvents?.ToList() ?? new List<CityEvent>();
+
         _activeEvents.Clear();
         _completedEvents.Clear();
 
-        if (activeEvents is not null)
+        foreach (var cityEvent in activeSnapshot)
         {
-            foreach (var cityEvent in activeEvents)
+            if (_activeEvents.Any(e => e.Id == cityEvent.Id))
             {
-                if (_activeEvents.Any(e => e.Id == cityEvent.Id))
-                {
-                    continue;
-                }
-
-                _activeEvents.Add(cityEvent);
+                continue;
             }
+
+            _activeEvents.Add(cityEvent);
         }
 
-        if (completedEvents is not null)
-        {
-            _completedEvents.AddRange(completedEvents);
-        }
+        _completedEvents.AddRange(completedSnapshot);
     }
 }
