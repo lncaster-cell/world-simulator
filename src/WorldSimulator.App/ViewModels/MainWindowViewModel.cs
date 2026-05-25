@@ -21,6 +21,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     private readonly SimulationClock _clock;
     private readonly DailyFoodFlowCalculator _dailyFoodFlowCalculator;
     private readonly CityEventManager _eventManager;
+    private readonly CityEventEffectCalculator _eventEffectCalculator;
     private readonly DispatcherTimer _timer;
     private DateTimeOffset _lastTickUtc;
     private DailyFoodFlowResult _dailyFoodFlowResult;
@@ -31,7 +32,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         _clock = new SimulationClock();
         _dailyFoodFlowCalculator = new DailyFoodFlowCalculator();
         _eventManager = new CityEventManager();
-        _dailyFoodFlowResult = _dailyFoodFlowCalculator.Calculate(_city, DailyFoodFlowInputs.GothaPlaceholder);
+        _eventEffectCalculator = new CityEventEffectCalculator();
+        _dailyFoodFlowResult = _dailyFoodFlowCalculator.Calculate(_city, BuildDailyFoodFlowInputs());
 
         StartCommand = new RelayCommand(Start, () => !_clock.IsRunning);
         PauseCommand = new RelayCommand(Pause, () => _clock.IsRunning);
@@ -262,8 +264,12 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
             TechnicalLogEntries.Add($"День {day}: завершено событие “{completedEvent.Name}”.");
         }
 
-        var result = _dailyFoodFlowCalculator.Calculate(_city, DailyFoodFlowInputs.GothaPlaceholder);
+        var eventEffects = _eventEffectCalculator.Calculate(_city, _eventManager.ActiveEvents);
+
+        var result = _dailyFoodFlowCalculator.Calculate(_city, BuildDailyFoodFlowInputs(eventEffects));
         _dailyFoodFlowCalculator.Apply(_city, result);
+
+        ApplyDailyEventEffects(eventEffects, day);
 
         TechnicalLogEntries.Add(
             $"День {day}: пища {result.StartingFood:0.##} → {result.EndingFood:0.##}; баланс {result.TotalDelta:+0.##;-0.##;0} (потребление -{result.PopulationConsumption:0.##}, рыбалка {result.FishingIncome:+0.##;-0.##;0}, охота {result.HuntingIncome:+0.##;-0.##;0}, поставки {result.MainlandSupplyIncome:+0.##;-0.##;0}, события {result.EventDelta:+0.##;-0.##;0}).");
@@ -300,7 +306,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         ActiveEventEntries.Clear();
         foreach (var activeEvent in _eventManager.ActiveEvents)
         {
-            ActiveEventEntries.Add($"{activeEvent.Name}: осталось дней {activeEvent.RemainingDays}");
+            var effectSummary = _eventEffectCalculator.Calculate(_city, new[] { activeEvent });
+            ActiveEventEntries.Add($"{activeEvent.Name}: осталось {activeEvent.RemainingDays} дн.; эффекты: {BuildEffectSummary(effectSummary)}");
         }
 
         CompletedEventEntries.Clear();
@@ -358,7 +365,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
 
     private void RefreshDailyFoodFlowPreview()
     {
-        _dailyFoodFlowResult = _dailyFoodFlowCalculator.Calculate(_city, DailyFoodFlowInputs.GothaPlaceholder);
+        _dailyFoodFlowResult = _dailyFoodFlowCalculator.Calculate(_city, BuildDailyFoodFlowInputs());
 
         OnPropertyChanged(nameof(DailyFoodStartingFood));
         OnPropertyChanged(nameof(DailyFoodPopulationConsumption));
@@ -374,6 +381,123 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(DailyFoodMainlandSupplyIncomeDisplay));
         OnPropertyChanged(nameof(DailyFoodEventDeltaDisplay));
         OnPropertyChanged(nameof(DailyFoodTotalDeltaDisplay));
+    }
+
+
+    private DailyFoodFlowInputs BuildDailyFoodFlowInputs(CityEventEffectsResult? eventEffects = null)
+    {
+        var effects = eventEffects ?? _eventEffectCalculator.Calculate(_city, _eventManager.ActiveEvents);
+        var baseInputs = DailyFoodFlowInputs.GothaPlaceholder;
+
+        return new DailyFoodFlowInputs
+        {
+            FishingIncome = baseInputs.FishingIncome,
+            HuntingIncome = baseInputs.HuntingIncome,
+            MainlandSupplyIncome = baseInputs.MainlandSupplyIncome + effects.MainlandSupplyDelta,
+            EventDelta = baseInputs.EventDelta + effects.FoodDelta
+        };
+    }
+
+    private void ApplyDailyEventEffects(CityEventEffectsResult effects, int day)
+    {
+        _city.Mood += effects.MoodDelta;
+        _city.Security += effects.SecurityDelta;
+        _city.Crime += effects.CrimeDelta;
+        _city.Wealth += effects.WealthDelta;
+        _city.Resources += effects.ResourcesDelta;
+
+        if (!effects.HasAnyEffect)
+        {
+            return;
+        }
+
+        var segments = new List<string>();
+
+        if (effects.FoodDelta != 0m)
+        {
+            segments.Add($"пища {effects.FoodDelta:+0.##;-0.##;0}");
+        }
+
+        if (effects.MoodDelta != 0)
+        {
+            segments.Add($"настроение {effects.MoodDelta:+0;-0;0}");
+        }
+
+        if (effects.SecurityDelta != 0)
+        {
+            segments.Add($"безопасность {effects.SecurityDelta:+0;-0;0}");
+        }
+
+        if (effects.CrimeDelta != 0)
+        {
+            segments.Add($"преступность {effects.CrimeDelta:+0;-0;0}");
+        }
+
+        if (effects.WealthDelta != 0m)
+        {
+            segments.Add($"богатство {effects.WealthDelta:+0.##;-0.##;0}");
+        }
+
+        if (effects.ResourcesDelta != 0m)
+        {
+            segments.Add($"ресурсы {effects.ResourcesDelta:+0.##;-0.##;0}");
+        }
+
+        if (effects.MainlandSupplyDelta != 0m)
+        {
+            segments.Add($"поставки с материка {effects.MainlandSupplyDelta:+0.##;-0.##;0}");
+        }
+
+        TechnicalLogEntries.Add($"День {day}: применены эффекты событий: {string.Join(", ", segments)}.");
+
+        OnPropertyChanged(nameof(Mood));
+        OnPropertyChanged(nameof(Security));
+        OnPropertyChanged(nameof(Crime));
+        OnPropertyChanged(nameof(Wealth));
+        OnPropertyChanged(nameof(Resources));
+    }
+
+
+    private static string BuildEffectSummary(CityEventEffectsResult effects)
+    {
+        var segments = new List<string>();
+
+        if (effects.FoodDelta != 0m)
+        {
+            segments.Add($"пища {effects.FoodDelta:+0.##;-0.##;0}");
+        }
+
+        if (effects.MoodDelta != 0)
+        {
+            segments.Add($"настроение {effects.MoodDelta:+0;-0;0}");
+        }
+
+        if (effects.SecurityDelta != 0)
+        {
+            segments.Add($"безопасность {effects.SecurityDelta:+0;-0;0}");
+        }
+
+        if (effects.CrimeDelta != 0)
+        {
+            segments.Add($"преступность {effects.CrimeDelta:+0;-0;0}");
+        }
+
+        if (effects.WealthDelta != 0m)
+        {
+            segments.Add($"богатство {effects.WealthDelta:+0.##;-0.##;0}");
+        }
+
+        if (effects.ResourcesDelta != 0m)
+        {
+            segments.Add($"ресурсы {effects.ResourcesDelta:+0.##;-0.##;0}");
+        }
+
+        if (effects.MainlandSupplyDelta != 0m)
+        {
+            segments.Add($"поставки с материка {effects.MainlandSupplyDelta:+0.##;-0.##;0}");
+        }
+
+        return segments.Count == 0 ? "без эффектов" : string.Join(", ", segments);
     }
 
     private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
