@@ -1,6 +1,7 @@
 using WorldSimulator.Core.Cities;
 using WorldSimulator.Core.Events;
 using WorldSimulator.Core.Resources;
+using Xunit;
 
 namespace WorldSimulator.Core.Tests;
 
