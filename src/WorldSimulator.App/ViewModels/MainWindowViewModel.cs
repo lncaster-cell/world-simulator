@@ -5,6 +5,7 @@ using System.Windows.Threading;
 using WorldSimulator.App.Infrastructure;
 using WorldSimulator.Core.Cities;
 using WorldSimulator.Core.Time;
+using WorldSimulator.Core.Resources;
 
 namespace WorldSimulator.App.ViewModels;
 
@@ -13,12 +14,16 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     private readonly City _city;
     private readonly SimulationClock _clock;
     private readonly DispatcherTimer _timer;
+    private readonly DailyFoodFlowCalculator _dailyFoodFlowCalculator;
+    private DailyFoodFlowResult _dailyFoodFlowResult;
     private DateTimeOffset _lastTickUtc;
 
     public MainWindowViewModel()
     {
         _city = CityPresets.CreateGotha();
         _clock = new SimulationClock();
+        _dailyFoodFlowCalculator = new DailyFoodFlowCalculator();
+        _dailyFoodFlowResult = CreateInitialDailyFoodFlowResult();
 
         StartCommand = new RelayCommand(Start, () => !_clock.IsRunning);
         PauseCommand = new RelayCommand(Pause, () => _clock.IsRunning);
@@ -33,6 +38,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
 
         _timer.Tick += OnTick;
         _timer.Start();
+
+        RefreshDailyFoodFlowPreview();
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -89,6 +96,34 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     public decimal Goods => _city.Goods;
 
     public decimal DailyFoodConsumption => _city.CalculateDailyFoodConsumption();
+
+    public decimal DailyFoodStartingFood => _dailyFoodFlowResult.StartingFood;
+
+    public decimal DailyFoodPopulationConsumption => _dailyFoodFlowResult.PopulationConsumption;
+
+    public decimal DailyFoodFishingIncome => _dailyFoodFlowResult.FishingIncome;
+
+    public decimal DailyFoodHuntingIncome => _dailyFoodFlowResult.HuntingIncome;
+
+    public decimal DailyFoodMainlandSupplyIncome => _dailyFoodFlowResult.MainlandSupplyIncome;
+
+    public decimal DailyFoodEventDelta => _dailyFoodFlowResult.EventDelta;
+
+    public decimal DailyFoodTotalDelta => _dailyFoodFlowResult.TotalDelta;
+
+    public decimal DailyFoodEndingFood => _dailyFoodFlowResult.EndingFood;
+
+    public string DailyFoodPopulationConsumptionDisplay => $"-{DailyFoodPopulationConsumption:0.##}";
+
+    public string DailyFoodFishingIncomeDisplay => FormatSigned(DailyFoodFishingIncome);
+
+    public string DailyFoodHuntingIncomeDisplay => FormatSigned(DailyFoodHuntingIncome);
+
+    public string DailyFoodMainlandSupplyIncomeDisplay => FormatSigned(DailyFoodMainlandSupplyIncome);
+
+    public string DailyFoodEventDeltaDisplay => FormatSigned(DailyFoodEventDelta);
+
+    public string DailyFoodTotalDeltaDisplay => FormatSigned(DailyFoodTotalDelta);
 
     public bool IsGothaSelected { get; private set; }
 
@@ -176,6 +211,58 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         {
             openSelectedCityCommand.RaiseCanExecuteChanged();
         }
+    }
+
+
+    private DailyFoodFlowResult CreateInitialDailyFoodFlowResult()
+    {
+        return new DailyFoodFlowResult
+        {
+            StartingFood = 0m,
+            PopulationConsumption = 0m,
+            FishingIncome = 0m,
+            HuntingIncome = 0m,
+            MainlandSupplyIncome = 0m,
+            EventDelta = 0m,
+            TotalDelta = 0m,
+            EndingFood = 0m
+        };
+    }
+
+    private void RefreshDailyFoodFlowPreview()
+    {
+        var inputs = DailyFoodFlowInputs.GothaPlaceholder;
+        _dailyFoodFlowResult = _dailyFoodFlowCalculator.Calculate(_city, inputs);
+
+        OnPropertyChanged(nameof(DailyFoodStartingFood));
+        OnPropertyChanged(nameof(DailyFoodPopulationConsumption));
+        OnPropertyChanged(nameof(DailyFoodFishingIncome));
+        OnPropertyChanged(nameof(DailyFoodHuntingIncome));
+        OnPropertyChanged(nameof(DailyFoodMainlandSupplyIncome));
+        OnPropertyChanged(nameof(DailyFoodEventDelta));
+        OnPropertyChanged(nameof(DailyFoodTotalDelta));
+        OnPropertyChanged(nameof(DailyFoodEndingFood));
+        OnPropertyChanged(nameof(DailyFoodPopulationConsumptionDisplay));
+        OnPropertyChanged(nameof(DailyFoodFishingIncomeDisplay));
+        OnPropertyChanged(nameof(DailyFoodHuntingIncomeDisplay));
+        OnPropertyChanged(nameof(DailyFoodMainlandSupplyIncomeDisplay));
+        OnPropertyChanged(nameof(DailyFoodEventDeltaDisplay));
+        OnPropertyChanged(nameof(DailyFoodTotalDeltaDisplay));
+    }
+
+    private static string FormatSigned(decimal value)
+    {
+        if (value > 0m)
+        {
+            return $"+{value:0.##}";
+        }
+
+        if (value < 0m)
+        {
+            return $"{value:0.##}";
+        }
+
+        return "0";
     }
 
     private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
