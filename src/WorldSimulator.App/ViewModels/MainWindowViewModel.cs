@@ -51,11 +51,26 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
 
     public bool IsRunning => _clock.IsRunning;
 
-    public string SimulationState => IsRunning ? "Running" : "Paused";
+    public string SimulationState => IsRunning ? "Запущено" : "Пауза";
 
     public string CityName => _city.Name;
 
     public string CityState => _city.CityState.ToString();
+
+    public string CityStateDisplay => _city.CityState switch
+    {
+        WorldSimulator.Core.Cities.CityState.Stable => "Стабильность",
+        WorldSimulator.Core.Cities.CityState.Prosperous => "Процветание",
+        WorldSimulator.Core.Cities.CityState.Stagnation => "Стагнация",
+        WorldSimulator.Core.Cities.CityState.FoodShortage => "Нехватка пищи",
+        WorldSimulator.Core.Cities.CityState.Famine => "Голод",
+        WorldSimulator.Core.Cities.CityState.EconomicDecline => "Экономический спад",
+        WorldSimulator.Core.Cities.CityState.CrimeProblem => "Проблемы с преступностью",
+        WorldSimulator.Core.Cities.CityState.Unrest => "Беспорядки",
+        WorldSimulator.Core.Cities.CityState.Recovery => "Восстановление",
+        WorldSimulator.Core.Cities.CityState.Collapse => "Коллапс",
+        _ => _city.CityState.ToString()
+    };
 
     public int Population => _city.Population;
 
@@ -84,7 +99,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     public string SelectedCityName => IsGothaSelected ? _city.Name : string.Empty;
 
     public string SelectedCityProfile => IsGothaSelected
-        ? "Small border coastal port city"
+        ? "Гота — малый пограничный прибрежный портовый город"
         : string.Empty;
 
 
@@ -137,6 +152,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(Hour));
         OnPropertyChanged(nameof(IsRunning));
         OnPropertyChanged(nameof(SimulationState));
+        OnPropertyChanged(nameof(CityStateDisplay));
 
         if (StartCommand is RelayCommand startCommand)
         {
@@ -154,6 +170,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(IsGothaSelected));
         OnPropertyChanged(nameof(SelectedCityName));
         OnPropertyChanged(nameof(SelectedCityProfile));
+        OnPropertyChanged(nameof(CityStateDisplay));
 
         if (OpenSelectedCityCommand is RelayCommand openSelectedCityCommand)
         {
