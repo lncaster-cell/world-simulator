@@ -1,0 +1,52 @@
+namespace WorldSimulator.Core.Events;
+
+public sealed class CityEventManager
+{
+    private readonly List<CityEvent> _activeEvents = new();
+    private readonly List<CityEvent> _completedEvents = new();
+
+    public IReadOnlyList<CityEvent> ActiveEvents => _activeEvents;
+
+    public IReadOnlyList<CityEvent> CompletedEvents => _completedEvents;
+
+    public bool AddEvent(CityEvent cityEvent)
+    {
+        ArgumentNullException.ThrowIfNull(cityEvent);
+
+        if (_activeEvents.Any(e => e.Id == cityEvent.Id))
+        {
+            return false;
+        }
+
+        _activeEvents.Add(cityEvent);
+        return true;
+    }
+
+    public IReadOnlyList<CityEvent> AdvanceDay()
+    {
+        var newlyCompleted = new List<CityEvent>();
+
+        foreach (var activeEvent in _activeEvents)
+        {
+            activeEvent.AdvanceDay();
+
+            if (activeEvent.IsCompleted)
+            {
+                newlyCompleted.Add(activeEvent);
+            }
+        }
+
+        if (newlyCompleted.Count == 0)
+        {
+            return newlyCompleted;
+        }
+
+        foreach (var completedEvent in newlyCompleted)
+        {
+            _activeEvents.Remove(completedEvent);
+            _completedEvents.Add(completedEvent);
+        }
+
+        return newlyCompleted;
+    }
+}

@@ -5,6 +5,7 @@ using System.Windows.Input;
 using System.Windows.Threading;
 using WorldSimulator.App.Infrastructure;
 using WorldSimulator.Core.Cities;
+using WorldSimulator.Core.Events;
 using WorldSimulator.Core.Resources;
 using WorldSimulator.Core.Time;
 
@@ -19,6 +20,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     private readonly City _city;
     private readonly SimulationClock _clock;
     private readonly DailyFoodFlowCalculator _dailyFoodFlowCalculator;
+    private readonly CityEventManager _eventManager;
     private readonly DispatcherTimer _timer;
     private DateTimeOffset _lastTickUtc;
     private DailyFoodFlowResult _dailyFoodFlowResult;
@@ -28,6 +30,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         _city = CityPresets.CreateGotha();
         _clock = new SimulationClock();
         _dailyFoodFlowCalculator = new DailyFoodFlowCalculator();
+        _eventManager = new CityEventManager();
         _dailyFoodFlowResult = _dailyFoodFlowCalculator.Calculate(_city, DailyFoodFlowInputs.GothaPlaceholder);
 
         StartCommand = new RelayCommand(Start, () => !_clock.IsRunning);
@@ -37,6 +40,11 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         SetVeryFastSpeedCommand = new RelayCommand(SetVeryFastSpeed);
         SelectGothaCommand = new RelayCommand(SelectGotha);
         OpenSelectedCityCommand = new RelayCommand(OpenSelectedCity, () => IsGothaSelected);
+        TriggerFireEventCommand = new RelayCommand(() => TryStartEvent(CityEventPresets.CreateFire));
+        TriggerDiseaseEventCommand = new RelayCommand(() => TryStartEvent(CityEventPresets.CreateDisease));
+        TriggerRatInfestationEventCommand = new RelayCommand(() => TryStartEvent(CityEventPresets.CreateRatInfestation));
+        TriggerArtistsPerformanceEventCommand = new RelayCommand(() => TryStartEvent(CityEventPresets.CreateArtistsPerformance));
+        TriggerPortStormEventCommand = new RelayCommand(() => TryStartEvent(CityEventPresets.CreatePortStorm));
 
         _lastTickUtc = DateTimeOffset.UtcNow;
         _timer = new DispatcherTimer
@@ -49,6 +57,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         _timer.Start();
 
         RefreshDailyFoodFlowPreview();
+        RefreshEventEntries();
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -63,6 +72,12 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     public ICommand SelectGothaCommand { get; }
 
     public ICommand OpenSelectedCityCommand { get; }
+
+    public ICommand TriggerFireEventCommand { get; }
+    public ICommand TriggerDiseaseEventCommand { get; }
+    public ICommand TriggerRatInfestationEventCommand { get; }
+    public ICommand TriggerArtistsPerformanceEventCommand { get; }
+    public ICommand TriggerPortStormEventCommand { get; }
 
     public int Day => _clock.Day;
 
@@ -141,6 +156,14 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     public ObservableCollection<string> TechnicalLogEntries { get; } = new();
 
     public bool HasTechnicalLogEntries => TechnicalLogEntries.Count > 0;
+
+    public ObservableCollection<string> ActiveEventEntries { get; } = new();
+
+    public ObservableCollection<string> CompletedEventEntries { get; } = new();
+
+    public bool HasActiveEventEntries => _eventManager.ActiveEvents.Count > 0;
+
+    public bool HasCompletedEventEntries => _eventManager.CompletedEvents.Count > 0;
 
     public bool IsGothaSelected { get; private set; }
 
@@ -233,6 +256,12 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
 
     private void OnDayAdvanced(int day)
     {
+        var completedEvents = _eventManager.AdvanceDay();
+        foreach (var completedEvent in completedEvents)
+        {
+            TechnicalLogEntries.Add($"День {day}: завершено событие “{completedEvent.Name}”.");
+        }
+
         var result = _dailyFoodFlowCalculator.Calculate(_city, DailyFoodFlowInputs.GothaPlaceholder);
         _dailyFoodFlowCalculator.Apply(_city, result);
 
@@ -240,9 +269,48 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
             $"День {day}: пища {result.StartingFood:0.##} → {result.EndingFood:0.##}; баланс {result.TotalDelta:+0.##;-0.##;0} (потребление -{result.PopulationConsumption:0.##}, рыбалка {result.FishingIncome:+0.##;-0.##;0}, охота {result.HuntingIncome:+0.##;-0.##;0}, поставки {result.MainlandSupplyIncome:+0.##;-0.##;0}, события {result.EventDelta:+0.##;-0.##;0}).");
 
         OnPropertyChanged(nameof(Food));
+        RefreshEventEntries();
         OnPropertyChanged(nameof(HasTechnicalLogEntries));
 
         RefreshDailyFoodFlowPreview();
+        RefreshEventEntries();
+    }
+
+
+    private void TryStartEvent(Func<int, CityEvent> factory)
+    {
+        var cityEvent = factory(Day);
+        var added = _eventManager.AddEvent(cityEvent);
+
+        if (added)
+        {
+            TechnicalLogEntries.Add($"День {Day}: запущено событие “{cityEvent.Name}”.");
+        }
+        else
+        {
+            TechnicalLogEntries.Add($"Событие “{cityEvent.Name}” уже активно.");
+        }
+
+        RefreshEventEntries();
+        OnPropertyChanged(nameof(HasTechnicalLogEntries));
+    }
+
+    private void RefreshEventEntries()
+    {
+        ActiveEventEntries.Clear();
+        foreach (var activeEvent in _eventManager.ActiveEvents)
+        {
+            ActiveEventEntries.Add($"{activeEvent.Name}: осталось дней {activeEvent.RemainingDays}");
+        }
+
+        CompletedEventEntries.Clear();
+        foreach (var completedEvent in _eventManager.CompletedEvents)
+        {
+            CompletedEventEntries.Add($"{completedEvent.Name}: завершено на дне {completedEvent.StartedDay + completedEvent.DurationDays}");
+        }
+
+        OnPropertyChanged(nameof(HasActiveEventEntries));
+        OnPropertyChanged(nameof(HasCompletedEventEntries));
     }
 
     private void OnTick(object? sender, EventArgs e)

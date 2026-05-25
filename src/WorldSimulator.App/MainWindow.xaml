@@ -198,7 +198,35 @@
 
                         <TabItem Header="События">
                             <StackPanel Margin="8">
-                                <TextBlock Text="Активных событий пока нет." TextWrapping="Wrap"/>
+                                <TextBlock Text="Активные события" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                                <TextBlock Text="Активных событий пока нет." Margin="0,0,0,6">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding HasActiveEventEntries}" Value="True">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                                <ListBox ItemsSource="{Binding ActiveEventEntries}" Margin="0,0,0,12"/>
+
+                                <TextBlock Text="Завершённые события" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                                <TextBlock Text="Завершённых событий пока нет." Margin="0,0,0,6">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding HasCompletedEventEntries}" Value="True">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                                <ListBox ItemsSource="{Binding CompletedEventEntries}"/>
                             </StackPanel>
                         </TabItem>
 
@@ -244,6 +272,15 @@
                                                     Command="{Binding SetVeryFastSpeedCommand}"
                                                     Width="120"
                                                     Margin="0,0,8,8"/>
+                                        </WrapPanel>
+                                        <Separator Margin="0,4,0,10"/>
+                                        <TextBlock Text="Запуск тестовых событий" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                                        <WrapPanel>
+                                            <Button Content="Запустить пожар" Command="{Binding TriggerFireEventCommand}" Margin="0,0,8,8"/>
+                                            <Button Content="Запустить болезнь" Command="{Binding TriggerDiseaseEventCommand}" Margin="0,0,8,8"/>
+                                            <Button Content="Запустить крыс" Command="{Binding TriggerRatInfestationEventCommand}" Margin="0,0,8,8"/>
+                                            <Button Content="Запустить артистов" Command="{Binding TriggerArtistsPerformanceEventCommand}" Margin="0,0,8,8"/>
+                                            <Button Content="Запустить шторм" Command="{Binding TriggerPortStormEventCommand}" Margin="0,0,8,8"/>
                                         </WrapPanel>
                                     </StackPanel>
                                 </Border>
