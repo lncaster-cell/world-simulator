@@ -95,59 +95,121 @@
                     </StackPanel>
                 </Border>
 
-                <Border BorderBrush="LightGray" BorderThickness="1" Padding="12" CornerRadius="6">
-                    <StackPanel>
-                        <TextBlock Text="Gotha Overview" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,10"/>
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="16"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
+                <Border BorderBrush="LightGray"
+                        BorderThickness="1"
+                        Padding="12"
+                        CornerRadius="6"
+                        Visibility="{Binding IsCityPanelVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <TabControl SelectedIndex="{Binding SelectedCityTabIndex}">
+                        <TabItem Header="Overview">
+                            <StackPanel Margin="8">
+                                <TextBlock Text="Gotha Overview" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="16"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
 
-                            <TextBlock Grid.Row="0" Grid.Column="0" Text="City Name:" FontWeight="SemiBold"/>
-                            <TextBlock Grid.Row="0" Grid.Column="2" Text="{Binding CityName}"/>
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="City name:" FontWeight="SemiBold"/>
+                                    <TextBlock Grid.Row="0" Grid.Column="2" Text="{Binding CityName}"/>
 
-                            <TextBlock Grid.Row="1" Grid.Column="0" Text="City State:" FontWeight="SemiBold"/>
-                            <TextBlock Grid.Row="1" Grid.Column="2" Text="{Binding CityState}"/>
+                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="City profile:" FontWeight="SemiBold"/>
+                                    <TextBlock Grid.Row="1" Grid.Column="2" Text="{Binding SelectedCityProfile}"/>
 
-                            <TextBlock Grid.Row="2" Grid.Column="0" Text="Population:" FontWeight="SemiBold"/>
-                            <TextBlock Grid.Row="2" Grid.Column="2" Text="{Binding Population}"/>
+                                    <TextBlock Grid.Row="2" Grid.Column="0" Text="City state:" FontWeight="SemiBold"/>
+                                    <TextBlock Grid.Row="2" Grid.Column="2" Text="{Binding CityState}"/>
 
-                            <TextBlock Grid.Row="3" Grid.Column="0" Text="Food:" FontWeight="SemiBold"/>
-                            <TextBlock Grid.Row="3" Grid.Column="2" Text="{Binding Food}"/>
+                                    <TextBlock Grid.Row="3" Grid.Column="0" Text="Population:" FontWeight="SemiBold"/>
+                                    <TextBlock Grid.Row="3" Grid.Column="2" Text="{Binding Population}"/>
 
-                            <TextBlock Grid.Row="4" Grid.Column="0" Text="Wealth:" FontWeight="SemiBold"/>
-                            <TextBlock Grid.Row="4" Grid.Column="2" Text="{Binding Wealth}"/>
+                                    <TextBlock Grid.Row="4" Grid.Column="0" Text="Mood:" FontWeight="SemiBold"/>
+                                    <TextBlock Grid.Row="4" Grid.Column="2" Text="{Binding Mood}"/>
 
-                            <TextBlock Grid.Row="5" Grid.Column="0" Text="Mood:" FontWeight="SemiBold"/>
-                            <TextBlock Grid.Row="5" Grid.Column="2" Text="{Binding Mood}"/>
+                                    <TextBlock Grid.Row="5" Grid.Column="0" Text="Security:" FontWeight="SemiBold"/>
+                                    <TextBlock Grid.Row="5" Grid.Column="2" Text="{Binding Security}"/>
 
-                            <TextBlock Grid.Row="6" Grid.Column="0" Text="Security:" FontWeight="SemiBold"/>
-                            <TextBlock Grid.Row="6" Grid.Column="2" Text="{Binding Security}"/>
+                                    <TextBlock Grid.Row="6" Grid.Column="0" Text="Crime:" FontWeight="SemiBold"/>
+                                    <TextBlock Grid.Row="6" Grid.Column="2" Text="{Binding Crime}"/>
 
-                            <TextBlock Grid.Row="7" Grid.Column="0" Text="Crime:" FontWeight="SemiBold"/>
-                            <TextBlock Grid.Row="7" Grid.Column="2" Text="{Binding Crime}"/>
+                                    <TextBlock Grid.Row="7" Grid.Column="0" Text="Day:" FontWeight="SemiBold"/>
+                                    <TextBlock Grid.Row="7" Grid.Column="2" Text="{Binding Day}"/>
 
-                            <TextBlock Grid.Row="8" Grid.Column="0" Text="Resources:" FontWeight="SemiBold"/>
-                            <TextBlock Grid.Row="8" Grid.Column="2" Text="{Binding Resources}"/>
+                                    <TextBlock Grid.Row="8" Grid.Column="0" Text="Hour:" FontWeight="SemiBold"/>
+                                    <TextBlock Grid.Row="8" Grid.Column="2" Text="{Binding Hour}"/>
 
-                            <TextBlock Grid.Row="9" Grid.Column="0" Text="Goods:" FontWeight="SemiBold"/>
-                            <TextBlock Grid.Row="9" Grid.Column="2" Text="{Binding Goods}"/>
-                        </Grid>
-                    </StackPanel>
+                                    <TextBlock Grid.Row="9" Grid.Column="0" Text="Simulation state:" FontWeight="SemiBold"/>
+                                    <TextBlock Grid.Row="9" Grid.Column="2" Text="{Binding SimulationState}"/>
+                                </Grid>
+                            </StackPanel>
+                        </TabItem>
+
+                        <TabItem Header="Stocks">
+                            <StackPanel Margin="8">
+                                <TextBlock Text="Current Stocks" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                                <TextBlock Text="Food: " FontWeight="SemiBold"/>
+                                <TextBlock Text="{Binding Food}" Margin="0,0,0,6"/>
+                                <TextBlock Text="Wealth: " FontWeight="SemiBold"/>
+                                <TextBlock Text="{Binding Wealth}" Margin="0,0,0,6"/>
+                                <TextBlock Text="Resources: " FontWeight="SemiBold"/>
+                                <TextBlock Text="{Binding Resources}" Margin="0,0,0,6"/>
+                                <TextBlock Text="Goods: " FontWeight="SemiBold"/>
+                                <TextBlock Text="{Binding Goods}" Margin="0,0,0,10"/>
+                                <TextBlock Text="Storage values are MVP abstract units."
+                                           FontStyle="Italic"
+                                           Foreground="DimGray"
+                                           TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </TabItem>
+
+                        <TabItem Header="Flows">
+                            <StackPanel Margin="8">
+                                <TextBlock Text="Daily food consumption:" FontWeight="SemiBold"/>
+                                <TextBlock Text="{Binding DailyFoodConsumption}" Margin="0,0,0,6"/>
+                                <TextBlock Text="Fishing: TBD" Margin="0,0,0,4"/>
+                                <TextBlock Text="Hunting: TBD" Margin="0,0,0,4"/>
+                                <TextBlock Text="Mainland supplies: TBD" Margin="0,0,0,4"/>
+                                <TextBlock Text="Daily balance: TBD" Margin="0,0,0,4"/>
+                            </StackPanel>
+                        </TabItem>
+
+                        <TabItem Header="Events">
+                            <StackPanel Margin="8">
+                                <TextBlock Text="No active events in MVP UI yet." TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </TabItem>
+
+                        <TabItem Header="Journal">
+                            <StackPanel Margin="8">
+                                <TextBlock Text="Gameplay journal" FontWeight="SemiBold" Margin="0,0,0,6"/>
+                                <TextBlock Text="Technical log" FontWeight="SemiBold" Margin="0,0,0,6"/>
+                                <TextBlock Text="Journal system will be implemented in a later task." TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </TabItem>
+
+                        <TabItem Header="Debug">
+                            <StackPanel Margin="8">
+                                <Border BorderBrush="DarkOrange" BorderThickness="1" Padding="8" CornerRadius="4" Background="#FFFFF7E6">
+                                    <TextBlock Text="Debug tools are developer-only and not implemented yet." 
+                                               TextWrapping="Wrap"
+                                               Foreground="DarkRed"
+                                               FontWeight="SemiBold"/>
+                                </Border>
+                            </StackPanel>
+                        </TabItem>
+                    </TabControl>
                 </Border>
             </StackPanel>
         </Grid>
