@@ -176,12 +176,23 @@
 
                         <TabItem Header="Потоки">
                             <StackPanel Margin="8">
-                                <TextBlock Text="Дневное потребление пищи:" FontWeight="SemiBold"/>
-                                <TextBlock Text="{Binding DailyFoodConsumption}" Margin="0,0,0,6"/>
-                                <TextBlock Text="Рыбалка: TBD" Margin="0,0,0,4"/>
-                                <TextBlock Text="Охота: TBD" Margin="0,0,0,4"/>
-                                <TextBlock Text="Поставки с материка: TBD" Margin="0,0,0,4"/>
-                                <TextBlock Text="Дневной баланс: TBD" Margin="0,0,0,4"/>
+                                <TextBlock Text="Дневный прогноз пищевого баланса" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                                <TextBlock Text="Начальная пища:" FontWeight="SemiBold"/>
+                                <TextBlock Text="{Binding DailyFoodStartingFood}" Margin="0,0,0,6"/>
+                                <TextBlock Text="Потребление населения:" FontWeight="SemiBold"/>
+                                <TextBlock Text="{Binding DailyFoodPopulationConsumptionDisplay}" Margin="0,0,0,6"/>
+                                <TextBlock Text="Рыбалка:" FontWeight="SemiBold"/>
+                                <TextBlock Text="{Binding DailyFoodFishingIncomeDisplay}" Margin="0,0,0,6"/>
+                                <TextBlock Text="Охота:" FontWeight="SemiBold"/>
+                                <TextBlock Text="{Binding DailyFoodHuntingIncomeDisplay}" Margin="0,0,0,6"/>
+                                <TextBlock Text="Поставки с материка:" FontWeight="SemiBold"/>
+                                <TextBlock Text="{Binding DailyFoodMainlandSupplyIncomeDisplay}" Margin="0,0,0,6"/>
+                                <TextBlock Text="Влияние событий:" FontWeight="SemiBold"/>
+                                <TextBlock Text="{Binding DailyFoodEventDeltaDisplay}" Margin="0,0,0,6"/>
+                                <TextBlock Text="Дневной баланс:" FontWeight="SemiBold"/>
+                                <TextBlock Text="{Binding DailyFoodTotalDeltaDisplay}" Margin="0,0,0,6"/>
+                                <TextBlock Text="Ожидаемая пища после дня:" FontWeight="SemiBold"/>
+                                <TextBlock Text="{Binding DailyFoodEndingFood}" Margin="0,0,0,6"/>
                             </StackPanel>
                         </TabItem>
 
