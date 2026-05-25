@@ -43,8 +43,8 @@
             </Grid.ColumnDefinitions>
 
             <Border Grid.Column="0" BorderBrush="LightGray" BorderThickness="1" CornerRadius="6" Padding="8">
-                <Grid>
-                    <Image Source="/Assets/Maps/world_map.png" Stretch="Uniform"/>
+                <Grid x:Name="MapContainer" MouseLeftButtonDown="MapContainer_MouseLeftButtonDown">
+                    <Image x:Name="MapImage" Source="/Assets/Maps/world_map.png" Stretch="Uniform"/>
 
                     <!-- TODO: Convert fixed hotspot coordinates to a relative map coordinate model after MVP. -->
                     <Button Width="58"
@@ -63,6 +63,13 @@
             </Border>
 
             <StackPanel Grid.Column="2">
+                <Border BorderBrush="LightGray" BorderThickness="1" CornerRadius="6" Padding="12" Margin="0,0,0,12">
+                    <StackPanel>
+                        <Button Content="{Binding MapCalibrationToggleButtonText}" Command="{Binding ToggleMapCalibrationModeCommand}" Margin="0,0,0,8"/>
+                        <TextBlock Text="{Binding LastMapCalibrationPointDisplay}"/>
+                    </StackPanel>
+                </Border>
+
                 <Border BorderBrush="LightGray" BorderThickness="1" CornerRadius="6" Padding="12" Margin="0,0,0,12">
                     <StackPanel>
                         <TextBlock Text="{Binding SimulationSummaryTitle}" FontWeight="SemiBold" FontSize="16" Margin="0,0,0,8"/>

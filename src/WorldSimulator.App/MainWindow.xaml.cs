@@ -1,3 +1,4 @@
+using System.Windows.Input;
 using WorldSimulator.App.ViewModels;
 
 namespace WorldSimulator.App;
@@ -11,6 +12,43 @@ public partial class MainWindow : System.Windows.Window
     {
         InitializeComponent();
         DataContext = new MainWindowViewModel();
+    }
+
+
+    private void MapContainer_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel viewModel || !viewModel.IsMapCalibrationModeEnabled)
+        {
+            return;
+        }
+
+        var containerWidth = MapContainer.ActualWidth;
+        var containerHeight = MapContainer.ActualHeight;
+        var imageWidth = MapImage.ActualWidth;
+        var imageHeight = MapImage.ActualHeight;
+
+        if (containerWidth <= 0 || containerHeight <= 0 || imageWidth <= 0 || imageHeight <= 0)
+        {
+            return;
+        }
+
+        var mapLeft = (containerWidth - imageWidth) / 2d;
+        var mapTop = (containerHeight - imageHeight) / 2d;
+
+        var click = e.GetPosition(MapContainer);
+
+        if (click.X < mapLeft || click.Y < mapTop || click.X > mapLeft + imageWidth || click.Y > mapTop + imageHeight)
+        {
+            return;
+        }
+
+        var relativeX = (click.X - mapLeft) / imageWidth;
+        var relativeY = (click.Y - mapTop) / imageHeight;
+
+        relativeX = Math.Clamp(relativeX, 0d, 1d);
+        relativeY = Math.Clamp(relativeY, 0d, 1d);
+
+        viewModel.RegisterMapCalibrationPoint(relativeX, relativeY);
     }
 
     private void OpenCityButton_Click(object sender, System.Windows.RoutedEventArgs e)
