@@ -53,7 +53,7 @@
 
                     <Canvas x:Name="MapOverlay"
                             Background="Transparent"
-                            IsHitTestVisible="False">
+                            IsHitTestVisible="True">
                         <Button x:Name="GothaHotspotButton"
                                 Width="34"
                                 Height="34"
