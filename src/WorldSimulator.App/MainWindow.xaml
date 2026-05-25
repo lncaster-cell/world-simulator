@@ -43,22 +43,41 @@
             </Grid.ColumnDefinitions>
 
             <Border Grid.Column="0" BorderBrush="LightGray" BorderThickness="1" CornerRadius="6" Padding="8">
-                <Grid x:Name="MapContainer" MouseLeftButtonDown="MapContainer_MouseLeftButtonDown">
-                    <Image x:Name="MapImage" Source="/Assets/Maps/world_map.png" Stretch="Uniform"/>
+                <Grid x:Name="MapContainer"
+                      MouseLeftButtonDown="MapContainer_MouseLeftButtonDown"
+                      SizeChanged="MapContainer_SizeChanged">
+                    <Image x:Name="MapImage"
+                           Source="/Assets/Maps/world_map.png"
+                           Stretch="Uniform"
+                           SizeChanged="MapImage_SizeChanged"/>
 
-                    <!-- TODO: Convert fixed hotspot coordinates to a relative map coordinate model after MVP. -->
-                    <Button Width="58"
-                            Height="42"
-                            HorizontalAlignment="Right"
-                            VerticalAlignment="Top"
-                            Margin="0,122,154,0"
-                            Command="{Binding SelectGothaCommand}"
-                            ToolTip="Гота"
-                            Background="#55FFAA00"
-                            BorderBrush="#AAFFAA00"
-                            BorderThickness="1"
-                            Opacity="0.75"
-                            Content="" />
+                    <Canvas x:Name="MapOverlay"
+                            Background="Transparent"
+                            IsHitTestVisible="False">
+                        <Button x:Name="GothaHotspotButton"
+                                Width="34"
+                                Height="34"
+                                Command="{Binding SelectGothaCommand}"
+                                ToolTip="Гота"
+                                Background="Transparent"
+                                BorderThickness="0"
+                                IsHitTestVisible="True">
+                            <Grid>
+                                <Ellipse Width="18"
+                                         Height="18"
+                                         Fill="#66FFAA00"
+                                         Stroke="#CCFFAA00"
+                                         StrokeThickness="2"
+                                         HorizontalAlignment="Center"
+                                         VerticalAlignment="Center"/>
+                                <Ellipse Width="6"
+                                         Height="6"
+                                         Fill="#FFFFAA00"
+                                         HorizontalAlignment="Center"
+                                         VerticalAlignment="Center"/>
+                            </Grid>
+                        </Button>
+                    </Canvas>
                 </Grid>
             </Border>
 
