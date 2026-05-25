@@ -4,6 +4,7 @@ using System.Windows.Input;
 using System.Windows.Threading;
 using WorldSimulator.App.Infrastructure;
 using WorldSimulator.Core.Cities;
+using WorldSimulator.Core.Resources;
 using WorldSimulator.Core.Time;
 using WorldSimulator.Core.Resources;
 
@@ -13,17 +14,19 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
 {
     private readonly City _city;
     private readonly SimulationClock _clock;
+    private readonly DailyFoodFlowCalculator _dailyFoodFlowCalculator;
     private readonly DispatcherTimer _timer;
     private readonly DailyFoodFlowCalculator _dailyFoodFlowCalculator;
     private DailyFoodFlowResult _dailyFoodFlowResult;
     private DateTimeOffset _lastTickUtc;
+    private DailyFoodFlowResult _dailyFoodFlowPreview;
 
     public MainWindowViewModel()
     {
         _city = CityPresets.CreateGotha();
         _clock = new SimulationClock();
         _dailyFoodFlowCalculator = new DailyFoodFlowCalculator();
-        _dailyFoodFlowResult = CreateInitialDailyFoodFlowResult();
+        _dailyFoodFlowPreview = _dailyFoodFlowCalculator.Calculate(_city, DailyFoodFlowInputs.GothaPlaceholder);
 
         StartCommand = new RelayCommand(Start, () => !_clock.IsRunning);
         PauseCommand = new RelayCommand(Pause, () => _clock.IsRunning);
@@ -96,6 +99,21 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     public decimal Goods => _city.Goods;
 
     public decimal DailyFoodConsumption => _city.CalculateDailyFoodConsumption();
+    public decimal DailyFoodStartingFood => _dailyFoodFlowPreview.StartingFood;
+    public decimal DailyFoodPopulationConsumption => _dailyFoodFlowPreview.PopulationConsumption;
+    public decimal DailyFoodFishingIncome => _dailyFoodFlowPreview.FishingIncome;
+    public decimal DailyFoodHuntingIncome => _dailyFoodFlowPreview.HuntingIncome;
+    public decimal DailyFoodMainlandSupplyIncome => _dailyFoodFlowPreview.MainlandSupplyIncome;
+    public decimal DailyFoodEventDelta => _dailyFoodFlowPreview.EventDelta;
+    public decimal DailyFoodTotalDelta => _dailyFoodFlowPreview.TotalDelta;
+    public decimal DailyFoodEndingFood => _dailyFoodFlowPreview.EndingFood;
+
+    public string DailyFoodPopulationConsumptionDisplay => $"-{DailyFoodPopulationConsumption:0.##}";
+    public string DailyFoodFishingIncomeDisplay => $"{DailyFoodFishingIncome:+0.##;-0.##;0}";
+    public string DailyFoodHuntingIncomeDisplay => $"{DailyFoodHuntingIncome:+0.##;-0.##;0}";
+    public string DailyFoodMainlandSupplyIncomeDisplay => $"{DailyFoodMainlandSupplyIncome:+0.##;-0.##;0}";
+    public string DailyFoodEventDeltaDisplay => $"{DailyFoodEventDelta:+0.##;-0.##;0}";
+    public string DailyFoodTotalDeltaDisplay => $"{DailyFoodTotalDelta:+0.##;-0.##;0}";
 
     public decimal DailyFoodStartingFood => _dailyFoodFlowResult.StartingFood;
 
@@ -213,26 +231,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         }
     }
 
-
-    private DailyFoodFlowResult CreateInitialDailyFoodFlowResult()
-    {
-        return new DailyFoodFlowResult
-        {
-            StartingFood = 0m,
-            PopulationConsumption = 0m,
-            FishingIncome = 0m,
-            HuntingIncome = 0m,
-            MainlandSupplyIncome = 0m,
-            EventDelta = 0m,
-            TotalDelta = 0m,
-            EndingFood = 0m
-        };
-    }
-
     private void RefreshDailyFoodFlowPreview()
     {
-        var inputs = DailyFoodFlowInputs.GothaPlaceholder;
-        _dailyFoodFlowResult = _dailyFoodFlowCalculator.Calculate(_city, inputs);
+        _dailyFoodFlowPreview = _dailyFoodFlowCalculator.Calculate(_city, DailyFoodFlowInputs.GothaPlaceholder);
 
         OnPropertyChanged(nameof(DailyFoodStartingFood));
         OnPropertyChanged(nameof(DailyFoodPopulationConsumption));
@@ -248,21 +249,6 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(DailyFoodMainlandSupplyIncomeDisplay));
         OnPropertyChanged(nameof(DailyFoodEventDeltaDisplay));
         OnPropertyChanged(nameof(DailyFoodTotalDeltaDisplay));
-    }
-
-    private static string FormatSigned(decimal value)
-    {
-        if (value > 0m)
-        {
-            return $"+{value:0.##}";
-        }
-
-        if (value < 0m)
-        {
-            return $"{value:0.##}";
-        }
-
-        return "0";
     }
 
     private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
