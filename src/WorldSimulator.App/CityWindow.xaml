@@ -148,20 +148,8 @@
             <TabItem Header="Журнал">
                 <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                     <StackPanel Margin="8">
-                        <TextBlock Text="Технический журнал" FontWeight="SemiBold" Margin="0,0,0,8"/>
-                        <TextBlock Text="Записей пока нет." Margin="0,0,0,6">
-                            <TextBlock.Style>
-                                <Style TargetType="TextBlock">
-                                    <Setter Property="Visibility" Value="Visible"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding HasTechnicalLogEntries}" Value="True">
-                                            <Setter Property="Visibility" Value="Collapsed"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </TextBlock.Style>
-                        </TextBlock>
-                        <ListBox ItemsSource="{Binding TechnicalLogEntries}"/>
+                        <TextBlock Text="Журнал вынесен в отдельное окно." Margin="0,0,0,10" TextWrapping="Wrap"/>
+                        <Button Content="Открыть журнал" Width="140" Click="OpenLogButton_Click" HorizontalAlignment="Left"/>
                     </StackPanel>
                 </ScrollViewer>
             </TabItem>

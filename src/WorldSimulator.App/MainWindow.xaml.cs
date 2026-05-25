@@ -5,6 +5,7 @@ namespace WorldSimulator.App;
 public partial class MainWindow : System.Windows.Window
 {
     private CityWindow? _cityWindow;
+    private LogWindow? _logWindow;
 
     public MainWindow()
     {
@@ -38,5 +39,33 @@ public partial class MainWindow : System.Windows.Window
 
         _cityWindow.Closed += (_, _) => _cityWindow = null;
         _cityWindow.Show();
+    }
+
+    private void OpenLogButton_Click(object sender, System.Windows.RoutedEventArgs e)
+    {
+        OpenLogWindow();
+    }
+
+    public void OpenLogWindow()
+    {
+        if (_logWindow is not null)
+        {
+            if (_logWindow.WindowState == System.Windows.WindowState.Minimized)
+            {
+                _logWindow.WindowState = System.Windows.WindowState.Normal;
+            }
+
+            _logWindow.Activate();
+            return;
+        }
+
+        _logWindow = new LogWindow
+        {
+            Owner = this,
+            DataContext = DataContext
+        };
+
+        _logWindow.Closed += (_, _) => _logWindow = null;
+        _logWindow.Show();
     }
 }
