@@ -126,7 +126,7 @@
 
                         <WrapPanel>
                             <Button Content="Открыть город" Width="130" Command="{Binding OpenSelectedCityCommand}" Click="OpenCityButton_Click" Margin="0,0,8,0"/>
-                            <Button Content="Открыть журнал" Width="140" Click="OpenLogButton_Click"/>
+                            <Button Content="Открыть летопись города" Width="140" Click="OpenLogButton_Click"/>
                         </WrapPanel>
                     </StackPanel>
                 </Border>

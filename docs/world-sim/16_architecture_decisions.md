@@ -163,3 +163,29 @@ Population in MVP changes once per in-game day as an aggregated delta.
 This keeps the MVP simulation deterministic, readable in logs, and lightweight while still reflecting city decline and growth.
 
 Семантика и приоритеты `CityState` описаны в `docs/world-sim/12_city_states.md`.
+
+## ADR-010: City-scoped journals
+
+### Decision
+
+Пользовательский журнал симуляции должен быть city-scoped: одна летопись на один город.
+
+### Rule
+
+- Каждая запись пользовательской летописи хранит `CityId` и `CityName`.
+- Текущая UI-летопись показывает записи только выбранного города.
+- Глобальные события мира не смешиваются с city-level дневной летописью.
+
+### MVP 0.1 scope
+
+- Реализован только один city-scoped журнал для `CityId = "gotha"`.
+- Отдельная летопись мира — future feature и не реализуется в этом этапе.
+
+### Rationale
+
+Смешивание всех городов в одном пользовательском журнале делает диагностику состояния конкретного города нечитаемой и мешает анализу по дням.
+
+### Consequences
+
+- Multi-city расширение добавляет новые city-scoped летописи без ломки модели журнала.
+- Для мировых событий потребуется отдельная модель и отдельный UI-поток.

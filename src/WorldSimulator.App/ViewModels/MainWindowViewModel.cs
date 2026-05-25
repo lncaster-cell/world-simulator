@@ -23,6 +23,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     private const string SaveFilePath = "data/save/world_save.json";
     private const int MaxTechnicalLogEntries = 500;
     private const int MaxSimulationJournalDays = 500;
+    private const string GothaCityId = "gotha";
+    private const string GothaJournalCityName = "Гота";
     private City _city;
     private readonly SimulationClock _clock;
     private readonly DailyFoodFlowCalculator _dailyFoodFlowCalculator;
@@ -42,6 +44,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     private SimulationJournalEntry? _selectedSimulationJournalEntry;
     private double? _lastMapCalibrationX;
     private double? _lastMapCalibrationY;
+    private string _selectedJournalCityId = GothaCityId;
 
     public MainWindowViewModel()
     {
@@ -284,6 +287,28 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     public string SelectedCityProfile => IsGothaSelected
         ? "Гота — малый пограничный прибрежный портовый город"
         : string.Empty;
+
+    public string SelectedJournalCityId
+    {
+        get => _selectedJournalCityId;
+        private set
+        {
+            if (_selectedJournalCityId == value)
+            {
+                return;
+            }
+
+            _selectedJournalCityId = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(CurrentJournalCityName));
+            OnPropertyChanged(nameof(CityJournalTitle));
+            RefreshSimulationJournalFilter();
+        }
+    }
+
+    public string CurrentJournalCityName => SelectedJournalCityId == GothaCityId ? GothaJournalCityName : SelectedJournalCityId;
+
+    public string CityJournalTitle => $"Летопись города: {CurrentJournalCityName}";
 
     private static string FormatSigned(decimal value)
     {
@@ -827,6 +852,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         var entry = new SimulationJournalEntry
         {
             Day = day,
+            CityId = GothaCityId,
+            CityName = GothaJournalCityName,
             CityState = ToRussianCityState(cityStateEnd),
             PopulationStart = populationStart,
             PopulationEnd = populationEnd,
@@ -853,10 +880,15 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     private void RefreshSimulationJournalFilter()
     {
         FilteredSimulationJournalEntries.Clear();
-        foreach (var entry in SimulationJournalEntries.Where(MatchesCurrentFilter))
+        foreach (var entry in SimulationJournalEntries.Where(entry => IsEntryInSelectedJournalCity(entry) && MatchesCurrentFilter(entry)))
         {
             FilteredSimulationJournalEntries.Add(entry);
         }
+    }
+
+    private bool IsEntryInSelectedJournalCity(SimulationJournalEntry entry)
+    {
+        return string.Equals(entry.CityId, SelectedJournalCityId, StringComparison.OrdinalIgnoreCase);
     }
 
     private bool MatchesCurrentFilter(SimulationJournalEntry entry)
