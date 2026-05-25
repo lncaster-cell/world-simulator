@@ -28,12 +28,3 @@ jobs:
 
       - name: Test
         run: dotnet test WorldSimulator.sln --configuration Release --no-build --verbosity normal
-
-      - name: Publish win-x64 single-file executable
-        run: dotnet publish src/WorldSimulator.App/WorldSimulator.App.csproj --configuration Release --runtime win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true --output publish/win-x64
-
-      - name: Upload win-x64 artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: world-simulator-win-x64
-          path: publish/win-x64/

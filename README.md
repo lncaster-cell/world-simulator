@@ -42,19 +42,20 @@ The app currently opens a placeholder main window only.
 
 ## Как получить exe
 
-После успешного CI можно скачать готовый Windows `.exe` из GitHub Actions:
+Обычный CI (**.NET build and test**) больше **не** создаёт `.exe` автоматически на каждый push/PR и выполняет только проверку кода (restore/build/test).
+
+Чтобы собрать Windows `.exe`, используйте ручной workflow:
 
 1. Откройте вкладку **Actions** в репозитории GitHub.
-2. Выберите последний успешный запуск workflow **.NET build and test**.
-3. В блоке **Artifacts** скачайте архив `world-simulator-win-x64`.
-4. Распакуйте архив `.zip`.
-5. Запустите `WorldSimulator.App.exe`.
+2. В списке workflow выберите **Publish Windows executable**.
+3. Нажмите **Run workflow**.
+4. Выберите ветку `main`.
+5. Подтвердите запуск и дождитесь завершения job.
+6. Откройте завершившийся запуск workflow и в блоке **Artifacts** скачайте `world-simulator-win-x64`.
+7. Распакуйте архив `.zip`.
+8. Запустите `WorldSimulator.App.exe`.
 
-Локально собрать такой же publish-вывод можно командой:
-
-```bash
-dotnet publish src/WorldSimulator.App/WorldSimulator.App.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o publish/win-x64
-```
+Workflow `Publish Windows executable` публикует self-contained `win-x64` single-file сборку и хранит artifact 14 дней.
 
 ## Documentation
 
