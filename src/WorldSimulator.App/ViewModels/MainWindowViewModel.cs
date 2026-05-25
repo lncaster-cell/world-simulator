@@ -6,7 +6,6 @@ using WorldSimulator.App.Infrastructure;
 using WorldSimulator.Core.Cities;
 using WorldSimulator.Core.Resources;
 using WorldSimulator.Core.Time;
-using WorldSimulator.Core.Resources;
 
 namespace WorldSimulator.App.ViewModels;
 
@@ -16,17 +15,15 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     private readonly SimulationClock _clock;
     private readonly DailyFoodFlowCalculator _dailyFoodFlowCalculator;
     private readonly DispatcherTimer _timer;
-    private readonly DailyFoodFlowCalculator _dailyFoodFlowCalculator;
-    private DailyFoodFlowResult _dailyFoodFlowResult;
     private DateTimeOffset _lastTickUtc;
-    private DailyFoodFlowResult _dailyFoodFlowPreview;
+    private DailyFoodFlowResult _dailyFoodFlowResult;
 
     public MainWindowViewModel()
     {
         _city = CityPresets.CreateGotha();
         _clock = new SimulationClock();
         _dailyFoodFlowCalculator = new DailyFoodFlowCalculator();
-        _dailyFoodFlowPreview = _dailyFoodFlowCalculator.Calculate(_city, DailyFoodFlowInputs.GothaPlaceholder);
+        _dailyFoodFlowResult = _dailyFoodFlowCalculator.Calculate(_city, DailyFoodFlowInputs.GothaPlaceholder);
 
         StartCommand = new RelayCommand(Start, () => !_clock.IsRunning);
         PauseCommand = new RelayCommand(Pause, () => _clock.IsRunning);
@@ -99,21 +96,6 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     public decimal Goods => _city.Goods;
 
     public decimal DailyFoodConsumption => _city.CalculateDailyFoodConsumption();
-    public decimal DailyFoodStartingFood => _dailyFoodFlowPreview.StartingFood;
-    public decimal DailyFoodPopulationConsumption => _dailyFoodFlowPreview.PopulationConsumption;
-    public decimal DailyFoodFishingIncome => _dailyFoodFlowPreview.FishingIncome;
-    public decimal DailyFoodHuntingIncome => _dailyFoodFlowPreview.HuntingIncome;
-    public decimal DailyFoodMainlandSupplyIncome => _dailyFoodFlowPreview.MainlandSupplyIncome;
-    public decimal DailyFoodEventDelta => _dailyFoodFlowPreview.EventDelta;
-    public decimal DailyFoodTotalDelta => _dailyFoodFlowPreview.TotalDelta;
-    public decimal DailyFoodEndingFood => _dailyFoodFlowPreview.EndingFood;
-
-    public string DailyFoodPopulationConsumptionDisplay => $"-{DailyFoodPopulationConsumption:0.##}";
-    public string DailyFoodFishingIncomeDisplay => $"{DailyFoodFishingIncome:+0.##;-0.##;0}";
-    public string DailyFoodHuntingIncomeDisplay => $"{DailyFoodHuntingIncome:+0.##;-0.##;0}";
-    public string DailyFoodMainlandSupplyIncomeDisplay => $"{DailyFoodMainlandSupplyIncome:+0.##;-0.##;0}";
-    public string DailyFoodEventDeltaDisplay => $"{DailyFoodEventDelta:+0.##;-0.##;0}";
-    public string DailyFoodTotalDeltaDisplay => $"{DailyFoodTotalDelta:+0.##;-0.##;0}";
 
     public decimal DailyFoodStartingFood => _dailyFoodFlowResult.StartingFood;
 
@@ -155,6 +137,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         ? "Гота — малый пограничный прибрежный портовый город"
         : string.Empty;
 
+    private static string FormatSigned(decimal value)
+    {
+        return value.ToString("+0.##;-0.##;0");
+    }
 
     private void SelectGotha()
     {
@@ -233,7 +219,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
 
     private void RefreshDailyFoodFlowPreview()
     {
-        _dailyFoodFlowPreview = _dailyFoodFlowCalculator.Calculate(_city, DailyFoodFlowInputs.GothaPlaceholder);
+        _dailyFoodFlowResult = _dailyFoodFlowCalculator.Calculate(_city, DailyFoodFlowInputs.GothaPlaceholder);
 
         OnPropertyChanged(nameof(DailyFoodStartingFood));
         OnPropertyChanged(nameof(DailyFoodPopulationConsumption));
