@@ -20,6 +20,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     private readonly City _city;
     private readonly SimulationClock _clock;
     private readonly DailyFoodFlowCalculator _dailyFoodFlowCalculator;
+    private readonly CityStateEvaluator _cityStateEvaluator;
     private readonly CityEventManager _eventManager;
     private readonly CityEventEffectCalculator _eventEffectCalculator;
     private readonly DispatcherTimer _timer;
@@ -31,6 +32,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         _city = CityPresets.CreateGotha();
         _clock = new SimulationClock();
         _dailyFoodFlowCalculator = new DailyFoodFlowCalculator();
+        _cityStateEvaluator = new CityStateEvaluator();
         _eventManager = new CityEventManager();
         _eventEffectCalculator = new CityEventEffectCalculator();
         _dailyFoodFlowResult = _dailyFoodFlowCalculator.Calculate(_city, BuildDailyFoodFlowInputs());
@@ -270,6 +272,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         _dailyFoodFlowCalculator.Apply(_city, result);
 
         ApplyDailyEventEffects(eventEffects, day);
+        RefreshCityState(day);
 
         TechnicalLogEntries.Add(
             $"День {day}: пища {result.StartingFood:0.##} → {result.EndingFood:0.##}; баланс {result.TotalDelta:+0.##;-0.##;0} (потребление -{result.PopulationConsumption:0.##}, рыбалка {result.FishingIncome:+0.##;-0.##;0}, охота {result.HuntingIncome:+0.##;-0.##;0}, поставки {result.MainlandSupplyIncome:+0.##;-0.##;0}, события {result.EventDelta:+0.##;-0.##;0}).");
@@ -337,7 +340,6 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(Hour));
         OnPropertyChanged(nameof(IsRunning));
         OnPropertyChanged(nameof(SimulationState));
-        OnPropertyChanged(nameof(CityStateDisplay));
 
         if (StartCommand is RelayCommand startCommand)
         {
@@ -457,6 +459,47 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(Resources));
     }
 
+
+
+    private void RefreshCityState(int? day = null)
+    {
+        var previousState = _city.CityState;
+        var newState = _cityStateEvaluator.Evaluate(_city);
+
+        if (previousState == newState)
+        {
+            return;
+        }
+
+        _city.CityState = newState;
+
+        if (day.HasValue)
+        {
+            TechnicalLogEntries.Add($"День {day.Value}: состояние города изменилось: {ToRussianCityState(previousState)} → {ToRussianCityState(newState)}.");
+            OnPropertyChanged(nameof(HasTechnicalLogEntries));
+        }
+
+        OnPropertyChanged(nameof(CityState));
+        OnPropertyChanged(nameof(CityStateDisplay));
+    }
+
+    private static string ToRussianCityState(CityState cityState)
+    {
+        return cityState switch
+        {
+            CityState.Stable => "Стабильность",
+            CityState.Prosperous => "Процветание",
+            CityState.Stagnation => "Стагнация",
+            CityState.FoodShortage => "Нехватка пищи",
+            CityState.Famine => "Голод",
+            CityState.EconomicDecline => "Экономический спад",
+            CityState.CrimeProblem => "Проблемы с преступностью",
+            CityState.Unrest => "Беспорядки",
+            CityState.Recovery => "Восстановление",
+            CityState.Collapse => "Коллапс",
+            _ => cityState.ToString()
+        };
+    }
 
     private static string BuildEffectSummary(CityEventEffectsResult effects)
     {
