@@ -6,6 +6,7 @@ using WorldSimulator.App.Infrastructure;
 using WorldSimulator.Core.Cities;
 using WorldSimulator.Core.Resources;
 using WorldSimulator.Core.Time;
+using WorldSimulator.Core.Resources;
 
 namespace WorldSimulator.App.ViewModels;
 
@@ -15,6 +16,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     private readonly SimulationClock _clock;
     private readonly DailyFoodFlowCalculator _dailyFoodFlowCalculator;
     private readonly DispatcherTimer _timer;
+    private readonly DailyFoodFlowCalculator _dailyFoodFlowCalculator;
+    private DailyFoodFlowResult _dailyFoodFlowResult;
     private DateTimeOffset _lastTickUtc;
     private DailyFoodFlowResult _dailyFoodFlowPreview;
 
@@ -111,6 +114,34 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     public string DailyFoodMainlandSupplyIncomeDisplay => $"{DailyFoodMainlandSupplyIncome:+0.##;-0.##;0}";
     public string DailyFoodEventDeltaDisplay => $"{DailyFoodEventDelta:+0.##;-0.##;0}";
     public string DailyFoodTotalDeltaDisplay => $"{DailyFoodTotalDelta:+0.##;-0.##;0}";
+
+    public decimal DailyFoodStartingFood => _dailyFoodFlowResult.StartingFood;
+
+    public decimal DailyFoodPopulationConsumption => _dailyFoodFlowResult.PopulationConsumption;
+
+    public decimal DailyFoodFishingIncome => _dailyFoodFlowResult.FishingIncome;
+
+    public decimal DailyFoodHuntingIncome => _dailyFoodFlowResult.HuntingIncome;
+
+    public decimal DailyFoodMainlandSupplyIncome => _dailyFoodFlowResult.MainlandSupplyIncome;
+
+    public decimal DailyFoodEventDelta => _dailyFoodFlowResult.EventDelta;
+
+    public decimal DailyFoodTotalDelta => _dailyFoodFlowResult.TotalDelta;
+
+    public decimal DailyFoodEndingFood => _dailyFoodFlowResult.EndingFood;
+
+    public string DailyFoodPopulationConsumptionDisplay => $"-{DailyFoodPopulationConsumption:0.##}";
+
+    public string DailyFoodFishingIncomeDisplay => FormatSigned(DailyFoodFishingIncome);
+
+    public string DailyFoodHuntingIncomeDisplay => FormatSigned(DailyFoodHuntingIncome);
+
+    public string DailyFoodMainlandSupplyIncomeDisplay => FormatSigned(DailyFoodMainlandSupplyIncome);
+
+    public string DailyFoodEventDeltaDisplay => FormatSigned(DailyFoodEventDelta);
+
+    public string DailyFoodTotalDeltaDisplay => FormatSigned(DailyFoodTotalDelta);
 
     public bool IsGothaSelected { get; private set; }
 
