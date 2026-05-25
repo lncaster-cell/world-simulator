@@ -14,5 +14,6 @@ public enum CityState
     CrimeProblem,
     Unrest,
     Recovery,
-    Collapse
+    Collapse,
+    Abandoned
 }

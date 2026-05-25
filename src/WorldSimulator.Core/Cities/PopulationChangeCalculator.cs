@@ -7,6 +7,16 @@ public sealed class PopulationChangeCalculator
         ArgumentNullException.ThrowIfNull(city);
 
         var startingPopulation = city.Population;
+
+        if (startingPopulation <= 0)
+        {
+            return new PopulationChangeResult(
+                startingPopulation,
+                0,
+                0,
+                "город опустел");
+        }
+
         var delta = city.CityState switch
         {
             CityState.Collapse => -Math.Max(5, CeilPercent(startingPopulation, 0.05m)),
@@ -63,6 +73,7 @@ public sealed class PopulationChangeCalculator
         return state switch
         {
             CityState.Collapse => "коллапс",
+            CityState.Abandoned => "город опустел",
             CityState.Famine => "голод",
             CityState.FoodShortage => "нехватка пищи",
             CityState.Unrest => "беспорядки",

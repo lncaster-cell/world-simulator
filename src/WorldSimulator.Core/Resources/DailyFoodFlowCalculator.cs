@@ -10,6 +10,22 @@ public sealed class DailyFoodFlowCalculator
         ArgumentNullException.ThrowIfNull(inputs);
 
         var startingFood = city.Food;
+
+        if (city.Population <= 0)
+        {
+            return new DailyFoodFlowResult
+            {
+                StartingFood = startingFood,
+                PopulationConsumption = 0m,
+                FishingIncome = 0m,
+                HuntingIncome = 0m,
+                MainlandSupplyIncome = 0m,
+                EventDelta = 0m,
+                TotalDelta = 0m,
+                EndingFood = startingFood
+            };
+        }
+
         var populationConsumption = city.CalculateDailyFoodConsumption();
         var totalDelta =
             inputs.FishingIncome +

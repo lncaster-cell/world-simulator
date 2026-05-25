@@ -366,7 +366,11 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         RefreshCityState(day);
         ApplyDailyPopulationChange(day);
 
-        if (IsRandomEventGenerationEnabled)
+        var canGenerateRandomEvents = IsRandomEventGenerationEnabled
+            && _city.Population > 0
+            && _city.CityState != WorldSimulator.Core.Cities.CityState.Abandoned;
+
+        if (canGenerateRandomEvents)
         {
             var generationResult = _eventGenerator.TryGenerate(day, _eventManager.ActiveEvents);
             if (generationResult.WasGenerated && generationResult.Event is not null && _eventManager.AddEvent(generationResult.Event))
@@ -714,6 +718,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
             WorldSimulator.Core.Cities.CityState.Unrest => "Беспорядки",
             WorldSimulator.Core.Cities.CityState.Recovery => "Восстановление",
             WorldSimulator.Core.Cities.CityState.Collapse => "Коллапс",
+            WorldSimulator.Core.Cities.CityState.Abandoned => "Опустевший город",
             _ => cityState.ToString()
         };
     }
