@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
@@ -36,6 +37,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
             Interval = TimeSpan.FromMilliseconds(250)
         };
 
+        _clock.DayAdvanced += OnDayAdvanced;
         _timer.Tick += OnTick;
         _timer.Start();
 
@@ -125,6 +127,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
 
     public string DailyFoodTotalDeltaDisplay => FormatSigned(DailyFoodTotalDelta);
 
+    public ObservableCollection<string> TechnicalLogEntries { get; } = new();
+
+    public bool HasTechnicalLogEntries => TechnicalLogEntries.Count > 0;
+
     public bool IsGothaSelected { get; private set; }
 
     public bool IsCityPanelVisible { get; private set; }
@@ -172,6 +178,21 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     {
         _clock.Pause();
         RefreshClockProperties();
+    }
+
+
+    private void OnDayAdvanced(int day)
+    {
+        var result = _dailyFoodFlowCalculator.Calculate(_city, DailyFoodFlowInputs.GothaPlaceholder);
+        _dailyFoodFlowCalculator.Apply(_city, result);
+
+        TechnicalLogEntries.Add(
+            $"День {day}: пища {result.StartingFood:0.##} → {result.EndingFood:0.##}; баланс {result.TotalDelta:+0.##;-0.##;0} (потребление -{result.PopulationConsumption:0.##}, рыбалка {result.FishingIncome:+0.##;-0.##;0}, охота {result.HuntingIncome:+0.##;-0.##;0}, поставки {result.MainlandSupplyIncome:+0.##;-0.##;0}, события {result.EventDelta:+0.##;-0.##;0}).");
+
+        OnPropertyChanged(nameof(Food));
+        OnPropertyChanged(nameof(HasTechnicalLogEntries));
+
+        RefreshDailyFoodFlowPreview();
     }
 
     private void OnTick(object? sender, EventArgs e)
