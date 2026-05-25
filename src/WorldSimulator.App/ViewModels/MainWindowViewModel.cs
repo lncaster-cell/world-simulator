@@ -22,6 +22,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
 
         StartCommand = new RelayCommand(Start, () => !_clock.IsRunning);
         PauseCommand = new RelayCommand(Pause, () => _clock.IsRunning);
+        SelectGothaCommand = new RelayCommand(SelectGotha);
+        OpenSelectedCityCommand = new RelayCommand(OpenSelectedCity, () => IsGothaSelected);
 
         _lastTickUtc = DateTimeOffset.UtcNow;
         _timer = new DispatcherTimer
@@ -38,6 +40,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     public ICommand StartCommand { get; }
 
     public ICommand PauseCommand { get; }
+
+    public ICommand SelectGothaCommand { get; }
+
+    public ICommand OpenSelectedCityCommand { get; }
 
     public int Day => _clock.Day;
 
@@ -66,6 +72,33 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     public decimal Resources => _city.Resources;
 
     public decimal Goods => _city.Goods;
+
+    public bool IsGothaSelected { get; private set; }
+
+    public string SelectedCityName => IsGothaSelected ? _city.Name : string.Empty;
+
+    public string SelectedCityProfile => IsGothaSelected
+        ? "Small border coastal port city"
+        : string.Empty;
+
+
+    private void SelectGotha()
+    {
+        IsGothaSelected = true;
+        RefreshSelectedCityProperties();
+    }
+
+    private void OpenSelectedCity()
+    {
+        // MVP behavior: city overview is already present in the current window.
+        // This command keeps flow explicit and can later focus/switch to a dedicated city panel.
+        if (!IsGothaSelected)
+        {
+            return;
+        }
+
+        OnPropertyChanged(nameof(CityName));
+    }
 
     private void Start()
     {
@@ -106,6 +139,18 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         if (PauseCommand is RelayCommand pauseCommand)
         {
             pauseCommand.RaiseCanExecuteChanged();
+        }
+    }
+
+    private void RefreshSelectedCityProperties()
+    {
+        OnPropertyChanged(nameof(IsGothaSelected));
+        OnPropertyChanged(nameof(SelectedCityName));
+        OnPropertyChanged(nameof(SelectedCityProfile));
+
+        if (OpenSelectedCityCommand is RelayCommand openSelectedCityCommand)
+        {
+            openSelectedCityCommand.RaiseCanExecuteChanged();
         }
     }
 
