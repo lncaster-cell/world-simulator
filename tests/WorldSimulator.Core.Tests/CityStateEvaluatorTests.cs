@@ -146,7 +146,7 @@ public sealed class CityStateEvaluatorTests
     private static City CreateBaselineCity()
     {
         var city = CityPresets.CreateGotha();
-        city.Food = 200m;
+        city.Food = city.CalculateDailyFoodConsumption() * 4m;
         city.Wealth = 200m;
         city.Mood = 35;
         city.Security = 35;
