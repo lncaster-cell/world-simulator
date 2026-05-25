@@ -32,6 +32,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     private readonly DispatcherTimer _timer;
     private DateTimeOffset _lastTickUtc;
     private DailyFoodFlowResult _dailyFoodFlowResult;
+    private bool _isRandomEventGenerationEnabled = true;
 
     public MainWindowViewModel()
     {
@@ -106,6 +107,29 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
 
     public string SimulationState => IsRunning ? "Запущено" : "Пауза";
     public string CurrentSimulationSpeedDisplay => $"Текущая скорость: {GetSpeedDisplay(_clock.RealTimePerGameHour)}";
+
+    public bool IsRandomEventGenerationEnabled
+    {
+        get => _isRandomEventGenerationEnabled;
+        private set
+        {
+            if (_isRandomEventGenerationEnabled == value)
+            {
+                return;
+            }
+
+            _isRandomEventGenerationEnabled = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(RandomEventGenerationStatusDisplay));
+            OnPropertyChanged(nameof(RandomEventGenerationToggleButtonText));
+        }
+    }
+
+    public string RandomEventGenerationStatusDisplay => IsRandomEventGenerationEnabled ? "включены" : "выключены";
+
+    public string RandomEventGenerationToggleButtonText => IsRandomEventGenerationEnabled
+        ? "Выключить случайные события"
+        : "Включить случайные события";
 
     public string CityName => _city.Name;
 
