@@ -223,11 +223,29 @@
 
                         <TabItem Header="Отладка">
                             <StackPanel Margin="8">
-                                <Border BorderBrush="DarkOrange" BorderThickness="1" Padding="8" CornerRadius="4" Background="#FFFFF7E6">
-                                    <TextBlock Text="Инструменты отладки пока не реализованы и предназначены только для разработки." 
-                                               TextWrapping="Wrap"
-                                               Foreground="DarkRed"
-                                               FontWeight="SemiBold"/>
+                                <Border BorderBrush="DarkOrange" BorderThickness="1" Padding="12" CornerRadius="4" Background="#FFFFF7E6">
+                                    <StackPanel>
+                                        <TextBlock Text="Скорость симуляции" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                                        <TextBlock Text="Инструменты отладки предназначены только для разработки."
+                                                   TextWrapping="Wrap"
+                                                   Foreground="DarkRed"
+                                                   Margin="0,0,0,10"/>
+                                        <TextBlock Text="{Binding CurrentSimulationSpeedDisplay}" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                                        <WrapPanel>
+                                            <Button Content="Нормальная"
+                                                    Command="{Binding SetNormalSpeedCommand}"
+                                                    Width="110"
+                                                    Margin="0,0,8,8"/>
+                                            <Button Content="Быстрая"
+                                                    Command="{Binding SetFastSpeedCommand}"
+                                                    Width="110"
+                                                    Margin="0,0,8,8"/>
+                                            <Button Content="Очень быстро"
+                                                    Command="{Binding SetVeryFastSpeedCommand}"
+                                                    Width="120"
+                                                    Margin="0,0,8,8"/>
+                                        </WrapPanel>
+                                    </StackPanel>
                                 </Border>
                             </StackPanel>
                         </TabItem>

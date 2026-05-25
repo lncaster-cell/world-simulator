@@ -12,6 +12,10 @@ namespace WorldSimulator.App.ViewModels;
 
 public sealed class MainWindowViewModel : INotifyPropertyChanged
 {
+    private static readonly TimeSpan NormalSimulationSpeed = TimeSpan.FromMinutes(5);
+    private static readonly TimeSpan FastSimulationSpeed = TimeSpan.FromSeconds(10);
+    private static readonly TimeSpan VeryFastSimulationSpeed = TimeSpan.FromSeconds(1);
+
     private readonly City _city;
     private readonly SimulationClock _clock;
     private readonly DailyFoodFlowCalculator _dailyFoodFlowCalculator;
@@ -28,6 +32,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
 
         StartCommand = new RelayCommand(Start, () => !_clock.IsRunning);
         PauseCommand = new RelayCommand(Pause, () => _clock.IsRunning);
+        SetNormalSpeedCommand = new RelayCommand(SetNormalSpeed);
+        SetFastSpeedCommand = new RelayCommand(SetFastSpeed);
+        SetVeryFastSpeedCommand = new RelayCommand(SetVeryFastSpeed);
         SelectGothaCommand = new RelayCommand(SelectGotha);
         OpenSelectedCityCommand = new RelayCommand(OpenSelectedCity, () => IsGothaSelected);
 
@@ -49,6 +56,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     public ICommand StartCommand { get; }
 
     public ICommand PauseCommand { get; }
+    public ICommand SetNormalSpeedCommand { get; }
+    public ICommand SetFastSpeedCommand { get; }
+    public ICommand SetVeryFastSpeedCommand { get; }
 
     public ICommand SelectGothaCommand { get; }
 
@@ -61,6 +71,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     public bool IsRunning => _clock.IsRunning;
 
     public string SimulationState => IsRunning ? "Запущено" : "Пауза";
+    public string CurrentSimulationSpeedDisplay => $"Текущая скорость: {GetSpeedDisplay(_clock.RealTimePerGameHour)}";
 
     public string CityName => _city.Name;
 
@@ -178,6 +189,45 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     {
         _clock.Pause();
         RefreshClockProperties();
+    }
+
+    private void SetNormalSpeed() => SetSimulationSpeed(NormalSimulationSpeed);
+
+    private void SetFastSpeed() => SetSimulationSpeed(FastSimulationSpeed);
+
+    private void SetVeryFastSpeed() => SetSimulationSpeed(VeryFastSimulationSpeed);
+
+    private void SetSimulationSpeed(TimeSpan realTimePerGameHour)
+    {
+        if (_clock.RealTimePerGameHour == realTimePerGameHour)
+        {
+            return;
+        }
+
+        _clock.SetSimulationSpeed(realTimePerGameHour);
+        TechnicalLogEntries.Add($"Скорость симуляции изменена: {GetSpeedDisplay(realTimePerGameHour)}.");
+        OnPropertyChanged(nameof(CurrentSimulationSpeedDisplay));
+        OnPropertyChanged(nameof(HasTechnicalLogEntries));
+    }
+
+    private static string GetSpeedDisplay(TimeSpan realTimePerGameHour)
+    {
+        if (realTimePerGameHour == NormalSimulationSpeed)
+        {
+            return "5 минут = 1 игровой час";
+        }
+
+        if (realTimePerGameHour == FastSimulationSpeed)
+        {
+            return "10 секунд = 1 игровой час";
+        }
+
+        if (realTimePerGameHour == VeryFastSimulationSpeed)
+        {
+            return "1 секунда = 1 игровой час";
+        }
+
+        return $"{realTimePerGameHour.TotalSeconds:0.##} секунд = 1 игровой час";
     }
 
 

@@ -38,6 +38,16 @@ public sealed class SimulationClock
 
     public void Pause() => IsRunning = false;
 
+    public void SetSimulationSpeed(TimeSpan realTimePerGameHour)
+    {
+        if (realTimePerGameHour <= TimeSpan.Zero)
+        {
+            throw new ArgumentOutOfRangeException(nameof(realTimePerGameHour), "RealTimePerGameHour must be greater than zero.");
+        }
+
+        _settings.RealTimePerGameHour = realTimePerGameHour;
+    }
+
     public void Advance(TimeSpan elapsedRealTime)
     {
         if (elapsedRealTime < TimeSpan.Zero)
