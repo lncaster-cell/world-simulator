@@ -1,0 +1,33 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorldSimulator.App", "src\WorldSimulator.App\WorldSimulator.App.csproj", "{A1B99391-760F-42FA-876B-349C4606C1D5}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorldSimulator.Core", "src\WorldSimulator.Core\WorldSimulator.Core.csproj", "{DBBBA85E-299C-40F4-8F0D-46BE2FF6311C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorldSimulator.Persistence", "src\WorldSimulator.Persistence\WorldSimulator.Persistence.csproj", "{B9D6CE07-3C68-4C3A-AEBB-80BFC89B8B97}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{A1B99391-760F-42FA-876B-349C4606C1D5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1B99391-760F-42FA-876B-349C4606C1D5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A1B99391-760F-42FA-876B-349C4606C1D5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A1B99391-760F-42FA-876B-349C4606C1D5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DBBBA85E-299C-40F4-8F0D-46BE2FF6311C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DBBBA85E-299C-40F4-8F0D-46BE2FF6311C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DBBBA85E-299C-40F4-8F0D-46BE2FF6311C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DBBBA85E-299C-40F4-8F0D-46BE2FF6311C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B9D6CE07-3C68-4C3A-AEBB-80BFC89B8B97}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B9D6CE07-3C68-4C3A-AEBB-80BFC89B8B97}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B9D6CE07-3C68-4C3A-AEBB-80BFC89B8B97}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B9D6CE07-3C68-4C3A-AEBB-80BFC89B8B97}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
