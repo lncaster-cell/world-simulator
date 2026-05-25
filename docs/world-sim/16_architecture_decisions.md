@@ -145,3 +145,19 @@ The simulator is expected to run for long sessions. Unlimited growth of logs/his
 - Core owns completed-events lifecycle and trimming policy.
 - App owns technical-log UI retention.
 - Future history-like systems must define explicit retention policies.
+
+## ADR-009: Daily aggregated population change for MVP
+
+### Decision
+
+Population in MVP changes once per in-game day as an aggregated delta.
+
+### Rule
+
+- No separate birth/death entities are tracked.
+- No family, age, or migration simulation is added.
+- The daily population delta depends on `CityState` and base city conditions (food, mood, security).
+
+### Rationale
+
+This keeps the MVP simulation deterministic, readable in logs, and lightweight while still reflecting city decline and growth.

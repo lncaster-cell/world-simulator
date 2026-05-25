@@ -25,6 +25,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     private readonly SimulationClock _clock;
     private readonly DailyFoodFlowCalculator _dailyFoodFlowCalculator;
     private readonly CityStateEvaluator _cityStateEvaluator;
+    private readonly PopulationChangeCalculator _populationChangeCalculator;
     private readonly CityEventManager _eventManager;
     private readonly CityEventEffectCalculator _eventEffectCalculator;
     private readonly CityEventGenerator _eventGenerator;
@@ -44,6 +45,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         _clock = new SimulationClock();
         _dailyFoodFlowCalculator = new DailyFoodFlowCalculator();
         _cityStateEvaluator = new CityStateEvaluator();
+        _populationChangeCalculator = new PopulationChangeCalculator();
         _eventManager = new CityEventManager();
         _eventEffectCalculator = new CityEventEffectCalculator();
         _eventGenerator = new CityEventGenerator(new SystemRandomProvider());
@@ -362,6 +364,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         }
 
         RefreshCityState(day);
+        ApplyDailyPopulationChange(day);
 
         if (IsRandomEventGenerationEnabled)
         {
@@ -380,6 +383,26 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         RefreshEventEntries();
         RefreshDailyFoodFlowPreview();
         RefreshSimulationSummary();
+    }
+
+
+    private void ApplyDailyPopulationChange(int day)
+    {
+        var result = _populationChangeCalculator.Calculate(_city);
+
+        if (result.PopulationDelta == 0)
+        {
+            return;
+        }
+
+        _city.Population = result.EndingPopulation;
+
+        AddTechnicalLogEntry($"День {day}: население изменилось {result.StartingPopulation} → {result.EndingPopulation} ({result.PopulationDelta:+0;-0;0}), причина: {result.Reason}.");
+        SetLastImportantChange($"День {day}: население изменилось {result.StartingPopulation} → {result.EndingPopulation} ({result.PopulationDelta:+0;-0;0}), причина: {result.Reason}.");
+
+        OnPropertyChanged(nameof(Population));
+        OnPropertyChanged(nameof(DailyFoodConsumption));
+        RefreshDailyFoodFlowPreview();
     }
 
     private void TryStartEvent(Func<int, CityEvent> factory)
