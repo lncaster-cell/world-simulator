@@ -675,6 +675,17 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
 
         _city.CityState = newState;
 
+        if (newState == WorldSimulator.Core.Cities.CityState.Abandoned)
+        {
+            _city.Mood = 0;
+            _city.Security = 0;
+            _city.Crime = 0;
+
+            OnPropertyChanged(nameof(Mood));
+            OnPropertyChanged(nameof(Security));
+            OnPropertyChanged(nameof(Crime));
+        }
+
         if (day.HasValue)
         {
             AddTechnicalLogEntry($"День {day.Value}: состояние города изменилось: {ToRussianCityState(previousState)} → {ToRussianCityState(newState)}.");
