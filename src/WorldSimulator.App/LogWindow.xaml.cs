@@ -1,10 +1,13 @@
 using System.Collections.Specialized;
+using System.Windows.Threading;
 using WorldSimulator.App.ViewModels;
 
 namespace WorldSimulator.App;
 
 public partial class LogWindow : System.Windows.Window
 {
+    private bool _pendingScrollToLatest;
+
     public LogWindow()
     {
         InitializeComponent();
@@ -21,16 +24,33 @@ public partial class LogWindow : System.Windows.Window
         if (e.NewValue is MainWindowViewModel newViewModel)
         {
             newViewModel.TechnicalLogEntries.CollectionChanged += TechnicalLogEntries_CollectionChanged;
-            ScrollToLatestLogEntry();
+            ScheduleScrollToLatestLogEntry();
         }
     }
 
     private void TechnicalLogEntries_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
-        if (e.Action == NotifyCollectionChangedAction.Add)
+        if (e.Action is NotifyCollectionChangedAction.Add or NotifyCollectionChangedAction.Reset)
         {
-            ScrollToLatestLogEntry();
+            ScheduleScrollToLatestLogEntry();
         }
+    }
+
+    private void ScheduleScrollToLatestLogEntry()
+    {
+        if (_pendingScrollToLatest)
+        {
+            return;
+        }
+
+        _pendingScrollToLatest = true;
+        Dispatcher.BeginInvoke(
+            DispatcherPriority.Background,
+            new System.Action(() =>
+            {
+                _pendingScrollToLatest = false;
+                ScrollToLatestLogEntry();
+            }));
     }
 
     private void ScrollToLatestLogEntry()
@@ -40,7 +60,16 @@ public partial class LogWindow : System.Windows.Window
             return;
         }
 
-        TechnicalLogList.ScrollIntoView(TechnicalLogList.Items[^1]);
+        var lastItem = TechnicalLogList.Items[^1];
+
+        try
+        {
+            TechnicalLogList.ScrollIntoView(lastItem);
+        }
+        catch
+        {
+            // Ignore auto-scroll failures to avoid crashing the application.
+        }
     }
 
     protected override void OnClosed(System.EventArgs e)
