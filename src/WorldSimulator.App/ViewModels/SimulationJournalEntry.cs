@@ -3,6 +3,8 @@ namespace WorldSimulator.App.ViewModels;
 public sealed class SimulationJournalEntry
 {
     public int Day { get; init; }
+    public string CityId { get; init; } = "";
+    public string CityName { get; init; } = "";
     public string CityState { get; init; } = "";
     public int PopulationStart { get; init; }
     public int PopulationEnd { get; init; }
