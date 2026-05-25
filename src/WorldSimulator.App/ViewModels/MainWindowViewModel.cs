@@ -59,16 +59,16 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
 
     public string CityStateDisplay => _city.CityState switch
     {
-        CityState.Stable => "Стабильность",
-        CityState.Prosperous => "Процветание",
-        CityState.Stagnation => "Стагнация",
-        CityState.FoodShortage => "Нехватка пищи",
-        CityState.Famine => "Голод",
-        CityState.EconomicDecline => "Экономический спад",
-        CityState.CrimeProblem => "Проблемы с преступностью",
-        CityState.Unrest => "Беспорядки",
-        CityState.Recovery => "Восстановление",
-        CityState.Collapse => "Коллапс",
+        WorldSimulator.Core.Cities.CityState.Stable => "Стабильность",
+        WorldSimulator.Core.Cities.CityState.Prosperous => "Процветание",
+        WorldSimulator.Core.Cities.CityState.Stagnation => "Стагнация",
+        WorldSimulator.Core.Cities.CityState.FoodShortage => "Нехватка пищи",
+        WorldSimulator.Core.Cities.CityState.Famine => "Голод",
+        WorldSimulator.Core.Cities.CityState.EconomicDecline => "Экономический спад",
+        WorldSimulator.Core.Cities.CityState.CrimeProblem => "Проблемы с преступностью",
+        WorldSimulator.Core.Cities.CityState.Unrest => "Беспорядки",
+        WorldSimulator.Core.Cities.CityState.Recovery => "Восстановление",
+        WorldSimulator.Core.Cities.CityState.Collapse => "Коллапс",
         _ => _city.CityState.ToString()
     };
 
