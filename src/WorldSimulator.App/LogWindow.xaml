@@ -10,24 +10,106 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="2*"/>
+            <ColumnDefinition Width="12"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
 
         <TextBlock Grid.Row="0"
-                   Text="Технический журнал"
+                   Grid.ColumnSpan="3"
+                   Text="Журнал симуляции"
                    FontWeight="SemiBold"
                    FontSize="18"
                    Margin="0,0,0,8"/>
 
         <TextBlock Grid.Row="1"
-                   Text="Показываются последние 500 записей."
+                   Grid.ColumnSpan="3"
+                   Text="Летопись мира и города Гота"
                    Foreground="DimGray"
                    Margin="0,0,0,10"/>
 
-        <ListBox x:Name="TechnicalLogList"
-                 Grid.Row="2"
-                 ItemsSource="{Binding TechnicalLogEntries}"
-                 ScrollViewer.VerticalScrollBarVisibility="Auto"
-                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"/>
+        <ComboBox Grid.Row="2"
+                  Grid.ColumnSpan="3"
+                  Width="220"
+                  Margin="0,0,0,10"
+                  DisplayMemberPath="Title"
+                  ItemsSource="{Binding SimulationJournalFilters}"
+                  SelectedItem="{Binding SelectedSimulationJournalFilter}"/>
+
+        <DataGrid x:Name="SimulationJournalGrid"
+                  Grid.Row="3"
+                  Grid.Column="0"
+                  ItemsSource="{Binding FilteredSimulationJournalEntries}"
+                  SelectedItem="{Binding SelectedSimulationJournalEntry, Mode=TwoWay}"
+                  AutoGenerateColumns="False"
+                  IsReadOnly="True"
+                  CanUserAddRows="False">
+            <DataGrid.RowStyle>
+                <Style TargetType="DataGridRow">
+                    <Setter Property="ToolTip" Value="{Binding DayTooltip}"/>
+                </Style>
+            </DataGrid.RowStyle>
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="День" Binding="{Binding Day}" Width="60"/>
+                <DataGridTextColumn Header="Состояние" Binding="{Binding CityState}" Width="120"/>
+                <DataGridTextColumn Header="Население" Binding="{Binding PopulationDisplay}" Width="110"/>
+                <DataGridTemplateColumn Header="Пища" Width="80">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding FoodDeltaDisplay}" ToolTip="{Binding FoodTooltip}"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTemplateColumn Header="События" Width="80">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding ActiveEventsCount}" ToolTip="{Binding EventsTooltip}"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTextColumn Header="Кратко" Binding="{Binding Summary}" Width="*"/>
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <Border Grid.Row="3" Grid.Column="2" BorderThickness="1" BorderBrush="#DDD" Padding="10">
+            <ContentControl Content="{Binding SelectedSimulationJournalEntry}">
+                <ContentControl.Style>
+                    <Style TargetType="ContentControl">
+                        <Setter Property="ContentTemplate">
+                            <Setter.Value>
+                                <DataTemplate>
+                                    <StackPanel>
+                                        <TextBlock FontSize="16" FontWeight="SemiBold" Text="{Binding Day, StringFormat=День {0}}"/>
+                                        <TextBlock Margin="0,8,0,0" FontWeight="SemiBold" Text="Итог:"/>
+                                        <TextBlock Text="{Binding Summary}" TextWrapping="Wrap"/>
+                                        <TextBlock Margin="0,8,0,0" FontWeight="SemiBold" Text="Пища:"/>
+                                        <TextBlock Text="{Binding FoodStart, StringFormat={}{0:0.##}}"/>
+                                        <TextBlock Text="{Binding FoodEnd, StringFormat=→ {0:0.##}}"/>
+                                        <TextBlock Text="{Binding FoodDeltaDisplay, StringFormat=Баланс: {0}}"/>
+                                        <TextBlock Margin="0,8,0,0" FontWeight="SemiBold" Text="Расчёт:"/>
+                                        <TextBlock Text="{Binding FoodCalculation}" TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </Setter.Value>
+                        </Setter>
+                        <Style.Triggers>
+                            <Trigger Property="Content" Value="{x:Null}">
+                                <Setter Property="ContentTemplate">
+                                    <Setter.Value>
+                                        <DataTemplate>
+                                            <TextBlock Text="Выберите день в журнале." Foreground="DimGray"/>
+                                        </DataTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </ContentControl.Style>
+            </ContentControl>
+        </Border>
     </Grid>
 </Window>

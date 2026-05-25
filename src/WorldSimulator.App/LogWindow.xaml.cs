@@ -18,17 +18,17 @@ public partial class LogWindow : System.Windows.Window
     {
         if (e.OldValue is MainWindowViewModel oldViewModel)
         {
-            oldViewModel.TechnicalLogEntries.CollectionChanged -= TechnicalLogEntries_CollectionChanged;
+            oldViewModel.FilteredSimulationJournalEntries.CollectionChanged -= JournalEntries_CollectionChanged;
         }
 
         if (e.NewValue is MainWindowViewModel newViewModel)
         {
-            newViewModel.TechnicalLogEntries.CollectionChanged += TechnicalLogEntries_CollectionChanged;
+            newViewModel.FilteredSimulationJournalEntries.CollectionChanged += JournalEntries_CollectionChanged;
             ScheduleScrollToLatestLogEntry();
         }
     }
 
-    private void TechnicalLogEntries_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    private void JournalEntries_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
         if (e.Action is NotifyCollectionChangedAction.Add or NotifyCollectionChangedAction.Reset)
         {
@@ -55,16 +55,16 @@ public partial class LogWindow : System.Windows.Window
 
     private void ScrollToLatestLogEntry()
     {
-        if (TechnicalLogList.Items.Count == 0)
+        if (SimulationJournalGrid.Items.Count == 0)
         {
             return;
         }
 
-        var lastItem = TechnicalLogList.Items[^1];
+        var lastItem = SimulationJournalGrid.Items[^1];
 
         try
         {
-            TechnicalLogList.ScrollIntoView(lastItem);
+            SimulationJournalGrid.ScrollIntoView(lastItem);
         }
         catch
         {
@@ -76,7 +76,7 @@ public partial class LogWindow : System.Windows.Window
     {
         if (DataContext is MainWindowViewModel viewModel)
         {
-            viewModel.TechnicalLogEntries.CollectionChanged -= TechnicalLogEntries_CollectionChanged;
+            viewModel.FilteredSimulationJournalEntries.CollectionChanged -= JournalEntries_CollectionChanged;
         }
 
         base.OnClosed(e);
