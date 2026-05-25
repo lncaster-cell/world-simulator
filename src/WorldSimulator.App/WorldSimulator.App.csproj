@@ -7,6 +7,9 @@
     <UseWPF>true</UseWPF>
   </PropertyGroup>
   <ItemGroup>
+    <Resource Include="Assets\Maps\world_map.png" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\WorldSimulator.Core\WorldSimulator.Core.csproj" />
     <ProjectReference Include="..\WorldSimulator.Persistence\WorldSimulator.Persistence.csproj" />
   </ItemGroup>

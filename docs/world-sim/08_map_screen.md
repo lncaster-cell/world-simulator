@@ -20,3 +20,9 @@ No simulation of:
 - caravans;
 - influence zones;
 - states/factions layer.
+
+## Map asset (MVP)
+
+- MVP map asset is stored at `src/WorldSimulator.App/Assets/Maps/world_map.png`.
+- At this stage this file is only a static asset (no UI binding yet).
+- Map rendering, clickability, and interactions are planned for Task 06.
