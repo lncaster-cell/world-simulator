@@ -1,4 +1,5 @@
 using WorldSimulator.Core.Events;
+using Xunit;
 
 namespace WorldSimulator.Core.Tests;
 
