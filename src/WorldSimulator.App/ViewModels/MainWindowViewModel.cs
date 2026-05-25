@@ -27,10 +27,12 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     private readonly CityStateEvaluator _cityStateEvaluator;
     private readonly CityEventManager _eventManager;
     private readonly CityEventEffectCalculator _eventEffectCalculator;
+    private readonly CityEventGenerator _eventGenerator;
     private readonly JsonWorldSaveService _saveService;
     private readonly DispatcherTimer _timer;
     private DateTimeOffset _lastTickUtc;
     private DailyFoodFlowResult _dailyFoodFlowResult;
+    private bool _isRandomEventGenerationEnabled = true;
 
     public MainWindowViewModel()
     {
@@ -40,6 +42,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         _cityStateEvaluator = new CityStateEvaluator();
         _eventManager = new CityEventManager();
         _eventEffectCalculator = new CityEventEffectCalculator();
+        _eventGenerator = new CityEventGenerator(new SystemRandomProvider());
         _saveService = new JsonWorldSaveService();
         _dailyFoodFlowResult = _dailyFoodFlowCalculator.Calculate(_city, BuildDailyFoodFlowInputs());
 
@@ -55,6 +58,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         TriggerRatInfestationEventCommand = new RelayCommand(() => TryStartEvent(CityEventPresets.CreateRatInfestation));
         TriggerArtistsPerformanceEventCommand = new RelayCommand(() => TryStartEvent(CityEventPresets.CreateArtistsPerformance));
         TriggerPortStormEventCommand = new RelayCommand(() => TryStartEvent(CityEventPresets.CreatePortStorm));
+        ToggleRandomEventGenerationCommand = new RelayCommand(ToggleRandomEventGeneration);
         SaveCommand = new RelayCommand(SaveState);
         LoadCommand = new RelayCommand(LoadState);
 
@@ -91,6 +95,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     public ICommand TriggerRatInfestationEventCommand { get; }
     public ICommand TriggerArtistsPerformanceEventCommand { get; }
     public ICommand TriggerPortStormEventCommand { get; }
+    public ICommand ToggleRandomEventGenerationCommand { get; }
     public ICommand SaveCommand { get; }
     public ICommand LoadCommand { get; }
 
@@ -102,6 +107,29 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
 
     public string SimulationState => IsRunning ? "Запущено" : "Пауза";
     public string CurrentSimulationSpeedDisplay => $"Текущая скорость: {GetSpeedDisplay(_clock.RealTimePerGameHour)}";
+
+    public bool IsRandomEventGenerationEnabled
+    {
+        get => _isRandomEventGenerationEnabled;
+        private set
+        {
+            if (_isRandomEventGenerationEnabled == value)
+            {
+                return;
+            }
+
+            _isRandomEventGenerationEnabled = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(RandomEventGenerationStatusDisplay));
+            OnPropertyChanged(nameof(RandomEventGenerationToggleButtonText));
+        }
+    }
+
+    public string RandomEventGenerationStatusDisplay => IsRandomEventGenerationEnabled ? "включены" : "выключены";
+
+    public string RandomEventGenerationToggleButtonText => IsRandomEventGenerationEnabled
+        ? "Выключить случайные события"
+        : "Включить случайные события";
 
     public string CityName => _city.Name;
 
@@ -256,19 +284,29 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
 
     private void OnDayAdvanced(int day)
     {
-        var completedEvents = _eventManager.AdvanceDay();
-        foreach (var completedEvent in completedEvents)
-        {
-            AddTechnicalLogEntry($"День {day}: завершено событие “{completedEvent.Name}”.");
-        }
-
         var eventEffects = _eventEffectCalculator.Calculate(_city, _eventManager.ActiveEvents);
 
         var result = _dailyFoodFlowCalculator.Calculate(_city, BuildDailyFoodFlowInputs(eventEffects));
         _dailyFoodFlowCalculator.Apply(_city, result);
 
         ApplyDailyEventEffects(eventEffects, day);
+
+        var completedEvents = _eventManager.AdvanceDay();
+        foreach (var completedEvent in completedEvents)
+        {
+            AddTechnicalLogEntry($"День {day}: завершено событие “{completedEvent.Name}”.");
+        }
+
         RefreshCityState(day);
+
+        if (IsRandomEventGenerationEnabled)
+        {
+            var generationResult = _eventGenerator.TryGenerate(day, _eventManager.ActiveEvents);
+            if (generationResult.WasGenerated && generationResult.Event is not null && _eventManager.AddEvent(generationResult.Event))
+            {
+                AddTechnicalLogEntry($"День {day}: случайное событие “{generationResult.Event.Name}” началось в городе.");
+            }
+        }
 
         AddTechnicalLogEntry(
             $"День {day}: пища {result.StartingFood:0.##} → {result.EndingFood:0.##}; баланс {result.TotalDelta:+0.##;-0.##;0} (потребление -{result.PopulationConsumption:0.##}, рыбалка {result.FishingIncome:+0.##;-0.##;0}, охота {result.HuntingIncome:+0.##;-0.##;0}, поставки {result.MainlandSupplyIncome:+0.##;-0.##;0}, события {result.EventDelta:+0.##;-0.##;0}).");
@@ -276,7 +314,6 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(Food));
         RefreshEventEntries();
         RefreshDailyFoodFlowPreview();
-        RefreshEventEntries();
     }
 
     private void TryStartEvent(Func<int, CityEvent> factory)
@@ -294,6 +331,15 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         }
 
         RefreshEventEntries();
+    }
+
+
+    private void ToggleRandomEventGeneration()
+    {
+        IsRandomEventGenerationEnabled = !IsRandomEventGenerationEnabled;
+        AddTechnicalLogEntry(IsRandomEventGenerationEnabled
+            ? "Случайная генерация событий включена."
+            : "Случайная генерация событий выключена.");
     }
 
     private void RefreshEventEntries()

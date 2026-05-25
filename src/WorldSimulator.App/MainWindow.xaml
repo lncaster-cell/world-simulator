@@ -283,6 +283,16 @@
                                             <Button Content="Запустить шторм" Command="{Binding TriggerPortStormEventCommand}" Margin="0,0,8,8"/>
                                         </WrapPanel>
                                         <Separator Margin="0,4,0,10"/>
+                                        <TextBlock Text="Случайные события" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                                        <TextBlock Text="Статус:" FontWeight="SemiBold"/>
+                                        <TextBlock Text="{Binding RandomEventGenerationStatusDisplay}" Margin="0,0,0,6"/>
+                                        <TextBlock Text="Шанс: 20% в день." Margin="0,0,0,4"/>
+                                        <TextBlock Text="Максимум активных случайных событий: 3." Margin="0,0,0,10"/>
+                                        <Button Content="{Binding RandomEventGenerationToggleButtonText}"
+                                                Command="{Binding ToggleRandomEventGenerationCommand}"
+                                                Width="250"
+                                                Margin="0,0,0,8"/>
+                                        <Separator Margin="0,4,0,10"/>
                                         <TextBlock Text="Сохранение" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,8"/>
                                         <TextBlock Text="Сохранение MVP использует фиксированный файл."
                                                    TextWrapping="Wrap"
