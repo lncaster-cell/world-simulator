@@ -73,7 +73,13 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
 
     public decimal Goods => _city.Goods;
 
+    public decimal DailyFoodConsumption => _city.CalculateDailyFoodConsumption();
+
     public bool IsGothaSelected { get; private set; }
+
+    public bool IsCityPanelVisible { get; private set; }
+
+    public int SelectedCityTabIndex { get; private set; }
 
     public string SelectedCityName => IsGothaSelected ? _city.Name : string.Empty;
 
@@ -90,14 +96,15 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
 
     private void OpenSelectedCity()
     {
-        // MVP behavior: city overview is already present in the current window.
-        // This command keeps flow explicit and can later focus/switch to a dedicated city panel.
         if (!IsGothaSelected)
         {
             return;
         }
 
-        OnPropertyChanged(nameof(CityName));
+        IsCityPanelVisible = true;
+        SelectedCityTabIndex = 0;
+        OnPropertyChanged(nameof(IsCityPanelVisible));
+        OnPropertyChanged(nameof(SelectedCityTabIndex));
     }
 
     private void Start()
