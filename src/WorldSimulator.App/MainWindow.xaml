@@ -65,6 +65,22 @@
                         BorderThickness="1"
                         CornerRadius="6"
                         Padding="12"
+                        Margin="0,0,0,12">
+                    <StackPanel>
+                        <TextBlock Text="{Binding SimulationSummaryTitle}" FontWeight="SemiBold" FontSize="16" Margin="0,0,0,8"/>
+                        <TextBlock Text="{Binding SimulationSummaryDayAndHour}" Margin="0,0,0,4"/>
+                        <TextBlock Text="{Binding SimulationSummaryCityState}" Margin="0,0,0,4"/>
+                        <TextBlock Text="{Binding SimulationSummaryFoodBalance}" Margin="0,0,0,4"/>
+                        <TextBlock Text="{Binding SimulationSummaryActiveEvents}" Margin="0,0,0,4"/>
+                        <TextBlock Text="{Binding SimulationSummaryRandomEventsStatus}" Margin="0,0,0,4"/>
+                        <TextBlock Text="{Binding SimulationSummaryLastImportantChange}" TextWrapping="Wrap"/>
+                    </StackPanel>
+                </Border>
+
+                <Border BorderBrush="LightGray"
+                        BorderThickness="1"
+                        CornerRadius="6"
+                        Padding="12"
                         Margin="0,0,0,12"
                         Visibility="{Binding IsGothaSelected, Converter={StaticResource BooleanToVisibilityConverter}}">
                     <StackPanel>

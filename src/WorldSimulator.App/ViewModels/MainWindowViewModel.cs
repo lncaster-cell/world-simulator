@@ -33,6 +33,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     private DateTimeOffset _lastTickUtc;
     private DailyFoodFlowResult _dailyFoodFlowResult;
     private bool _isRandomEventGenerationEnabled = true;
+    private string _lastImportantChange = "пока нет.";
 
     public MainWindowViewModel()
     {
@@ -75,6 +76,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         RefreshCityState();
         RefreshDailyFoodFlowPreview();
         RefreshEventEntries();
+        RefreshSimulationSummary();
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -130,6 +132,20 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     public string RandomEventGenerationToggleButtonText => IsRandomEventGenerationEnabled
         ? "Выключить случайные события"
         : "Включить случайные события";
+
+    public string SimulationSummaryTitle => "Сводка симуляции";
+
+    public string SimulationSummaryDayAndHour => $"День {Day}, час {Hour}";
+
+    public string SimulationSummaryCityState => $"{CityName}: {CityStateDisplay}";
+
+    public string SimulationSummaryFoodBalance => $"Пищевой баланс: {DailyFoodTotalDelta:+0.##;-0.##;0}/день, запас {Food:0.##}";
+
+    public string SimulationSummaryActiveEvents => $"Активные события: {_eventManager.ActiveEvents.Count}";
+
+    public string SimulationSummaryRandomEventsStatus => $"Случайные события: {RandomEventGenerationStatusDisplay}";
+
+    public string SimulationSummaryLastImportantChange => $"Последнее изменение: {_lastImportantChange}";
 
     public string CityName => _city.Name;
 
@@ -295,6 +311,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         foreach (var completedEvent in completedEvents)
         {
             AddTechnicalLogEntry($"День {day}: завершено событие “{completedEvent.Name}”.");
+            SetLastImportantChange($"День {day}: событие “{completedEvent.Name}” завершилось.");
         }
 
         RefreshCityState(day);
@@ -305,6 +322,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
             if (generationResult.WasGenerated && generationResult.Event is not null && _eventManager.AddEvent(generationResult.Event))
             {
                 AddTechnicalLogEntry($"День {day}: случайное событие “{generationResult.Event.Name}” началось в городе.");
+                SetLastImportantChange($"День {day}: случайное событие “{generationResult.Event.Name}” началось в городе.");
             }
         }
 
@@ -314,6 +332,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(Food));
         RefreshEventEntries();
         RefreshDailyFoodFlowPreview();
+        RefreshSimulationSummary();
     }
 
     private void TryStartEvent(Func<int, CityEvent> factory)
@@ -324,6 +343,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         if (added)
         {
             AddTechnicalLogEntry($"День {Day}: запущено событие “{cityEvent.Name}”.");
+            SetLastImportantChange($"День {Day}: запущено событие “{cityEvent.Name}”.");
         }
         else
         {
@@ -340,6 +360,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         AddTechnicalLogEntry(IsRandomEventGenerationEnabled
             ? "Случайная генерация событий включена."
             : "Случайная генерация событий выключена.");
+        RefreshSimulationSummary();
     }
 
     private void RefreshEventEntries()
@@ -378,6 +399,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         {
             _saveService.SaveAsync(SaveFilePath, _city, _clock, _eventManager).GetAwaiter().GetResult();
             AddTechnicalLogEntry($"Состояние сохранено: {SaveFilePath}");
+            SetLastImportantChange("состояние сохранено.");
+            RefreshSimulationSummary();
         }
         catch (Exception ex)
         {
@@ -410,12 +433,14 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
             RefreshEventEntries();
             AddTechnicalLogEntry($"События загружены: активных {loaded.ActiveEvents.Count}, завершённых {loaded.CompletedEvents.Count}.");
             AddTechnicalLogEntry($"Состояние загружено: {SaveFilePath}");
+            SetLastImportantChange("состояние загружено.");
 
             RefreshAllCityProperties();
             RefreshClockProperties();
             RefreshSelectedCityProperties();
             RefreshDailyFoodFlowPreview();
             OnPropertyChanged(nameof(CurrentSimulationSpeedDisplay));
+            RefreshSimulationSummary();
         }
         catch (Exception ex)
         {
@@ -429,6 +454,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(Hour));
         OnPropertyChanged(nameof(IsRunning));
         OnPropertyChanged(nameof(SimulationState));
+        OnPropertyChanged(nameof(SimulationSummaryDayAndHour));
 
         if (StartCommand is RelayCommand startCommand)
         {
@@ -488,6 +514,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(DailyFoodMainlandSupplyIncomeDisplay));
         OnPropertyChanged(nameof(DailyFoodEventDeltaDisplay));
         OnPropertyChanged(nameof(DailyFoodTotalDeltaDisplay));
+        OnPropertyChanged(nameof(SimulationSummaryFoodBalance));
     }
 
     private DailyFoodFlowInputs BuildDailyFoodFlowInputs(CityEventEffectsResult? eventEffects = null)
@@ -578,10 +605,30 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         if (day.HasValue)
         {
             AddTechnicalLogEntry($"День {day.Value}: состояние города изменилось: {ToRussianCityState(previousState)} → {ToRussianCityState(newState)}.");
+            SetLastImportantChange($"День {day.Value}: состояние города изменилось: {ToRussianCityState(previousState)} → {ToRussianCityState(newState)}.");
         }
 
         OnPropertyChanged(nameof(CityState));
         OnPropertyChanged(nameof(CityStateDisplay));
+        OnPropertyChanged(nameof(SimulationSummaryCityState));
+    }
+
+
+    private void SetLastImportantChange(string message)
+    {
+        _lastImportantChange = message;
+        OnPropertyChanged(nameof(SimulationSummaryLastImportantChange));
+    }
+
+    private void RefreshSimulationSummary()
+    {
+        OnPropertyChanged(nameof(SimulationSummaryTitle));
+        OnPropertyChanged(nameof(SimulationSummaryDayAndHour));
+        OnPropertyChanged(nameof(SimulationSummaryCityState));
+        OnPropertyChanged(nameof(SimulationSummaryFoodBalance));
+        OnPropertyChanged(nameof(SimulationSummaryActiveEvents));
+        OnPropertyChanged(nameof(SimulationSummaryRandomEventsStatus));
+        OnPropertyChanged(nameof(SimulationSummaryLastImportantChange));
     }
 
     private static string ToRussianCityState(WorldSimulator.Core.Cities.CityState cityState)
