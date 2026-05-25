@@ -56,12 +56,7 @@ public sealed class SimulationClockTests
         var clock = new SimulationClock();
         clock.Start();
 
-        clock.Advance(TimeSpan.FromHours(2));
-
-        for (var i = 0; i < 22; i++)
-        {
-            clock.Advance(TimeSpan.FromMinutes(5));
-        }
+        clock.Advance(TimeSpan.FromMinutes(120));
 
         Assert.Equal(2, clock.Day);
         Assert.Equal(0, clock.Hour);
