@@ -25,17 +25,17 @@ public sealed class CityEventGenerator
     {
         ArgumentNullException.ThrowIfNull(activeEvents);
 
-        if (activeEvents.Count >= MaxActiveEventsForGeneration)
-        {
-            return CityEventGenerationResult.NotGenerated(CityEventGenerationReason.MaxActiveEventsReached);
-        }
-
         var activeIds = activeEvents.Select(e => e.Id).ToHashSet(StringComparer.Ordinal);
         var available = Presets.Where(p => !activeIds.Contains(p.Id)).ToArray();
 
         if (available.Length == 0)
         {
             return CityEventGenerationResult.NotGenerated(CityEventGenerationReason.NoAvailableEventTypes);
+        }
+
+        if (activeEvents.Count >= MaxActiveEventsForGeneration)
+        {
+            return CityEventGenerationResult.NotGenerated(CityEventGenerationReason.MaxActiveEventsReached);
         }
 
         if (_randomProvider.NextDouble() >= DailyEventChance)
