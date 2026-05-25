@@ -20,6 +20,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     private static readonly TimeSpan VeryFastSimulationSpeed = TimeSpan.FromSeconds(1);
 
     private const string SaveFilePath = "data/save/world_save.json";
+    private const int MaxTechnicalLogEntries = 500;
     private City _city;
     private readonly SimulationClock _clock;
     private readonly DailyFoodFlowCalculator _dailyFoodFlowCalculator;
@@ -229,9 +230,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         }
 
         _clock.SetSimulationSpeed(realTimePerGameHour);
-        TechnicalLogEntries.Add($"Скорость симуляции изменена: {GetSpeedDisplay(realTimePerGameHour)}.");
+        AddTechnicalLogEntry($"Скорость симуляции изменена: {GetSpeedDisplay(realTimePerGameHour)}.");
         OnPropertyChanged(nameof(CurrentSimulationSpeedDisplay));
-        OnPropertyChanged(nameof(HasTechnicalLogEntries));
     }
 
     private static string GetSpeedDisplay(TimeSpan realTimePerGameHour)
@@ -259,7 +259,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         var completedEvents = _eventManager.AdvanceDay();
         foreach (var completedEvent in completedEvents)
         {
-            TechnicalLogEntries.Add($"День {day}: завершено событие “{completedEvent.Name}”.");
+            AddTechnicalLogEntry($"День {day}: завершено событие “{completedEvent.Name}”.");
         }
 
         var eventEffects = _eventEffectCalculator.Calculate(_city, _eventManager.ActiveEvents);
@@ -270,13 +270,11 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         ApplyDailyEventEffects(eventEffects, day);
         RefreshCityState(day);
 
-        TechnicalLogEntries.Add(
+        AddTechnicalLogEntry(
             $"День {day}: пища {result.StartingFood:0.##} → {result.EndingFood:0.##}; баланс {result.TotalDelta:+0.##;-0.##;0} (потребление -{result.PopulationConsumption:0.##}, рыбалка {result.FishingIncome:+0.##;-0.##;0}, охота {result.HuntingIncome:+0.##;-0.##;0}, поставки {result.MainlandSupplyIncome:+0.##;-0.##;0}, события {result.EventDelta:+0.##;-0.##;0}).");
 
         OnPropertyChanged(nameof(Food));
         RefreshEventEntries();
-        OnPropertyChanged(nameof(HasTechnicalLogEntries));
-
         RefreshDailyFoodFlowPreview();
         RefreshEventEntries();
     }
@@ -288,15 +286,14 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
 
         if (added)
         {
-            TechnicalLogEntries.Add($"День {Day}: запущено событие “{cityEvent.Name}”.");
+            AddTechnicalLogEntry($"День {Day}: запущено событие “{cityEvent.Name}”.");
         }
         else
         {
-            TechnicalLogEntries.Add($"Событие “{cityEvent.Name}” уже активно.");
+            AddTechnicalLogEntry($"Событие “{cityEvent.Name}” уже активно.");
         }
 
         RefreshEventEntries();
-        OnPropertyChanged(nameof(HasTechnicalLogEntries));
     }
 
     private void RefreshEventEntries()
@@ -334,14 +331,13 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         try
         {
             _saveService.SaveAsync(SaveFilePath, _city, _clock, _eventManager).GetAwaiter().GetResult();
-            TechnicalLogEntries.Add($"Состояние сохранено: {SaveFilePath}");
+            AddTechnicalLogEntry($"Состояние сохранено: {SaveFilePath}");
         }
         catch (Exception ex)
         {
-            TechnicalLogEntries.Add($"Ошибка сохранения: {ex.Message}");
+            AddTechnicalLogEntry($"Ошибка сохранения: {ex.Message}");
         }
 
-        OnPropertyChanged(nameof(HasTechnicalLogEntries));
     }
 
     private void LoadState()
@@ -350,8 +346,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         {
             if (!File.Exists(SaveFilePath))
             {
-                TechnicalLogEntries.Add($"Файл сохранения не найден: {SaveFilePath}");
-                OnPropertyChanged(nameof(HasTechnicalLogEntries));
+                AddTechnicalLogEntry($"Файл сохранения не найден: {SaveFilePath}");
                 return;
             }
 
@@ -367,20 +362,18 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
 
             _eventManager.Restore(loaded.ActiveEvents, loaded.CompletedEvents);
             RefreshEventEntries();
-            TechnicalLogEntries.Add($"События загружены: активных {loaded.ActiveEvents.Count}, завершённых {loaded.CompletedEvents.Count}.");
-            TechnicalLogEntries.Add($"Состояние загружено: {SaveFilePath}");
+            AddTechnicalLogEntry($"События загружены: активных {loaded.ActiveEvents.Count}, завершённых {loaded.CompletedEvents.Count}.");
+            AddTechnicalLogEntry($"Состояние загружено: {SaveFilePath}");
 
             RefreshAllCityProperties();
             RefreshClockProperties();
             RefreshSelectedCityProperties();
             RefreshDailyFoodFlowPreview();
             OnPropertyChanged(nameof(CurrentSimulationSpeedDisplay));
-            OnPropertyChanged(nameof(HasTechnicalLogEntries));
         }
         catch (Exception ex)
         {
-            TechnicalLogEntries.Add($"Ошибка загрузки: {ex.Message}");
-            OnPropertyChanged(nameof(HasTechnicalLogEntries));
+            AddTechnicalLogEntry($"Ошибка загрузки: {ex.Message}");
         }
     }
 
@@ -515,7 +508,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
             segments.Add($"поставки с материка {effects.MainlandSupplyDelta:+0.##;-0.##;0}");
         }
 
-        TechnicalLogEntries.Add($"День {day}: применены эффекты событий: {string.Join(", ", segments)}.");
+        AddTechnicalLogEntry($"День {day}: применены эффекты событий: {string.Join(", ", segments)}.");
 
         OnPropertyChanged(nameof(Mood));
         OnPropertyChanged(nameof(Security));
@@ -538,8 +531,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
 
         if (day.HasValue)
         {
-            TechnicalLogEntries.Add($"День {day.Value}: состояние города изменилось: {ToRussianCityState(previousState)} → {ToRussianCityState(newState)}.");
-            OnPropertyChanged(nameof(HasTechnicalLogEntries));
+            AddTechnicalLogEntry($"День {day.Value}: состояние города изменилось: {ToRussianCityState(previousState)} → {ToRussianCityState(newState)}.");
         }
 
         OnPropertyChanged(nameof(CityState));
@@ -604,6 +596,18 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         }
 
         return segments.Count == 0 ? "без эффектов" : string.Join(", ", segments);
+    }
+
+    private void AddTechnicalLogEntry(string message)
+    {
+        TechnicalLogEntries.Add(message);
+
+        if (TechnicalLogEntries.Count > MaxTechnicalLogEntries)
+        {
+            TechnicalLogEntries.RemoveAt(0);
+        }
+
+        OnPropertyChanged(nameof(HasTechnicalLogEntries));
     }
 
     private void OnPropertyChanged([CallerMemberName] string? propertyName = null)

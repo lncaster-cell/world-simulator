@@ -122,3 +122,26 @@ For MVP 0.1, implementation work should follow documented tasks and should not e
 ### Rationale
 
 The project is design-heavy and simulation-heavy. Uncontrolled implementation will quickly produce scope creep.
+
+## ADR-008: Long-running simulation safety
+
+### Decision
+
+The simulator must enforce automatic retention limits for runtime history data.
+
+### Rule
+
+- Technical UI log is bounded (latest 500 entries).
+- Completed events history is bounded in Core (latest 100 events).
+- Retention is automatic; manual cleanup is not the primary stability mechanism.
+- Save files persist only already-trimmed runtime history.
+
+### Rationale
+
+The simulator is expected to run for long sessions. Unlimited growth of logs/history degrades UI responsiveness and inflates save files.
+
+### Consequences
+
+- Core owns completed-events lifecycle and trimming policy.
+- App owns technical-log UI retention.
+- Future history-like systems must define explicit retention policies.

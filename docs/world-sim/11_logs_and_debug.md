@@ -34,3 +34,8 @@ Must allow:
 - save;
 - load;
 - reset Gotha to start preset.
+
+## Technical log retention
+
+- Technical log shows only the latest 500 entries.
+- Older entries are removed automatically from the UI log.

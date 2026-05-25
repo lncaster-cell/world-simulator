@@ -28,6 +28,7 @@ public sealed class JsonWorldSaveServiceTests
             Assert.Contains("\"Events\"", json);
             Assert.Contains("\"ActiveEvents\"", json);
             Assert.Contains("\"RemainingDays\": 3", json);
+            Assert.DoesNotContain("TechnicalLog", json);
         }
         finally
         {

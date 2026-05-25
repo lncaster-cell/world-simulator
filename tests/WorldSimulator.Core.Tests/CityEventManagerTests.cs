@@ -66,6 +66,53 @@ public sealed class CityEventManagerTests
     }
 
     [Fact]
+    public void AdvanceDay_TrimsCompletedEventsToMaxLimit()
+    {
+        var manager = new CityEventManager(maxCompletedEvents: 2);
+        manager.AddEvent(new CityEvent("e1", "E1", "D1", startedDay: 1, durationDays: 1, remainingDays: 1));
+        manager.AddEvent(new CityEvent("e2", "E2", "D2", startedDay: 2, durationDays: 1, remainingDays: 1));
+        manager.AddEvent(new CityEvent("e3", "E3", "D3", startedDay: 3, durationDays: 1, remainingDays: 1));
+
+        manager.AdvanceDay();
+
+        Assert.Equal(2, manager.CompletedEvents.Count);
+        Assert.Equal(["e2", "e3"], manager.CompletedEvents.Select(e => e.Id).ToArray());
+    }
+
+    [Fact]
+    public void Restore_TrimsCompletedEventsToMaxLimit()
+    {
+        var manager = new CityEventManager(maxCompletedEvents: 2);
+        var completed = new[]
+        {
+            new CityEvent("old", "Old", "D", 1, 1, 0),
+            new CityEvent("mid", "Mid", "D", 2, 1, 0),
+            new CityEvent("new", "New", "D", 3, 1, 0)
+        };
+
+        manager.Restore([], completed);
+
+        Assert.Equal(2, manager.CompletedEvents.Count);
+        Assert.Equal(["mid", "new"], manager.CompletedEvents.Select(e => e.Id).ToArray());
+    }
+
+    [Fact]
+    public void Restore_DoesNotTrimActiveEvents()
+    {
+        var manager = new CityEventManager(maxCompletedEvents: 1);
+        var active = new[]
+        {
+            new CityEvent("a1", "A1", "D", 1, 2, 1),
+            new CityEvent("a2", "A2", "D", 1, 2, 1),
+            new CityEvent("a3", "A3", "D", 1, 2, 1)
+        };
+
+        manager.Restore(active, []);
+
+        Assert.Equal(3, manager.ActiveEvents.Count);
+    }
+
+    [Fact]
     public void FirePreset_HasRussianName_AndOneDayDuration()
     {
         var cityEvent = CityEventPresets.CreateFire(currentDay: 1);
