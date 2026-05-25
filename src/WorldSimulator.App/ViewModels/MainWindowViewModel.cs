@@ -20,6 +20,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     private readonly City _city;
     private readonly SimulationClock _clock;
     private readonly DailyFoodFlowCalculator _dailyFoodFlowCalculator;
+    private readonly CityStateEvaluator _cityStateEvaluator;
     private readonly CityEventManager _eventManager;
     private readonly CityEventEffectCalculator _eventEffectCalculator;
     private readonly DispatcherTimer _timer;
@@ -31,6 +32,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         _city = CityPresets.CreateGotha();
         _clock = new SimulationClock();
         _dailyFoodFlowCalculator = new DailyFoodFlowCalculator();
+        _cityStateEvaluator = new CityStateEvaluator();
         _eventManager = new CityEventManager();
         _eventEffectCalculator = new CityEventEffectCalculator();
         _dailyFoodFlowResult = _dailyFoodFlowCalculator.Calculate(_city, BuildDailyFoodFlowInputs());
@@ -58,6 +60,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         _timer.Tick += OnTick;
         _timer.Start();
 
+        RefreshCityState();
         RefreshDailyFoodFlowPreview();
         RefreshEventEntries();
     }
@@ -94,20 +97,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
 
     public string CityState => _city.CityState.ToString();
 
-    public string CityStateDisplay => _city.CityState switch
-    {
-        WorldSimulator.Core.Cities.CityState.Stable => "Стабильность",
-        WorldSimulator.Core.Cities.CityState.Prosperous => "Процветание",
-        WorldSimulator.Core.Cities.CityState.Stagnation => "Стагнация",
-        WorldSimulator.Core.Cities.CityState.FoodShortage => "Нехватка пищи",
-        WorldSimulator.Core.Cities.CityState.Famine => "Голод",
-        WorldSimulator.Core.Cities.CityState.EconomicDecline => "Экономический спад",
-        WorldSimulator.Core.Cities.CityState.CrimeProblem => "Проблемы с преступностью",
-        WorldSimulator.Core.Cities.CityState.Unrest => "Беспорядки",
-        WorldSimulator.Core.Cities.CityState.Recovery => "Восстановление",
-        WorldSimulator.Core.Cities.CityState.Collapse => "Коллапс",
-        _ => _city.CityState.ToString()
-    };
+    public string CityStateDisplay => ToRussianCityState(_city.CityState);
 
     public int Population => _city.Population;
 
@@ -255,7 +245,6 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         return $"{realTimePerGameHour.TotalSeconds:0.##} секунд = 1 игровой час";
     }
 
-
     private void OnDayAdvanced(int day)
     {
         var completedEvents = _eventManager.AdvanceDay();
@@ -270,6 +259,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         _dailyFoodFlowCalculator.Apply(_city, result);
 
         ApplyDailyEventEffects(eventEffects, day);
+        RefreshCityState(day);
 
         TechnicalLogEntries.Add(
             $"День {day}: пища {result.StartingFood:0.##} → {result.EndingFood:0.##}; баланс {result.TotalDelta:+0.##;-0.##;0} (потребление -{result.PopulationConsumption:0.##}, рыбалка {result.FishingIncome:+0.##;-0.##;0}, охота {result.HuntingIncome:+0.##;-0.##;0}, поставки {result.MainlandSupplyIncome:+0.##;-0.##;0}, события {result.EventDelta:+0.##;-0.##;0}).");
@@ -281,7 +271,6 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         RefreshDailyFoodFlowPreview();
         RefreshEventEntries();
     }
-
 
     private void TryStartEvent(Func<int, CityEvent> factory)
     {
@@ -337,7 +326,6 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(Hour));
         OnPropertyChanged(nameof(IsRunning));
         OnPropertyChanged(nameof(SimulationState));
-        OnPropertyChanged(nameof(CityStateDisplay));
 
         if (StartCommand is RelayCommand startCommand)
         {
@@ -382,7 +370,6 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(DailyFoodEventDeltaDisplay));
         OnPropertyChanged(nameof(DailyFoodTotalDeltaDisplay));
     }
-
 
     private DailyFoodFlowInputs BuildDailyFoodFlowInputs(CityEventEffectsResult? eventEffects = null)
     {
@@ -457,6 +444,45 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(Resources));
     }
 
+    private void RefreshCityState(int? day = null)
+    {
+        var previousState = _city.CityState;
+        var newState = _cityStateEvaluator.Evaluate(_city);
+
+        if (previousState == newState)
+        {
+            return;
+        }
+
+        _city.CityState = newState;
+
+        if (day.HasValue)
+        {
+            TechnicalLogEntries.Add($"День {day.Value}: состояние города изменилось: {ToRussianCityState(previousState)} → {ToRussianCityState(newState)}.");
+            OnPropertyChanged(nameof(HasTechnicalLogEntries));
+        }
+
+        OnPropertyChanged(nameof(CityState));
+        OnPropertyChanged(nameof(CityStateDisplay));
+    }
+
+    private static string ToRussianCityState(WorldSimulator.Core.Cities.CityState cityState)
+    {
+        return cityState switch
+        {
+            WorldSimulator.Core.Cities.CityState.Stable => "Стабильность",
+            WorldSimulator.Core.Cities.CityState.Prosperous => "Процветание",
+            WorldSimulator.Core.Cities.CityState.Stagnation => "Стагнация",
+            WorldSimulator.Core.Cities.CityState.FoodShortage => "Нехватка пищи",
+            WorldSimulator.Core.Cities.CityState.Famine => "Голод",
+            WorldSimulator.Core.Cities.CityState.EconomicDecline => "Экономический спад",
+            WorldSimulator.Core.Cities.CityState.CrimeProblem => "Проблемы с преступностью",
+            WorldSimulator.Core.Cities.CityState.Unrest => "Беспорядки",
+            WorldSimulator.Core.Cities.CityState.Recovery => "Восстановление",
+            WorldSimulator.Core.Cities.CityState.Collapse => "Коллапс",
+            _ => cityState.ToString()
+        };
+    }
 
     private static string BuildEffectSummary(CityEventEffectsResult effects)
     {
