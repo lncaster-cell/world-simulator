@@ -161,3 +161,5 @@ Population in MVP changes once per in-game day as an aggregated delta.
 ### Rationale
 
 This keeps the MVP simulation deterministic, readable in logs, and lightweight while still reflecting city decline and growth.
+
+Семантика и приоритеты `CityState` описаны в `docs/world-sim/12_city_states.md`.

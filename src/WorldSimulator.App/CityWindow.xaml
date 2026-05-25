@@ -145,15 +145,6 @@
                 </ScrollViewer>
             </TabItem>
 
-            <TabItem Header="Журнал">
-                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                    <StackPanel Margin="8">
-                        <TextBlock Text="Журнал вынесен в отдельное окно." Margin="0,0,0,10" TextWrapping="Wrap"/>
-                        <Button Content="Открыть журнал" Width="140" Click="OpenLogButton_Click" HorizontalAlignment="Left"/>
-                    </StackPanel>
-                </ScrollViewer>
-            </TabItem>
-
             <TabItem Header="Отладка">
                 <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                     <StackPanel Margin="8">
