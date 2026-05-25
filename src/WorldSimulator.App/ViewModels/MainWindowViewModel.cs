@@ -18,6 +18,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     private static readonly TimeSpan NormalSimulationSpeed = TimeSpan.FromMinutes(5);
     private static readonly TimeSpan FastSimulationSpeed = TimeSpan.FromSeconds(10);
     private static readonly TimeSpan VeryFastSimulationSpeed = TimeSpan.FromSeconds(1);
+    private static readonly TimeSpan TurboSimulationSpeed = TimeSpan.FromMilliseconds(1000d / 24d);
 
     private const string SaveFilePath = "data/save/world_save.json";
     private const int MaxTechnicalLogEntries = 500;
@@ -57,6 +58,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         SetNormalSpeedCommand = new RelayCommand(SetNormalSpeed);
         SetFastSpeedCommand = new RelayCommand(SetFastSpeed);
         SetVeryFastSpeedCommand = new RelayCommand(SetVeryFastSpeed);
+        SetTurboSpeedCommand = new RelayCommand(SetTurboSpeed);
         SelectGothaCommand = new RelayCommand(SelectGotha);
         OpenSelectedCityCommand = new RelayCommand(OpenSelectedCity, () => IsGothaSelected);
         TriggerFireEventCommand = new RelayCommand(() => TryStartEvent(CityEventPresets.CreateFire));
@@ -93,6 +95,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     public ICommand SetNormalSpeedCommand { get; }
     public ICommand SetFastSpeedCommand { get; }
     public ICommand SetVeryFastSpeedCommand { get; }
+    public ICommand SetTurboSpeedCommand { get; }
 
     public ICommand SelectGothaCommand { get; }
 
@@ -315,6 +318,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
 
     private void SetVeryFastSpeed() => SetSimulationSpeed(VeryFastSimulationSpeed);
 
+    private void SetTurboSpeed() => SetSimulationSpeed(TurboSimulationSpeed);
+
     private void SetSimulationSpeed(TimeSpan realTimePerGameHour)
     {
         if (_clock.RealTimePerGameHour == realTimePerGameHour)
@@ -342,6 +347,11 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         if (realTimePerGameHour == VeryFastSimulationSpeed)
         {
             return "1 секунда = 1 игровой час";
+        }
+
+        if (realTimePerGameHour == TurboSimulationSpeed)
+        {
+            return "1 секунда = 1 игровой день";
         }
 
         return $"{realTimePerGameHour.TotalSeconds:0.##} секунд = 1 игровой час";

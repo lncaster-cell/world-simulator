@@ -165,6 +165,23 @@ public sealed class SimulationClockTests
         Assert.Equal(TimeSpan.FromSeconds(1), clock.RealTimePerGameHour);
     }
 
+
+    [Fact]
+    public void Turbo_Speed_Advances_One_Day_In_One_Second()
+    {
+        var clock = new SimulationClock();
+        var dayAdvancedCount = 0;
+
+        clock.DayAdvanced += _ => dayAdvancedCount++;
+        clock.SetSimulationSpeed(TimeSpan.FromMilliseconds(1000d / 24d));
+        clock.Start();
+
+        clock.Advance(TimeSpan.FromSeconds(1));
+
+        Assert.Equal(2, clock.Day);
+        Assert.Equal(0, clock.Hour);
+        Assert.Equal(1, dayAdvancedCount);
+    }
     [Fact]
     public void Advance_Uses_New_Speed_After_Change()
     {
