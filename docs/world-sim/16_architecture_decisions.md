@@ -189,3 +189,6 @@ This keeps the MVP simulation deterministic, readable in logs, and lightweight w
 
 - Multi-city расширение добавляет новые city-scoped летописи без ломки модели журнала.
 - Для мировых событий потребуется отдельная модель и отдельный UI-поток.
+
+
+Модель городской экономики описана в `docs/world-sim/13_city_economy_model.md`.
