@@ -8,8 +8,12 @@ public sealed class CityStateEvaluator
 
         var dailyFoodConsumption = city.CalculateDailyFoodConsumption();
 
-        if (city.Population <= 0
-            || (city.Food <= 0m && city.Mood <= 10)
+        if (city.Population <= 0)
+        {
+            return CityState.Abandoned;
+        }
+
+        if ((city.Food <= 0m && city.Mood <= 10)
             || (city.Security <= 0 && city.Crime >= 90))
         {
             return CityState.Collapse;

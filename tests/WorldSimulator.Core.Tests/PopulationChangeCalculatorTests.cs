@@ -149,4 +149,30 @@ public sealed class PopulationChangeCalculatorTests
         city.Goods = 150m;
         return city;
     }
+    [Fact]
+    public void Population_Zero_Stays_Zero()
+    {
+        var city = CreateCity(CityState.Abandoned, 0);
+
+        var result = _calculator.Calculate(city);
+
+        Assert.Equal(0, result.PopulationDelta);
+        Assert.Equal(0, result.EndingPopulation);
+        Assert.Equal("город опустел", result.Reason);
+    }
+
+    [Fact]
+    public void Abandoned_City_DoesNotRegrow()
+    {
+        var city = CreateCity(CityState.Abandoned, 0);
+        city.Food = 10_000m;
+        city.Mood = 100;
+        city.Security = 100;
+
+        var result = _calculator.Calculate(city);
+
+        Assert.Equal(0, result.PopulationDelta);
+        Assert.Equal(0, result.EndingPopulation);
+    }
+
 }

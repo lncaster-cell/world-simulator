@@ -117,4 +117,33 @@ public sealed class DailyFoodFlowCalculatorTests
         Assert.Equal(34m, result.TotalDelta);
         Assert.Equal(1034m, result.EndingFood);
     }
+    [Fact]
+    public void ZeroPopulation_Produces_Zero_TotalDelta()
+    {
+        var city = CityPresets.CreateGotha();
+        city.Population = 0;
+
+        var result = _calculator.Calculate(city, DailyFoodFlowInputs.GothaPlaceholder);
+
+        Assert.Equal(0m, result.TotalDelta);
+        Assert.Equal(0m, result.PopulationConsumption);
+        Assert.Equal(0m, result.FishingIncome);
+        Assert.Equal(0m, result.HuntingIncome);
+        Assert.Equal(0m, result.MainlandSupplyIncome);
+        Assert.Equal(0m, result.EventDelta);
+    }
+
+    [Fact]
+    public void ZeroPopulation_Keeps_Food_Unchanged()
+    {
+        var city = CityPresets.CreateGotha();
+        city.Population = 0;
+        city.Food = 777m;
+
+        var result = _calculator.Calculate(city, DailyFoodFlowInputs.GothaPlaceholder);
+
+        Assert.Equal(777m, result.StartingFood);
+        Assert.Equal(777m, result.EndingFood);
+    }
+
 }

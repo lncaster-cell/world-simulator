@@ -107,14 +107,14 @@ public sealed class CityStateEvaluatorTests
     }
 
     [Fact]
-    public void ZeroPopulation_ReturnsCollapse()
+    public void ZeroPopulation_ReturnsAbandoned()
     {
         var city = CreateBaselineCity();
         city.Population = 0;
 
         var state = _evaluator.Evaluate(city);
 
-        Assert.Equal(CityState.Collapse, state);
+        Assert.Equal(CityState.Abandoned, state);
     }
 
     [Fact]
@@ -130,13 +130,12 @@ public sealed class CityStateEvaluatorTests
     }
 
     [Fact]
-    public void Collapse_HasPriorityOverEverything()
+    public void CatastrophicPopulatedCity_ReturnsCollapse()
     {
         var city = CreateBaselineCity();
-        city.Population = 0;
-        city.Food = city.CalculateDailyFoodConsumption();
+        city.Population = 420;
+        city.Food = 0m;
         city.Mood = 10;
-        city.Crime = 80;
 
         var state = _evaluator.Evaluate(city);
 
