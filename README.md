@@ -40,6 +40,22 @@ src/
 
 The app currently opens a placeholder main window only.
 
+## Как получить exe
+
+После успешного CI можно скачать готовый Windows `.exe` из GitHub Actions:
+
+1. Откройте вкладку **Actions** в репозитории GitHub.
+2. Выберите последний успешный запуск workflow **.NET build and test**.
+3. В блоке **Artifacts** скачайте архив `world-simulator-win-x64`.
+4. Распакуйте архив `.zip`.
+5. Запустите `WorldSimulator.App.exe`.
+
+Локально собрать такой же publish-вывод можно командой:
+
+```bash
+dotnet publish src/WorldSimulator.App/WorldSimulator.App.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o publish/win-x64
+```
+
 ## Documentation
 
 All project docs are located in:
