@@ -62,3 +62,7 @@ Workflow `Publish Windows executable` публикует self-contained `win-x64
 All project docs are located in:
 
 - `docs/world-sim/`
+
+## Диагностика падений
+
+Если приложение закрывается само или не открывается, проверьте файл `logs/startup-crash.log` рядом с exe.
