@@ -1,0 +1,124 @@
+# 16 — Architecture Decisions
+
+## Purpose
+
+This document records early technical architecture decisions for the external NWN2 world simulator.
+
+The goal is to make the future implementation predictable for agents/Codex while keeping MVP 0.1 small and controlled.
+
+## ADR-001: Build a standalone Windows desktop application
+
+### Decision
+
+MVP 0.1 will be implemented as a standalone Windows desktop application.
+
+### Rationale
+
+- The simulator is intended to run outside NWN2.
+- MVP 0.1 needs map navigation, city panels, logs, save/load, and debug tools.
+- A desktop app is simpler than embedding this into NWN2 or building a game engine layer.
+
+### Consequences
+
+- No Unity project is created.
+- No NWN2 runtime integration is implemented in MVP 0.1.
+- The simulator must remain useful as a standalone tool.
+
+## ADR-002: Keep simulation core separate from UI
+
+### Decision
+
+The simulation logic must be separated from the visual UI layer.
+
+### Intended structure
+
+```text
+WorldSimulator.App        -> desktop UI shell
+WorldSimulator.Core       -> simulation rules and domain model
+WorldSimulator.Persistence -> save/load and file formats
+```
+
+### Rationale
+
+The UI should display state and send user commands. It should not own the simulation rules.
+
+This prevents the project from becoming a UI-script mess and makes future tests and NWN2 export easier.
+
+## ADR-003: Use fixed logical ticks with lightweight runtime scheduling
+
+### Decision
+
+The simulator must use a lightweight runtime loop and fixed logical ticks.
+
+### Rule
+
+The app must not wait until an hourly/daily boundary and then calculate everything in one heavy burst.
+
+Instead, it should:
+
+- track elapsed real time continuously;
+- prepare pending balances and timers gradually;
+- mutate city state only on fixed logical ticks.
+
+### Tick levels
+
+- Runtime loop: lightweight scheduling and elapsed-time tracking.
+- Hourly tick: minor simulation step.
+- Daily tick: main economy, resource, and city_state step.
+
+### Performance constraint
+
+Do not implement a busy loop. The runtime loop must be CPU-friendly.
+
+## ADR-004: Save files use JSON for MVP
+
+### Decision
+
+MVP 0.1 save/load will use local JSON files.
+
+### Rationale
+
+- Easy to inspect manually.
+- Easy for agents to generate and debug.
+- Good enough for one-city MVP.
+- Avoids premature database complexity.
+
+### Future note
+
+A database can be considered later if multi-city, long-running history, or NWN2 synchronization requires it.
+
+## ADR-005: Use stable IDs for future integration
+
+### Decision
+
+All durable entities must have stable IDs.
+
+For MVP 0.1:
+
+```text
+city_gotha
+```
+
+### Rationale
+
+Stable IDs prevent later breakage when display names, UI labels, or translations change.
+
+## ADR-006: Do not encode NWN2-specific objects in the core model
+
+### Decision
+
+The simulation core must not store NWN2-specific tags, area resrefs, object references, or script names.
+
+### Rationale
+
+The simulator must remain independent from NWN2. Future integration should be handled by a separate adapter/export layer.
+
+## ADR-007: Documentation before implementation
+
+### Decision
+
+For MVP 0.1, implementation work should follow documented tasks and should not expand scope ad hoc.
+
+### Rationale
+
+The project is design-heavy and simulation-heavy. Uncontrolled implementation will quickly produce scope creep.
