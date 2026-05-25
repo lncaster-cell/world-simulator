@@ -59,6 +59,35 @@ public sealed class SimulationClock
         }
     }
 
+    public void RestoreState(int day, int hour, bool isRunning, TimeSpan accumulatedRealTime, TimeSpan realTimePerGameHour)
+    {
+        if (day < 1)
+        {
+            throw new ArgumentOutOfRangeException(nameof(day), "Day must be at least 1.");
+        }
+
+        if (hour is < 0 or >= HoursPerDay)
+        {
+            throw new ArgumentOutOfRangeException(nameof(hour), "Hour must be between 0 and 23.");
+        }
+
+        if (accumulatedRealTime < TimeSpan.Zero)
+        {
+            throw new ArgumentOutOfRangeException(nameof(accumulatedRealTime), "Accumulated real time cannot be negative.");
+        }
+
+        if (realTimePerGameHour <= TimeSpan.Zero)
+        {
+            throw new ArgumentOutOfRangeException(nameof(realTimePerGameHour), "RealTimePerGameHour must be greater than zero.");
+        }
+
+        Day = day;
+        Hour = hour;
+        IsRunning = isRunning;
+        _accumulatedRealTime = accumulatedRealTime;
+        _settings.RealTimePerGameHour = realTimePerGameHour;
+    }
+
     private void AdvanceOneHour()
     {
         Hour++;

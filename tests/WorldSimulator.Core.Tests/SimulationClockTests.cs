@@ -103,4 +103,29 @@ public sealed class SimulationClockTests
         Assert.Equal(2, days[0]);
         Assert.Equal((2, 0), hours[^1]);
     }
+
+    [Fact]
+    public void RestoreState_Sets_Clock_State()
+    {
+        var clock = new SimulationClock();
+
+        clock.RestoreState(5, 6, true, TimeSpan.FromSeconds(45), TimeSpan.FromMinutes(1));
+
+        Assert.Equal(5, clock.Day);
+        Assert.Equal(6, clock.Hour);
+        Assert.True(clock.IsRunning);
+        Assert.Equal(TimeSpan.FromSeconds(45), clock.AccumulatedRealTime);
+        Assert.Equal(TimeSpan.FromMinutes(1), clock.RealTimePerGameHour);
+    }
+
+    [Fact]
+    public void RestoreState_Invalid_State_Throws()
+    {
+        var clock = new SimulationClock();
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => clock.RestoreState(0, 0, false, TimeSpan.Zero, TimeSpan.FromMinutes(1)));
+        Assert.Throws<ArgumentOutOfRangeException>(() => clock.RestoreState(1, 24, false, TimeSpan.Zero, TimeSpan.FromMinutes(1)));
+        Assert.Throws<ArgumentOutOfRangeException>(() => clock.RestoreState(1, 0, false, TimeSpan.FromSeconds(-1), TimeSpan.FromMinutes(1)));
+        Assert.Throws<ArgumentOutOfRangeException>(() => clock.RestoreState(1, 0, false, TimeSpan.Zero, TimeSpan.Zero));
+    }
 }

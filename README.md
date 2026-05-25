@@ -19,7 +19,7 @@ WorldSimulator.sln
 src/
   WorldSimulator.App/          # WPF UI shell
   WorldSimulator.Core/         # future simulation logic
-  WorldSimulator.Persistence/  # future save/load layer
+  WorldSimulator.Persistence/  # save/load JSON layer
 ```
 
 ## Open and run (Windows)
