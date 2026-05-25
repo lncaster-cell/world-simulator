@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.IO;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
 using System.Windows.Threading;
@@ -8,6 +9,7 @@ using WorldSimulator.Core.Cities;
 using WorldSimulator.Core.Events;
 using WorldSimulator.Core.Resources;
 using WorldSimulator.Core.Time;
+using WorldSimulator.Persistence.Saves;
 
 namespace WorldSimulator.App.ViewModels;
 
@@ -17,12 +19,14 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     private static readonly TimeSpan FastSimulationSpeed = TimeSpan.FromSeconds(10);
     private static readonly TimeSpan VeryFastSimulationSpeed = TimeSpan.FromSeconds(1);
 
-    private readonly City _city;
+    private const string SaveFilePath = "data/save/world_save.json";
+    private City _city;
     private readonly SimulationClock _clock;
     private readonly DailyFoodFlowCalculator _dailyFoodFlowCalculator;
     private readonly CityStateEvaluator _cityStateEvaluator;
     private readonly CityEventManager _eventManager;
     private readonly CityEventEffectCalculator _eventEffectCalculator;
+    private readonly JsonWorldSaveService _saveService;
     private readonly DispatcherTimer _timer;
     private DateTimeOffset _lastTickUtc;
     private DailyFoodFlowResult _dailyFoodFlowResult;
@@ -35,6 +39,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         _cityStateEvaluator = new CityStateEvaluator();
         _eventManager = new CityEventManager();
         _eventEffectCalculator = new CityEventEffectCalculator();
+        _saveService = new JsonWorldSaveService();
         _dailyFoodFlowResult = _dailyFoodFlowCalculator.Calculate(_city, BuildDailyFoodFlowInputs());
 
         StartCommand = new RelayCommand(Start, () => !_clock.IsRunning);
@@ -49,6 +54,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         TriggerRatInfestationEventCommand = new RelayCommand(() => TryStartEvent(CityEventPresets.CreateRatInfestation));
         TriggerArtistsPerformanceEventCommand = new RelayCommand(() => TryStartEvent(CityEventPresets.CreateArtistsPerformance));
         TriggerPortStormEventCommand = new RelayCommand(() => TryStartEvent(CityEventPresets.CreatePortStorm));
+        SaveCommand = new RelayCommand(SaveState);
+        LoadCommand = new RelayCommand(LoadState);
 
         _lastTickUtc = DateTimeOffset.UtcNow;
         _timer = new DispatcherTimer
@@ -83,6 +90,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     public ICommand TriggerRatInfestationEventCommand { get; }
     public ICommand TriggerArtistsPerformanceEventCommand { get; }
     public ICommand TriggerPortStormEventCommand { get; }
+    public ICommand SaveCommand { get; }
+    public ICommand LoadCommand { get; }
 
     public int Day => _clock.Day;
 
@@ -320,6 +329,61 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         RefreshClockProperties();
     }
 
+    private void SaveState()
+    {
+        try
+        {
+            _saveService.SaveAsync(SaveFilePath, _city, _clock).GetAwaiter().GetResult();
+            TechnicalLogEntries.Add($"Состояние сохранено: {SaveFilePath}");
+        }
+        catch (Exception ex)
+        {
+            TechnicalLogEntries.Add($"Ошибка сохранения: {ex.Message}");
+        }
+
+        OnPropertyChanged(nameof(HasTechnicalLogEntries));
+    }
+
+    private void LoadState()
+    {
+        try
+        {
+            if (!File.Exists(SaveFilePath))
+            {
+                TechnicalLogEntries.Add($"Файл сохранения не найден: {SaveFilePath}");
+                OnPropertyChanged(nameof(HasTechnicalLogEntries));
+                return;
+            }
+
+            var loaded = _saveService.LoadAsync(SaveFilePath).GetAwaiter().GetResult();
+            _city = loaded.City;
+            _clock.RestoreState(
+                loaded.Clock.Day,
+                loaded.Clock.Hour,
+                loaded.Clock.IsRunning,
+                loaded.Clock.AccumulatedRealTime,
+                loaded.Clock.RealTimePerGameHour);
+            _lastTickUtc = DateTimeOffset.UtcNow;
+
+            _eventManager.Clear();
+            RefreshEventEntries();
+            TechnicalLogEntries.Add("События пока не сохраняются и были очищены после загрузки.");
+            TechnicalLogEntries.Add($"Состояние загружено: {SaveFilePath}");
+
+            RefreshAllCityProperties();
+            RefreshClockProperties();
+            RefreshSelectedCityProperties();
+            RefreshDailyFoodFlowPreview();
+            OnPropertyChanged(nameof(CurrentSimulationSpeedDisplay));
+            OnPropertyChanged(nameof(HasTechnicalLogEntries));
+        }
+        catch (Exception ex)
+        {
+            TechnicalLogEntries.Add($"Ошибка загрузки: {ex.Message}");
+            OnPropertyChanged(nameof(HasTechnicalLogEntries));
+        }
+    }
+
     private void RefreshClockProperties()
     {
         OnPropertyChanged(nameof(Day));
@@ -349,6 +413,22 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         {
             openSelectedCityCommand.RaiseCanExecuteChanged();
         }
+    }
+
+    private void RefreshAllCityProperties()
+    {
+        OnPropertyChanged(nameof(CityName));
+        OnPropertyChanged(nameof(CityState));
+        OnPropertyChanged(nameof(CityStateDisplay));
+        OnPropertyChanged(nameof(Population));
+        OnPropertyChanged(nameof(Food));
+        OnPropertyChanged(nameof(Wealth));
+        OnPropertyChanged(nameof(Mood));
+        OnPropertyChanged(nameof(Security));
+        OnPropertyChanged(nameof(Crime));
+        OnPropertyChanged(nameof(Resources));
+        OnPropertyChanged(nameof(Goods));
+        OnPropertyChanged(nameof(DailyFoodConsumption));
     }
 
     private void RefreshDailyFoodFlowPreview()

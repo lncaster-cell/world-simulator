@@ -49,4 +49,10 @@ public sealed class CityEventManager
 
         return newlyCompleted;
     }
+
+    public void Clear()
+    {
+        _activeEvents.Clear();
+        _completedEvents.Clear();
+    }
 }
