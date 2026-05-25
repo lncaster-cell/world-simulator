@@ -128,4 +128,52 @@ public sealed class SimulationClockTests
         Assert.Throws<ArgumentOutOfRangeException>(() => clock.RestoreState(1, 0, false, TimeSpan.FromSeconds(-1), TimeSpan.FromMinutes(1)));
         Assert.Throws<ArgumentOutOfRangeException>(() => clock.RestoreState(1, 0, false, TimeSpan.Zero, TimeSpan.Zero));
     }
+
+    [Fact]
+    public void SetSimulationSpeed_Zero_Throws()
+    {
+        var clock = new SimulationClock();
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => clock.SetSimulationSpeed(TimeSpan.Zero));
+    }
+
+    [Fact]
+    public void SetSimulationSpeed_Negative_Throws()
+    {
+        var clock = new SimulationClock();
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => clock.SetSimulationSpeed(TimeSpan.FromSeconds(-1)));
+    }
+
+    [Fact]
+    public void SetSimulationSpeed_Allows_10_Seconds()
+    {
+        var clock = new SimulationClock();
+
+        clock.SetSimulationSpeed(TimeSpan.FromSeconds(10));
+
+        Assert.Equal(TimeSpan.FromSeconds(10), clock.RealTimePerGameHour);
+    }
+
+    [Fact]
+    public void SetSimulationSpeed_Allows_1_Second()
+    {
+        var clock = new SimulationClock();
+
+        clock.SetSimulationSpeed(TimeSpan.FromSeconds(1));
+
+        Assert.Equal(TimeSpan.FromSeconds(1), clock.RealTimePerGameHour);
+    }
+
+    [Fact]
+    public void Advance_Uses_New_Speed_After_Change()
+    {
+        var clock = new SimulationClock();
+        clock.Start();
+        clock.SetSimulationSpeed(TimeSpan.FromSeconds(10));
+
+        clock.Advance(TimeSpan.FromSeconds(30));
+
+        Assert.Equal(3, clock.Hour);
+    }
 }
