@@ -8,13 +8,18 @@ public sealed class CityEvent
     private int _remainingDays;
 
     public CityEvent(string id, string name, string description, int startedDay, int durationDays)
+        : this(id, name, description, startedDay, durationDays, durationDays)
+    {
+    }
+
+    public CityEvent(string id, string name, string description, int startedDay, int durationDays, int remainingDays)
     {
         Id = id;
         Name = name;
         Description = description ?? string.Empty;
         StartedDay = startedDay;
         DurationDays = durationDays;
-        RemainingDays = durationDays;
+        RemainingDays = remainingDays;
     }
 
     public string Id

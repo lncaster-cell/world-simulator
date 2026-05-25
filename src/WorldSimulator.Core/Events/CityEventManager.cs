@@ -55,4 +55,28 @@ public sealed class CityEventManager
         _activeEvents.Clear();
         _completedEvents.Clear();
     }
+
+    public void Restore(IEnumerable<CityEvent>? activeEvents, IEnumerable<CityEvent>? completedEvents)
+    {
+        _activeEvents.Clear();
+        _completedEvents.Clear();
+
+        if (activeEvents is not null)
+        {
+            foreach (var cityEvent in activeEvents)
+            {
+                if (_activeEvents.Any(e => e.Id == cityEvent.Id))
+                {
+                    continue;
+                }
+
+                _activeEvents.Add(cityEvent);
+            }
+        }
+
+        if (completedEvents is not null)
+        {
+            _completedEvents.AddRange(completedEvents);
+        }
+    }
 }

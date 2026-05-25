@@ -1,5 +1,6 @@
 using System.Text.Json;
 using WorldSimulator.Core.Cities;
+using WorldSimulator.Core.Events;
 using WorldSimulator.Core.Time;
 
 namespace WorldSimulator.Persistence.Saves;
@@ -11,11 +12,18 @@ public sealed class JsonWorldSaveService
         WriteIndented = true
     };
 
-    public async Task SaveAsync(string filePath, City city, SimulationClock clock, CancellationToken cancellationToken = default)
+    public Task SaveAsync(string filePath, City city, SimulationClock clock, CancellationToken cancellationToken = default)
+    {
+        var emptyEventManager = new CityEventManager();
+        return SaveAsync(filePath, city, clock, emptyEventManager, cancellationToken);
+    }
+
+    public async Task SaveAsync(string filePath, City city, SimulationClock clock, CityEventManager eventManager, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
         ArgumentNullException.ThrowIfNull(city);
         ArgumentNullException.ThrowIfNull(clock);
+        ArgumentNullException.ThrowIfNull(eventManager);
 
         var saveData = new WorldSaveData
         {
@@ -41,6 +49,11 @@ public sealed class JsonWorldSaveService
                 Resources = city.Resources,
                 Goods = city.Goods,
                 CityState = city.CityState.ToString()
+            },
+            Events = new EventSaveData
+            {
+                ActiveEvents = eventManager.ActiveEvents.Select(ToSaveData).ToList(),
+                CompletedEvents = eventManager.CompletedEvents.Select(ToSaveData).ToList()
             }
         };
 
@@ -54,7 +67,7 @@ public sealed class JsonWorldSaveService
         await JsonSerializer.SerializeAsync(stream, saveData, JsonOptions, cancellationToken);
     }
 
-    public async Task<(City City, SimulationClock Clock)> LoadAsync(string filePath, CancellationToken cancellationToken = default)
+    public async Task<WorldLoadResult> LoadAsync(string filePath, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
 
@@ -110,6 +123,31 @@ public sealed class JsonWorldSaveService
             saveData.Clock.AccumulatedRealTime,
             saveData.Clock.RealTimePerGameHour);
 
-        return (city, clock);
+        var activeEvents = (saveData.Events?.ActiveEvents ?? [])
+            .Select(ToCoreEvent)
+            .ToList();
+        var completedEvents = (saveData.Events?.CompletedEvents ?? [])
+            .Select(ToCoreEvent)
+            .ToList();
+
+        return new WorldLoadResult(city, clock, activeEvents, completedEvents);
     }
+
+    private static CityEventSaveData ToSaveData(CityEvent cityEvent) => new()
+    {
+        Id = cityEvent.Id,
+        Name = cityEvent.Name,
+        Description = cityEvent.Description,
+        StartedDay = cityEvent.StartedDay,
+        DurationDays = cityEvent.DurationDays,
+        RemainingDays = cityEvent.RemainingDays
+    };
+
+    private static CityEvent ToCoreEvent(CityEventSaveData eventSaveData) => new(
+        eventSaveData.Id,
+        eventSaveData.Name,
+        eventSaveData.Description,
+        eventSaveData.StartedDay,
+        eventSaveData.DurationDays,
+        eventSaveData.RemainingDays);
 }

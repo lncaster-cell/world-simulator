@@ -9,6 +9,8 @@ public sealed class WorldSaveData
     public ClockSaveData Clock { get; set; } = new();
 
     public CitySaveData City { get; set; } = new();
+
+    public EventSaveData Events { get; set; } = new();
 }
 
 public sealed class ClockSaveData
@@ -48,3 +50,26 @@ public sealed class CitySaveData
 
     public string CityState { get; set; } = string.Empty;
 }
+
+public sealed class EventSaveData
+{
+    public List<CityEventSaveData> ActiveEvents { get; set; } = new();
+
+    public List<CityEventSaveData> CompletedEvents { get; set; } = new();
+}
+
+public sealed class CityEventSaveData
+{
+    public string Id { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public int StartedDay { get; set; }
+    public int DurationDays { get; set; }
+    public int RemainingDays { get; set; }
+}
+
+public sealed record WorldLoadResult(
+    WorldSimulator.Core.Cities.City City,
+    WorldSimulator.Core.Time.SimulationClock Clock,
+    IReadOnlyList<WorldSimulator.Core.Events.CityEvent> ActiveEvents,
+    IReadOnlyList<WorldSimulator.Core.Events.CityEvent> CompletedEvents);
