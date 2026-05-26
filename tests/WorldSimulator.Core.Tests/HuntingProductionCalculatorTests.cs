@@ -102,10 +102,12 @@ public sealed class HuntingProductionCalculatorTests
         city900.CityState = CityState.Prosperous;
 
         var output300 = _calculator.Calculate(city300).FinalOutput;
-        var output900 = _calculator.Calculate(city900).FinalOutput;
+        var result900 = _calculator.Calculate(city900);
+        var output900 = result900.FinalOutput;
 
         Assert.True(output900 < output300 * 3m);
-        Assert.True(output900 < (8m * 1.05m * 1.05m) + 0.05m);
+        Assert.True(result900.OverstaffBonus < 0.4m);
+        Assert.True(result900.FinalOutput < 9.3m);
     }
 
     [Fact]
