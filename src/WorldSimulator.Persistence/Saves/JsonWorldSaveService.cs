@@ -109,6 +109,14 @@ public sealed class JsonWorldSaveService
                 state.SetManager(pair.Key, manager);
             }
 
+            if (!state.EventManagersByCity.ContainsKey(selectedCityId))
+            {
+                var firstManager = state.EventManagersByCity.Values.First();
+                var selectedManager = new CityEventManager();
+                selectedManager.Restore(firstManager.ActiveEvents.ToList(), firstManager.CompletedEvents.ToList());
+                state.SetManager(selectedCityId, selectedManager);
+            }
+
             return state;
         }
 
@@ -124,14 +132,36 @@ public sealed class JsonWorldSaveService
     {
         if (saveData.World is null) throw new InvalidDataException($"Save file '{filePath}' version 2 is missing world data.");
 
+        var defaultWorld = WorldPresets.CreateDefaultWorld();
+
+        var regions = saveData.World.Regions.Any()
+            ? saveData.World.Regions.Select(x => new Region { Id = x.Id, DisplayName = x.DisplayName, MapAssetId = x.MapAssetId }).ToList()
+            : defaultWorld.Regions;
+
+        var settlementMapLocations = saveData.World.SettlementMapLocations.Any()
+            ? saveData.World.SettlementMapLocations.Select(x => new SettlementMapLocation { SettlementId = x.SettlementId, RegionId = x.RegionId, X = x.X, Y = x.Y }).ToList()
+            : defaultWorld.SettlementMapLocations;
+
+        var settlementEconomyProfiles = saveData.World.SettlementEconomyProfiles.Any()
+            ? saveData.World.SettlementEconomyProfiles.Select(x => new SettlementEconomyProfile { SettlementId = x.SettlementId, AgriculturePotential = x.AgriculturePotential, FishingMultiplier = x.FishingMultiplier, HuntingMultiplier = x.HuntingMultiplier, MainlandSupplyMultiplier = x.MainlandSupplyMultiplier, ResourceGatheringMultiplier = x.ResourceGatheringMultiplier, GoodsCraftingMultiplier = x.GoodsCraftingMultiplier, IsPort = x.IsPort, IsFortress = x.IsFortress, IsCapital = x.IsCapital }).ToList()
+            : defaultWorld.SettlementEconomyProfiles;
+
+        var caravans = saveData.World.Caravans.Any()
+            ? saveData.World.Caravans.Select(ToCoreCaravan).ToList()
+            : defaultWorld.Caravans;
+
+        var tradeRoutes = saveData.World.TradeRoutes.Any()
+            ? saveData.World.TradeRoutes.Select(ToCoreTradeRoute).ToList()
+            : defaultWorld.TradeRoutes;
+
         return new SimulationWorld
         {
             Cities = saveData.World.Cities.Select(x => ToCoreCity(x, filePath)).ToList(),
-            Regions = saveData.World.Regions.Select(x => new Region { Id = x.Id, DisplayName = x.DisplayName, MapAssetId = x.MapAssetId }).ToList(),
-            SettlementMapLocations = saveData.World.SettlementMapLocations.Select(x => new SettlementMapLocation { SettlementId = x.SettlementId, RegionId = x.RegionId, X = x.X, Y = x.Y }).ToList(),
-            SettlementEconomyProfiles = saveData.World.SettlementEconomyProfiles.Select(x => new SettlementEconomyProfile { SettlementId = x.SettlementId, AgriculturePotential = x.AgriculturePotential, FishingMultiplier = x.FishingMultiplier, HuntingMultiplier = x.HuntingMultiplier, MainlandSupplyMultiplier = x.MainlandSupplyMultiplier, ResourceGatheringMultiplier = x.ResourceGatheringMultiplier, GoodsCraftingMultiplier = x.GoodsCraftingMultiplier, IsPort = x.IsPort, IsFortress = x.IsFortress, IsCapital = x.IsCapital }).ToList(),
-            Caravans = saveData.World.Caravans.Select(ToCoreCaravan).ToList(),
-            TradeRoutes = saveData.World.TradeRoutes.Select(ToCoreTradeRoute).ToList(),
+            Regions = regions,
+            SettlementMapLocations = settlementMapLocations,
+            SettlementEconomyProfiles = settlementEconomyProfiles,
+            Caravans = caravans,
+            TradeRoutes = tradeRoutes,
             TradeShipments = saveData.World.TradeShipments.Select(ToCoreTradeShipment).ToList(),
             SelectedCityId = saveData.World.SelectedCityId,
             SelectedRegionId = saveData.World.SelectedRegionId
