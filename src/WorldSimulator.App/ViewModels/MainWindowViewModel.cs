@@ -29,6 +29,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     private readonly SimulationClock _clock;
     private readonly DailyFoodFlowCalculator _dailyFoodFlowCalculator;
     private readonly FishingProductionCalculator _fishingProductionCalculator = new();
+    private readonly HuntingProductionCalculator _huntingProductionCalculator = new();
     private readonly CityStateEvaluator _cityStateEvaluator;
     private readonly PopulationChangeCalculator _populationChangeCalculator;
     private readonly CityEventManager _eventManager;
@@ -678,11 +679,12 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         var effects = eventEffects ?? _eventEffectCalculator.Calculate(_city, _eventManager.ActiveEvents);
         var baseInputs = DailyFoodFlowInputs.GothaPlaceholder;
         var fishing = _fishingProductionCalculator.Calculate(_city, _eventManager.ActiveEvents);
+        var hunting = _huntingProductionCalculator.Calculate(_city);
 
         return new DailyFoodFlowInputs
         {
             FishingIncome = fishing.FinalOutput,
-            HuntingIncome = baseInputs.HuntingIncome,
+            HuntingIncome = hunting.FinalOutput,
             MainlandSupplyIncome = baseInputs.MainlandSupplyIncome + effects.MainlandSupplyDelta,
             EventDelta = baseInputs.EventDelta + effects.FoodDelta
         };
