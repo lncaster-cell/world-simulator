@@ -32,6 +32,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     private readonly MainlandSupplyProductionCalculator _mainlandSupplyProductionCalculator = new();
     private readonly GoodsCraftingProductionCalculator _goodsCraftingProductionCalculator = new();
     private readonly ResourceGatheringProductionCalculator _resourceGatheringProductionCalculator = new();
+    private readonly HouseholdConsumptionCalculator _householdConsumptionCalculator = new();
     private readonly DailyWealthFlowCalculator _dailyWealthFlowCalculator = new();
     private readonly CityStateEvaluator _cityStateEvaluator;
     private readonly PopulationChangeCalculator _populationChangeCalculator;
@@ -539,12 +540,16 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         _city.Resources -= goodsCrafting.ResourcesConsumed;
         _city.Goods += goodsCrafting.GoodsProduced;
 
-        var householdConsumption = new HouseholdConsumptionResult
-        {
-            GoodsShortage = 0m,
-            ResourcesShortage = 0m,
-            HasAnyShortage = false
-        };
+        var householdConsumption = _householdConsumptionCalculator.Calculate(_city);
+        _city.Goods -= householdConsumption.GoodsConsumed;
+        _city.Resources -= householdConsumption.ResourcesConsumed;
+
+        OnPropertyChanged(nameof(Goods));
+        OnPropertyChanged(nameof(Resources));
+        OnPropertyChanged(nameof(GoodsTooltip));
+        OnPropertyChanged(nameof(ResourcesTooltip));
+        OnPropertyChanged(nameof(EconomyStocksTooltip));
+
 
         var wealthFlow = _dailyWealthFlowCalculator.Calculate(_city, result, goodsCrafting, householdConsumption);
         _dailyWealthFlowResult = wealthFlow;

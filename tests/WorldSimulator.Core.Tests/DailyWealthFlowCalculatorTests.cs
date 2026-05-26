@@ -59,6 +59,25 @@ public sealed class DailyWealthFlowCalculatorTests
         return _calculator.Calculate(city,
             new DailyFoodFlowResult{StartingFood=1000m,PopulationConsumption=populationConsumption,FishingIncome=0m,HuntingIncome=0m,MainlandSupplyIncome=mainlandSupply,EventDelta=0m,TotalDelta=0m,EndingFood=endingFood},
             new GoodsCraftingProductionResult{NaturalPotential=0m,RequiredWorkers=0,AssignedWorkers=0,WorkerCoverage=0m,ExtraWorkers=0,OverstaffBonus=0m,MoodModifier=1m,SecurityModifier=1m,StateModifier=1m,ResourceCostPerGoods=1m,PotentialGoodsOutput=0m,ResourcesNeeded=0m,ResourcesAvailable=0m,ResourcesConsumed=0m,GoodsProduced=goodsProduced},
-            new HouseholdConsumptionResult{GoodsShortage=goodsShortage,ResourcesShortage=resourcesShortage,HasAnyShortage=goodsShortage>0m||resourcesShortage>0m});
+            Household(goodsShortage, resourcesShortage, population));
     }
+
+    private static HouseholdConsumptionResult Household(decimal goodsShortage = 0m, decimal resourcesShortage = 0m, int population = 420)
+    {
+        return new HouseholdConsumptionResult
+        {
+            Population = population,
+            GoodsConsumptionPerPerson = 0.05m,
+            RequiredGoods = goodsShortage > 0m ? goodsShortage : 0m,
+            GoodsAvailable = 0m,
+            GoodsConsumed = 0m,
+            GoodsShortage = goodsShortage,
+            ResourcesConsumptionPerPerson = 0.01m,
+            RequiredResources = resourcesShortage > 0m ? resourcesShortage : 0m,
+            ResourcesAvailable = 0m,
+            ResourcesConsumed = 0m,
+            ResourcesShortage = resourcesShortage
+        };
+    }
+
 }
