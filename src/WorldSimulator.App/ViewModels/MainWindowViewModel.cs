@@ -32,6 +32,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     private readonly MainlandSupplyProductionCalculator _mainlandSupplyProductionCalculator = new();
     private readonly GoodsCraftingProductionCalculator _goodsCraftingProductionCalculator = new();
     private readonly ResourceGatheringProductionCalculator _resourceGatheringProductionCalculator = new();
+    private readonly DailyWealthFlowCalculator _dailyWealthFlowCalculator = new();
     private readonly CityStateEvaluator _cityStateEvaluator;
     private readonly PopulationChangeCalculator _populationChangeCalculator;
     private readonly CityEventManager _eventManager;
@@ -41,6 +42,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     private readonly DispatcherTimer _timer;
     private DateTimeOffset _lastTickUtc;
     private DailyFoodFlowResult _dailyFoodFlowResult;
+    private DailyWealthFlowResult? _dailyWealthFlowResult;
     private bool _isRandomEventGenerationEnabled = true;
     private string _lastImportantChange = "пока нет.";
     private bool _isMapCalibrationModeEnabled;
@@ -178,6 +180,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     public decimal Food => _city.Food;
 
     public decimal Wealth => _city.Wealth;
+
+    public string WealthTooltip => BuildWealthTooltip();
 
     public int Mood => _city.Mood;
 
@@ -471,6 +475,23 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         _city.Resources -= goodsCrafting.ResourcesConsumed;
         _city.Goods += goodsCrafting.GoodsProduced;
 
+        var householdConsumption = new HouseholdConsumptionResult
+        {
+            GoodsShortage = 0m,
+            ResourcesShortage = 0m,
+            HasAnyShortage = false
+        };
+
+        var wealthFlow = _dailyWealthFlowCalculator.Calculate(_city, result, goodsCrafting, householdConsumption);
+        _dailyWealthFlowResult = wealthFlow;
+        _city.Wealth = wealthFlow.EndingWealth;
+
+        if (wealthFlow.TotalDelta != 0m)
+        {
+            AddTechnicalLogEntry($"День {day}: благосостояние {wealthFlow.StartingWealth:0.##} → {wealthFlow.EndingWealth:0.##}; баланс {wealthFlow.TotalDelta:+0.##;-0.##;0}." +
+                                 $" Дефициты: еда {wealthFlow.FoodShortagePenalty:+0.##;-0.##;0}, товары {wealthFlow.GoodsShortagePenalty:+0.##;-0.##;0}, ресурсы {wealthFlow.ResourcesShortagePenalty:+0.##;-0.##;0}.");
+        }
+
         if (goodsCrafting.GoodsProduced > 0m || goodsCrafting.ResourcesConsumed > 0m)
         {
             AddTechnicalLogEntry($"День {day}: товары +{goodsCrafting.GoodsProduced:0.##} произведены из ресурсов -{goodsCrafting.ResourcesConsumed:0.##}.");
@@ -524,6 +545,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         var cityStateEnd = _city.CityState;
         OnPropertyChanged(nameof(Food));
         OnPropertyChanged(nameof(Resources));
+        OnPropertyChanged(nameof(Wealth));
+        OnPropertyChanged(nameof(WealthTooltip));
+        OnPropertyChanged(nameof(WealthTooltip));
         OnPropertyChanged(nameof(FoodBalanceTooltip));
         OnPropertyChanged(nameof(FishingProductionTooltip));
         OnPropertyChanged(nameof(Resources));
@@ -551,6 +575,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
 
         OnPropertyChanged(nameof(Population));
         OnPropertyChanged(nameof(DailyFoodConsumption));
+        OnPropertyChanged(nameof(WealthTooltip));
         OnPropertyChanged(nameof(FoodBalanceTooltip));
         OnPropertyChanged(nameof(FishingProductionTooltip));
         RefreshDailyFoodFlowPreview();
@@ -718,6 +743,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(Resources));
         OnPropertyChanged(nameof(Goods));
         OnPropertyChanged(nameof(DailyFoodConsumption));
+        OnPropertyChanged(nameof(WealthTooltip));
     }
 
     private void RefreshDailyFoodFlowPreview()
@@ -850,9 +876,36 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(CityState));
         OnPropertyChanged(nameof(CityStateDisplay));
         OnPropertyChanged(nameof(FishingProductionTooltip));
+        OnPropertyChanged(nameof(WealthTooltip));
         OnPropertyChanged(nameof(SimulationSummaryCityState));
     }
 
+
+
+    private string BuildWealthTooltip()
+    {
+        var flow = _dailyWealthFlowResult ?? new DailyWealthFlowResult
+        {
+            StartingWealth = Wealth, PortTradeBonus = 0m, GoodsProductionBonus = 0m, ConsumptionCoverageBonus = 0m,
+            FoodShortagePenalty = 0m, GoodsShortagePenalty = 0m, ResourcesShortagePenalty = 0m, SecurityModifierDelta = 0m, CrimePenalty = 0m, CityStateDelta = 0m, TotalDelta = 0m, EndingWealth = Wealth
+        };
+
+        return $"Благосостояние:{Environment.NewLine}" +
+               $"Текущее значение: {Wealth:0.##}{Environment.NewLine}{Environment.NewLine}" +
+               $"Прогноз на день:{Environment.NewLine}" +
+               $"Портовая торговля: {flow.PortTradeBonus:+0.##;-0.##;0}{Environment.NewLine}" +
+               $"Производство товаров: {flow.GoodsProductionBonus:+0.##;-0.##;0}{Environment.NewLine}" +
+               $"Покрытие бытовых потребностей: {flow.ConsumptionCoverageBonus:+0.##;-0.##;0}{Environment.NewLine}{Environment.NewLine}" +
+               $"Штрафы:{Environment.NewLine}" +
+               $"Нехватка еды: {flow.FoodShortagePenalty:+0.##;-0.##;0}{Environment.NewLine}" +
+               $"Дефицит товаров: {flow.GoodsShortagePenalty:+0.##;-0.##;0}{Environment.NewLine}" +
+               $"Дефицит ресурсов: {flow.ResourcesShortagePenalty:+0.##;-0.##;0}{Environment.NewLine}" +
+               $"Безопасность: {flow.SecurityModifierDelta:+0.##;-0.##;0}{Environment.NewLine}" +
+               $"Преступность: {flow.CrimePenalty:+0.##;-0.##;0}{Environment.NewLine}" +
+               $"Состояние города: {flow.CityStateDelta:+0.##;-0.##;0}{Environment.NewLine}{Environment.NewLine}" +
+               $"Итоговый баланс: {flow.TotalDelta:+0.##;-0.##;0}{Environment.NewLine}" +
+               $"Ожидаемое благосостояние после дня: {flow.EndingWealth:0.##}";
+    }
 
     private void SetLastImportantChange(string message)
     {
