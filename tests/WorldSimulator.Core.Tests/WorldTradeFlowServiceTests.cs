@@ -9,129 +9,109 @@ public sealed class WorldTradeFlowServiceTests
 {
     private readonly WorldTradeFlowService _service = new();
 
-    [Fact] public void FoodSurplus_TransfersFood() => AssertTransfer(TradeGoodType.Food);
-    [Fact] public void GoodsSurplus_TransfersGoods() => AssertTransfer(TradeGoodType.Goods);
-    [Fact] public void ResourcesSurplus_TransfersResources() => AssertTransfer(TradeGoodType.Resources);
-
     [Fact]
-    public void Transfer_RespectsReserveAndTargetAndCapacity()
+    public void WeeklyTrade_CreatesShipmentInsteadOfInstantDelivery()
     {
-        var world = BuildWorld(TradeGoodType.Food, exporterStock: 300m, importerStock: 0m, caravanCapacity: 10m);
-        var exporter = world.FindCity("a")!;
-        var importer = world.FindCity("b")!;
-        var reserve = 160m; // pop100 => 20/day * 8
-        var target = 240m;
+        var world = BuildWorld(TradeGoodType.Food, 300m, 0m, 10m);
 
-        _service.RunWeeklyTrade(world);
+        _service.RunWeeklyTrade(world, currentDay: 7);
 
-        exporter.Food.Should().BeGreaterThanOrEqualTo(reserve);
-        importer.Food.Should().BeLessThanOrEqualTo(target);
-        (importer.Food).Should().Be(10m);
-    }
-
-    [Fact]
-    public void UnavailableCaravan_DoesNotTrade()
-    {
-        var world = BuildWorld(TradeGoodType.Goods, 100m, 0m, 50m, false);
-        var result = _service.RunWeeklyTrade(world);
-        result.Transfers.Should().BeEmpty();
-    }
-
-    [Fact]
-    public void CityWithoutCaravan_DoesNotTradeAsExporter()
-    {
-        var world = BuildWorld(TradeGoodType.Resources, 100m, 0m, 50m);
-        world.Caravans.Clear();
-        var result = _service.RunWeeklyTrade(world);
-        result.Transfers.Should().BeEmpty();
-    }
-
-    [Fact]
-    public void Trade_ChangesWealthInSmallAmount()
-    {
-        var world = BuildWorld(TradeGoodType.Food, 300m, 0m, 50m);
-        var result = _service.RunWeeklyTrade(world);
-        result.Transfers.Should().HaveCount(1);
-        result.Transfers[0].ExporterWealthDelta.Should().BePositive().And.BeLessOrEqualTo(2m);
-        result.Transfers[0].ImporterWealthDelta.Should().BeNegative().And.BeGreaterOrEqualTo(-2m);
-    }
-
-
-    [Fact]
-    public void ImporterWithEnoughWealth_ImportsNormally()
-    {
-        var world = BuildWorld(TradeGoodType.Food, exporterStock: 300m, importerStock: 0m, caravanCapacity: 10m, importerWealth: 100m);
-
-        _service.RunWeeklyTrade(world);
-
-        world.FindCity("b")!.Food.Should().Be(10m);
-    }
-
-    [Fact]
-    public void ImporterWithPartialWealth_ReceivesReducedTransfer()
-    {
-        var world = BuildWorld(TradeGoodType.Food, exporterStock: 300m, importerStock: 0m, caravanCapacity: 10m, importerWealth: 0.1m);
-
-        _service.RunWeeklyTrade(world);
-
-        world.FindCity("b")!.Food.Should().Be(5m);
-    }
-
-    [Fact]
-    public void ImporterWithZeroWealth_ReceivesNoTransfer()
-    {
-        var world = BuildWorld(TradeGoodType.Food, exporterStock: 300m, importerStock: 0m, caravanCapacity: 10m, importerWealth: 0m);
-
-        var result = _service.RunWeeklyTrade(world);
-
-        result.Transfers.Should().BeEmpty();
+        world.TradeShipments.Should().ContainSingle();
         world.FindCity("b")!.Food.Should().Be(0m);
     }
 
     [Fact]
-    public void ExporterKeepsGoods_WhenImporterCannotPay()
+    public void ExporterStock_DecreasesOnDeparture()
     {
-        var world = BuildWorld(TradeGoodType.Goods, exporterStock: 100m, importerStock: 0m, caravanCapacity: 50m, importerWealth: 0m);
-        var exporterGoodsBefore = world.FindCity("a")!.Goods;
+        var world = BuildWorld(TradeGoodType.Food, 300m, 0m, 10m);
 
-        _service.RunWeeklyTrade(world);
+        _service.RunWeeklyTrade(world, currentDay: 7);
 
-        world.FindCity("a")!.Goods.Should().Be(exporterGoodsBefore);
+        world.FindCity("a")!.Food.Should().Be(290m);
     }
 
     [Fact]
-    public void ExporterWealthGain_EqualsImporterWealthCost_AndNoNegativeWealth()
+    public void ImporterStock_IncreasesOnArrivalDayOnly()
     {
-        var world = BuildWorld(TradeGoodType.Food, exporterStock: 300m, importerStock: 0m, caravanCapacity: 50m, importerWealth: 0.5m);
+        var world = BuildWorld(TradeGoodType.Food, 300m, 0m, 10m, travelDays: 3);
 
-        var result = _service.RunWeeklyTrade(world);
+        _service.RunWeeklyTrade(world, currentDay: 7);
+        _service.ProcessShipments(world, currentDay: 9);
+        world.FindCity("b")!.Food.Should().Be(0m);
 
-        result.Transfers.Should().ContainSingle();
-        var transfer = result.Transfers.Single();
-        transfer.ExporterWealthDelta.Should().Be(-transfer.ImporterWealthDelta);
-        world.Cities.Should().OnlyContain(c => c.Wealth >= 0m);
+        _service.ProcessShipments(world, currentDay: 10);
+        world.FindCity("b")!.Food.Should().Be(10m);
     }
 
     [Fact]
-    public void Result_IsDeterministic()
+    public void ActiveShipment_BlocksCaravanReuse_UntilReturnDay()
     {
-        var worldA = BuildWorld(TradeGoodType.Food, 300m, 0m, 50m);
-        var worldB = BuildWorld(TradeGoodType.Food, 300m, 0m, 50m);
+        var world = BuildWorld(TradeGoodType.Food, 500m, 0m, 10m, travelDays: 2);
 
-        var resultA = _service.RunWeeklyTrade(worldA);
-        var resultB = _service.RunWeeklyTrade(worldB);
+        _service.RunWeeklyTrade(world, currentDay: 7);
+        _service.RunWeeklyTrade(world, currentDay: 14);
+        world.TradeShipments.Should().HaveCount(1);
 
-        resultA.Should().BeEquivalentTo(resultB);
+        _service.ProcessShipments(world, currentDay: 11);
+        _service.RunWeeklyTrade(world, currentDay: 14);
+        world.TradeShipments.Should().HaveCount(2);
     }
 
-    private void AssertTransfer(TradeGoodType good)
+    [Fact]
+    public void ZeroWealthImporter_CreatesNoShipment()
     {
-        var world = BuildWorld(good, 100m, 0m, 50m);
-        var result = _service.RunWeeklyTrade(world);
-        result.Transfers.Should().ContainSingle(t => t.GoodType == good && t.AmountTransferred > 0m);
+        var world = BuildWorld(TradeGoodType.Food, 300m, 0m, 10m, importerWealth: 0m);
+
+        var result = _service.RunWeeklyTrade(world, currentDay: 7);
+
+        result.Transfers.Should().BeEmpty();
+        world.TradeShipments.Should().BeEmpty();
     }
 
-    private static SimulationWorld BuildWorld(TradeGoodType good, decimal exporterStock, decimal importerStock, decimal caravanCapacity, bool available = true, decimal importerWealth = 100m)
+    [Fact]
+    public void PartialWealth_LimitsShipmentAmount()
+    {
+        var world = BuildWorld(TradeGoodType.Food, 300m, 0m, 10m, importerWealth: 0.1m);
+
+        _service.RunWeeklyTrade(world, currentDay: 7);
+
+        world.TradeShipments.Should().ContainSingle();
+        world.TradeShipments[0].Amount.Should().Be(5m);
+    }
+
+    [Fact]
+    public void DisabledRoute_PreventsShipment()
+    {
+        var world = BuildWorld(TradeGoodType.Food, 300m, 0m, 10m, routeEnabled: false);
+
+        var result = _service.RunWeeklyTrade(world, currentDay: 7);
+
+        result.Transfers.Should().BeEmpty();
+        world.TradeShipments.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void WrongCaravanType_PreventsShipment()
+    {
+        var world = BuildWorld(TradeGoodType.Food, 300m, 0m, 10m, caravanType: CaravanType.Sea, routeType: CaravanType.Land);
+
+        var result = _service.RunWeeklyTrade(world, currentDay: 7);
+
+        result.Transfers.Should().BeEmpty();
+        world.TradeShipments.Should().BeEmpty();
+    }
+
+    private static SimulationWorld BuildWorld(
+        TradeGoodType good,
+        decimal exporterStock,
+        decimal importerStock,
+        decimal caravanCapacity,
+        bool available = true,
+        decimal importerWealth = 100m,
+        int travelDays = 2,
+        bool routeEnabled = true,
+        CaravanType caravanType = CaravanType.Land,
+        CaravanType routeType = CaravanType.Land)
     {
         var cityA = City("a", 100);
         var cityB = City("b", 100, importerWealth);
@@ -141,10 +121,12 @@ public sealed class WorldTradeFlowServiceTests
         return new SimulationWorld
         {
             Cities = [cityA, cityB],
-            Regions = [],
+            Regions = [new Region { Id = "r", DisplayName = "R", MapAssetId = "map" }],
             SettlementMapLocations = [],
             SettlementEconomyProfiles = [],
-            Caravans = [new Caravan { Id = "c1", OwnerSettlementId = "a", Type = CaravanType.Land, Capacity = caravanCapacity, RequiredWorkers = 1, IsAvailable = available }],
+            Caravans = [new Caravan { Id = "c1", OwnerSettlementId = "a", Type = caravanType, Capacity = caravanCapacity, RequiredWorkers = 1, IsAvailable = available }],
+            TradeRoutes = [new TradeRoute { Id = "route1", FromSettlementId = "a", ToSettlementId = "b", Type = routeType, Distance = 1m, TravelDays = travelDays, IsEnabled = routeEnabled, DifficultyMultiplier = 1m }],
+            TradeShipments = [],
             SelectedCityId = "a",
             SelectedRegionId = "r"
         };
