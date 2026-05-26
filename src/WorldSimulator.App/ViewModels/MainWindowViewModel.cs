@@ -237,6 +237,63 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
               $"Дневной баланс: {DailyFoodTotalDeltaDisplay}{Environment.NewLine}" +
               $"Ожидаемая пища после дня: {DailyFoodEndingFood:0.##}";
 
+    public string GoodsTooltip
+    {
+        get
+        {
+            var resourceGathering = _resourceGatheringProductionCalculator.Calculate(_city);
+            var previewCity = CreatePreviewCity();
+            previewCity.Resources += resourceGathering.FinalOutput;
+
+            var goodsCrafting = _goodsCraftingProductionCalculator.Calculate(previewCity);
+            previewCity.Resources -= goodsCrafting.ResourcesConsumed;
+            previewCity.Goods += goodsCrafting.GoodsProduced;
+
+            var householdConsumption = _householdConsumptionCalculator.Calculate(previewCity);
+            var expectedBalance = goodsCrafting.GoodsProduced - householdConsumption.GoodsConsumed;
+
+            return $"Товары:{Environment.NewLine}" +
+                   $"Текущий запас: {Goods:0.##}{Environment.NewLine}{Environment.NewLine}" +
+                   $"Производство:{Environment.NewLine}" +
+                   $"Производство товаров: +{goodsCrafting.GoodsProduced:0.##}{Environment.NewLine}" +
+                   $"Расход ресурсов на производство: -{goodsCrafting.ResourcesConsumed:0.##}{Environment.NewLine}{Environment.NewLine}" +
+                   $"Бытовое потребление:{Environment.NewLine}" +
+                   $"Потребность населения: -{householdConsumption.RequiredGoods:0.##}{Environment.NewLine}" +
+                   $"Фактически потреблено: -{householdConsumption.GoodsConsumed:0.##}{Environment.NewLine}" +
+                   $"Дефицит: {householdConsumption.GoodsShortage:0.##}{Environment.NewLine}{Environment.NewLine}" +
+                   $"Итог:{Environment.NewLine}" +
+                   $"Ожидаемый баланс товаров за день: {expectedBalance:+0.##;-0.##;0}";
+        }
+    }
+
+    public string ResourcesTooltip
+    {
+        get
+        {
+            var resourceGathering = _resourceGatheringProductionCalculator.Calculate(_city);
+            var previewCity = CreatePreviewCity();
+            previewCity.Resources += resourceGathering.FinalOutput;
+
+            var goodsCrafting = _goodsCraftingProductionCalculator.Calculate(previewCity);
+            previewCity.Resources -= goodsCrafting.ResourcesConsumed;
+            previewCity.Goods += goodsCrafting.GoodsProduced;
+
+            var householdConsumption = _householdConsumptionCalculator.Calculate(previewCity);
+            var expectedBalance = resourceGathering.FinalOutput - goodsCrafting.ResourcesConsumed - householdConsumption.ResourcesConsumed;
+
+            return $"Ресурсы:{Environment.NewLine}" +
+                   $"Текущий запас: {Resources:0.##}{Environment.NewLine}{Environment.NewLine}" +
+                   $"Приход:{Environment.NewLine}" +
+                   $"Сбор ресурсов: +{resourceGathering.FinalOutput:0.##}{Environment.NewLine}{Environment.NewLine}" +
+                   $"Расход:{Environment.NewLine}" +
+                   $"Производство товаров: -{goodsCrafting.ResourcesConsumed:0.##}{Environment.NewLine}" +
+                   $"Бытовое потребление населения: -{householdConsumption.ResourcesConsumed:0.##}{Environment.NewLine}{Environment.NewLine}" +
+                   $"Дефицит бытовых ресурсов: {householdConsumption.ResourcesShortage:0.##}{Environment.NewLine}{Environment.NewLine}" +
+                   $"Итог:{Environment.NewLine}" +
+                   $"Ожидаемый баланс ресурсов за день: {expectedBalance:+0.##;-0.##;0}";
+        }
+    }
+
     public string FishingProductionTooltip
     {
         get
@@ -352,9 +409,16 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
 
     public string CityJournalTitle => $"Летопись города: {CurrentJournalCityName}";
 
+    public string EconomyStocksTooltip => $"{ResourcesTooltip}{Environment.NewLine}{Environment.NewLine}{GoodsTooltip}";
+
     private static string FormatSigned(decimal value)
     {
         return value.ToString("+0.##;-0.##;0");
+    }
+
+    private City CreatePreviewCity()
+    {
+        return new City(_city.Id, _city.Name, _city.Population, _city.Food, _city.Wealth, _city.Mood, _city.Security, _city.Crime, _city.Resources, _city.Goods, _city.CityState);
     }
 
     private void SelectGotha()
@@ -501,6 +565,16 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
             AddTechnicalLogEntry($"День {day}: производство товаров остановлено — нет ресурсов.");
         }
 
+        if (householdConsumption.GoodsConsumed > 0m || householdConsumption.ResourcesConsumed > 0m)
+        {
+            AddTechnicalLogEntry($"День {day}: население потребило товары -{householdConsumption.GoodsConsumed:0.##} и ресурсы -{householdConsumption.ResourcesConsumed:0.##}.");
+        }
+
+        if (householdConsumption.HasAnyShortage)
+        {
+            AddTechnicalLogEntry($"День {day}: бытовой дефицит: товары не хватает {householdConsumption.GoodsShortage:0.##}, ресурсы не хватает {householdConsumption.ResourcesShortage:0.##}.");
+        }
+
         var completedEvents = _eventManager.AdvanceDay();
         var journalItems = new List<SimulationJournalItem>();
         foreach (var completedEvent in completedEvents)
@@ -550,6 +624,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(WealthTooltip));
         OnPropertyChanged(nameof(FoodBalanceTooltip));
         OnPropertyChanged(nameof(FishingProductionTooltip));
+        OnPropertyChanged(nameof(ResourcesTooltip));
+        OnPropertyChanged(nameof(GoodsTooltip));
+        OnPropertyChanged(nameof(EconomyStocksTooltip));
         OnPropertyChanged(nameof(Resources));
         OnPropertyChanged(nameof(Goods));
         RefreshEventEntries();
@@ -578,6 +655,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(WealthTooltip));
         OnPropertyChanged(nameof(FoodBalanceTooltip));
         OnPropertyChanged(nameof(FishingProductionTooltip));
+        OnPropertyChanged(nameof(ResourcesTooltip));
+        OnPropertyChanged(nameof(GoodsTooltip));
         RefreshDailyFoodFlowPreview();
     }
 
@@ -599,6 +678,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         RefreshEventEntries();
         OnPropertyChanged(nameof(FoodBalanceTooltip));
         OnPropertyChanged(nameof(FishingProductionTooltip));
+        OnPropertyChanged(nameof(ResourcesTooltip));
+        OnPropertyChanged(nameof(GoodsTooltip));
     }
 
 
@@ -736,6 +817,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(Food));
         OnPropertyChanged(nameof(FoodBalanceTooltip));
         OnPropertyChanged(nameof(FishingProductionTooltip));
+        OnPropertyChanged(nameof(ResourcesTooltip));
+        OnPropertyChanged(nameof(GoodsTooltip));
         OnPropertyChanged(nameof(Wealth));
         OnPropertyChanged(nameof(Mood));
         OnPropertyChanged(nameof(Security));
@@ -766,6 +849,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(DailyFoodTotalDeltaDisplay));
         OnPropertyChanged(nameof(FoodBalanceTooltip));
         OnPropertyChanged(nameof(FishingProductionTooltip));
+        OnPropertyChanged(nameof(ResourcesTooltip));
+        OnPropertyChanged(nameof(GoodsTooltip));
         OnPropertyChanged(nameof(SimulationSummaryFoodBalance));
     }
 
@@ -842,6 +927,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(Crime));
         OnPropertyChanged(nameof(Wealth));
         OnPropertyChanged(nameof(Resources));
+        OnPropertyChanged(nameof(ResourcesTooltip));
+        OnPropertyChanged(nameof(GoodsTooltip));
     }
 
     private void RefreshCityState(int? day = null)
