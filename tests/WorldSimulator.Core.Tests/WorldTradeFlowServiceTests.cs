@@ -56,6 +56,62 @@ public sealed class WorldTradeFlowServiceTests
         result.Transfers[0].ImporterWealthDelta.Should().BeNegative().And.BeGreaterOrEqualTo(-2m);
     }
 
+
+    [Fact]
+    public void ImporterWithEnoughWealth_ImportsNormally()
+    {
+        var world = BuildWorld(TradeGoodType.Food, exporterStock: 300m, importerStock: 0m, caravanCapacity: 10m, importerWealth: 100m);
+
+        _service.RunWeeklyTrade(world);
+
+        world.FindCity("b")!.Food.Should().Be(10m);
+    }
+
+    [Fact]
+    public void ImporterWithPartialWealth_ReceivesReducedTransfer()
+    {
+        var world = BuildWorld(TradeGoodType.Food, exporterStock: 300m, importerStock: 0m, caravanCapacity: 10m, importerWealth: 0.1m);
+
+        _service.RunWeeklyTrade(world);
+
+        world.FindCity("b")!.Food.Should().Be(5m);
+    }
+
+    [Fact]
+    public void ImporterWithZeroWealth_ReceivesNoTransfer()
+    {
+        var world = BuildWorld(TradeGoodType.Food, exporterStock: 300m, importerStock: 0m, caravanCapacity: 10m, importerWealth: 0m);
+
+        var result = _service.RunWeeklyTrade(world);
+
+        result.Transfers.Should().BeEmpty();
+        world.FindCity("b")!.Food.Should().Be(0m);
+    }
+
+    [Fact]
+    public void ExporterKeepsGoods_WhenImporterCannotPay()
+    {
+        var world = BuildWorld(TradeGoodType.Goods, exporterStock: 100m, importerStock: 0m, caravanCapacity: 50m, importerWealth: 0m);
+        var exporterGoodsBefore = world.FindCity("a")!.Goods;
+
+        _service.RunWeeklyTrade(world);
+
+        world.FindCity("a")!.Goods.Should().Be(exporterGoodsBefore);
+    }
+
+    [Fact]
+    public void ExporterWealthGain_EqualsImporterWealthCost_AndNoNegativeWealth()
+    {
+        var world = BuildWorld(TradeGoodType.Food, exporterStock: 300m, importerStock: 0m, caravanCapacity: 50m, importerWealth: 0.5m);
+
+        var result = _service.RunWeeklyTrade(world);
+
+        result.Transfers.Should().ContainSingle();
+        var transfer = result.Transfers.Single();
+        transfer.ExporterWealthDelta.Should().Be(-transfer.ImporterWealthDelta);
+        world.Cities.Should().OnlyContain(c => c.Wealth >= 0m);
+    }
+
     [Fact]
     public void Result_IsDeterministic()
     {
@@ -75,10 +131,10 @@ public sealed class WorldTradeFlowServiceTests
         result.Transfers.Should().ContainSingle(t => t.GoodType == good && t.AmountTransferred > 0m);
     }
 
-    private static SimulationWorld BuildWorld(TradeGoodType good, decimal exporterStock, decimal importerStock, decimal caravanCapacity, bool available = true)
+    private static SimulationWorld BuildWorld(TradeGoodType good, decimal exporterStock, decimal importerStock, decimal caravanCapacity, bool available = true, decimal importerWealth = 100m)
     {
         var cityA = City("a", 100);
-        var cityB = City("b", 100);
+        var cityB = City("b", 100, importerWealth);
         SetStock(cityA, good, exporterStock);
         SetStock(cityB, good, importerStock);
 
@@ -94,7 +150,7 @@ public sealed class WorldTradeFlowServiceTests
         };
     }
 
-    private static City City(string id, int population) => new(id, id, population, 0m, 100m, 50, 50, 10, 0m, 0m, CityState.Growing);
+    private static City City(string id, int population, decimal wealth = 100m) => new(id, id, population, 0m, wealth, 50, 50, 10, 0m, 0m, CityState.Growing);
 
     private static void SetStock(City city, TradeGoodType good, decimal stock)
     {
