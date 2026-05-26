@@ -13,12 +13,12 @@ public sealed class JsonWorldSaveService
 
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
 
-    public async Task SaveAsync(string filePath, SimulationWorld world, SimulationClock clock, CityEventManager eventManager, CancellationToken cancellationToken = default)
+    public async Task SaveAsync(string filePath, SimulationWorld world, SimulationClock clock, WorldEventState eventState, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
         ArgumentNullException.ThrowIfNull(world);
         ArgumentNullException.ThrowIfNull(clock);
-        ArgumentNullException.ThrowIfNull(eventManager);
+        ArgumentNullException.ThrowIfNull(eventState);
 
         var saveData = new WorldSaveData
         {
@@ -37,8 +37,16 @@ public sealed class JsonWorldSaveService
             },
             Events = new EventSaveData
             {
-                ActiveEvents = eventManager.ActiveEvents.Select(ToSaveData).ToList(),
-                CompletedEvents = eventManager.CompletedEvents.Select(ToSaveData).ToList()
+                ActiveEvents = eventState.GetManagerOrEmpty(world.SelectedCityId).ActiveEvents.Select(ToSaveData).ToList(),
+                CompletedEvents = eventState.GetManagerOrEmpty(world.SelectedCityId).CompletedEvents.Select(ToSaveData).ToList(),
+                EventsByCityId = eventState.EventManagersByCity.ToDictionary(
+                    x => x.Key,
+                    x => new CityEventBucketSaveData
+                    {
+                        ActiveEvents = x.Value.ActiveEvents.Select(ToSaveData).ToList(),
+                        CompletedEvents = x.Value.CompletedEvents.Select(ToSaveData).ToList()
+                    },
+                    StringComparer.Ordinal)
             }
         };
 
@@ -81,10 +89,34 @@ public sealed class JsonWorldSaveService
         var clock = new SimulationClock(settings);
         clock.RestoreState(saveData.Clock.Day, saveData.Clock.Hour, saveData.Clock.IsRunning, saveData.Clock.AccumulatedRealTime, saveData.Clock.RealTimePerGameHour);
 
-        var activeEvents = (saveData.Events?.ActiveEvents ?? []).Select(ToCoreEvent).ToList();
-        var completedEvents = (saveData.Events?.CompletedEvents ?? []).Select(ToCoreEvent).ToList();
+        var eventState = BuildEventState(saveData.Events, world.SelectedCityId);
 
-        return new WorldLoadResult(world, clock, activeEvents, completedEvents);
+        return new WorldLoadResult(world, clock, eventState);
+    }
+
+    private static WorldEventState BuildEventState(EventSaveData? events, string selectedCityId)
+    {
+        var state = new WorldEventState();
+        if (events?.EventsByCityId is { Count: > 0 })
+        {
+            foreach (var pair in events.EventsByCityId)
+            {
+                var manager = new CityEventManager();
+                manager.Restore(
+                    (pair.Value.ActiveEvents ?? []).Select(ToCoreEvent).ToList(),
+                    (pair.Value.CompletedEvents ?? []).Select(ToCoreEvent).ToList());
+                state.SetManager(pair.Key, manager);
+            }
+
+            return state;
+        }
+
+        var fallbackManager = new CityEventManager();
+        fallbackManager.Restore(
+            (events?.ActiveEvents ?? []).Select(ToCoreEvent).ToList(),
+            (events?.CompletedEvents ?? []).Select(ToCoreEvent).ToList());
+        state.SetManager(selectedCityId, fallbackManager);
+        return state;
     }
 
     private static SimulationWorld BuildWorldFromVersion2(WorldSaveData saveData, string filePath)

@@ -121,5 +121,4 @@ public sealed class CityEventSaveData
 public sealed record WorldLoadResult(
     SimulationWorld World,
     SimulationClock Clock,
-    IReadOnlyList<CityEvent> ActiveEvents,
-    IReadOnlyList<CityEvent> CompletedEvents);
+    WorldEventState EventState);

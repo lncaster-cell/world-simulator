@@ -16,7 +16,7 @@ public sealed class JsonWorldSaveServiceTests
         var service = new JsonWorldSaveService();
         var world = WorldPresets.CreateDefaultWorld();
         var clock = new SimulationClock();
-        var manager = CreateManagerWithEvents();
+        var eventState = CreateEventStateWithEvents();
 
         world.Cities[0].Food = 1234;
         world.Cities[1].Mood = 73;
@@ -26,7 +26,7 @@ public sealed class JsonWorldSaveServiceTests
         var filePath = TempFile();
         try
         {
-            await service.SaveAsync(filePath, world, clock, manager);
+            await service.SaveAsync(filePath, world, clock, eventState);
             var loaded = await service.LoadAsync(filePath);
 
             Assert.Equal(world.Cities.Count, loaded.World.Cities.Count);
@@ -37,8 +37,9 @@ public sealed class JsonWorldSaveServiceTests
             Assert.Equal(world.Caravans.Count, loaded.World.Caravans.Count);
             Assert.Equal(world.SettlementMapLocations.Count, loaded.World.SettlementMapLocations.Count);
             Assert.Equal(world.SettlementEconomyProfiles.Count, loaded.World.SettlementEconomyProfiles.Count);
-            Assert.Single(loaded.ActiveEvents);
-            Assert.Single(loaded.CompletedEvents);
+            var selectedManager = loaded.EventState.GetManagerOrEmpty(loaded.World.SelectedCityId);
+            Assert.Single(selectedManager.ActiveEvents);
+            Assert.Single(selectedManager.CompletedEvents);
         }
         finally { Cleanup(filePath); }
     }
@@ -54,7 +55,7 @@ public sealed class JsonWorldSaveServiceTests
         var filePath = TempFile();
         try
         {
-            await service.SaveAsync(filePath, world, clock, new CityEventManager());
+            await service.SaveAsync(filePath, world, clock, new WorldEventState());
             var loaded = await service.LoadAsync(filePath);
             Assert.Equal(5, loaded.Clock.Day);
             Assert.Equal(14, loaded.Clock.Hour);
@@ -120,11 +121,13 @@ public sealed class JsonWorldSaveServiceTests
         finally { Cleanup(filePath); }
     }
 
-    private static CityEventManager CreateManagerWithEvents()
+    private static WorldEventState CreateEventStateWithEvents()
     {
         var manager = new CityEventManager();
         manager.Restore([new CityEvent("fire", "Fire", "Warehouse fire", 2, 5, 3)], [new CityEvent("storm", "Storm", "Port storm", 1, 2, 0)]);
-        return manager;
+        var state = new WorldEventState();
+        state.SetManager("novigrad", manager);
+        return state;
     }
 
     private static string TempFile() => Path.Combine(Path.GetTempPath(), $"world-save-{Guid.NewGuid():N}.json");
