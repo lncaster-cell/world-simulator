@@ -125,14 +125,14 @@ public sealed class WorldTradeFlowServiceTests
             SettlementMapLocations = [],
             SettlementEconomyProfiles = [],
             Caravans = [new Caravan { Id = "c1", OwnerSettlementId = "a", Type = caravanType, Capacity = caravanCapacity, RequiredWorkers = 1, IsAvailable = available }],
-            TradeRoutes = [new TradeRoute { Id = "route1", FromSettlementId = "a", ToSettlementId = "b", Type = routeType, Distance = 1m, TravelDays = travelDays, IsEnabled = routeEnabled, DifficultyMultiplier = 1m }],
+            TradeRoutes = [new TradeRoute { Id = "route1", FromSettlementId = "a", ToSettlementId = "b", Type = routeType, Distance = 1m, TravelDays = travelDays, IsEnabled = routeEnabled, DifficultyMultiplier = 1m, Points = [] }],
             TradeShipments = [],
             SelectedCityId = "a",
             SelectedRegionId = "r"
         };
     }
 
-    private static City City(string id, int population, decimal wealth = 100m) => new(id, id, population, 0m, wealth, 50, 50, 10, 0m, 0m, CityState.Growing);
+    private static City City(string id, int population, decimal wealth = 100m) => new(id, id, population, 0m, wealth, 50, 50, 10, 0m, 0m, CityState.Prosperous);
 
     private static void SetStock(City city, TradeGoodType good, decimal stock)
     {
