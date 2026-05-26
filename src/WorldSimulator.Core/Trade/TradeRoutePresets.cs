@@ -31,6 +31,12 @@ public static class TradeRoutePresets
         },
         new()
         {
+            Id = "rivenstal_brno", FromSettlementId = "rivenstal", ToSettlementId = "brno", Type = CaravanType.Land, Distance = 150m, TravelDays = 4, IsEnabled = true,
+            // TODO: replace intermediate point with authored road fork coordinate.
+            Points = [Pt(0.4824m, 0.4500m), Pt(0.4680m, 0.6100m), Pt(0.4527m, 0.7448m)]
+        },
+        new()
+        {
             Id = "brno_wodenz_land", FromSettlementId = "brno", ToSettlementId = "wodenz", Type = CaravanType.Land, Distance = 180m, TravelDays = 5, IsEnabled = true,
             Points = [Pt(0.4527m, 0.7448m), Pt(0.6200m, 0.8600m), Pt(0.8036m, 0.9604m)]
         },

@@ -26,6 +26,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     private const string SaveFilePath = "data/save/world_save.json";
     private const int MaxTechnicalLogEntries = 500;
     private const int MaxSimulationJournalDays = 500;
+    private const int MaxVisibleCaravanMovementMarkers = 12;
     private const string GothaCityId = "gotha";
     private SimulationWorld _world;
     private City _city;
@@ -58,6 +59,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     private double? _lastMapCalibrationX;
     private double? _lastMapCalibrationY;
     private string _selectedJournalCityId = GothaCityId;
+    private readonly List<CaravanMovementMarkerViewModel> _activeCaravanMovementMarkers = [];
+    private readonly List<TradeRouteVisualViewModel> _tradeRouteVisuals = [];
+    private readonly DispatcherTimer _tradeMarkerAnimationTimer;
+    private DateTimeOffset _lastTradeMarkerAnimationTickUtc;
 
     public MainWindowViewModel()
     {
@@ -114,15 +119,22 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         {
             Interval = TimeSpan.FromMilliseconds(250)
         };
+        _tradeMarkerAnimationTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(100)
+        };
 
         _clock.DayAdvanced += OnDayAdvanced;
         _timer.Tick += OnTick;
+        _tradeMarkerAnimationTimer.Tick += OnTradeMarkerAnimationTick;
         _timer.Start();
+        _tradeMarkerAnimationTimer.Start();
 
         RefreshCityState();
         RefreshDailyFoodFlowPreview();
         RefreshEventEntries();
         RefreshSimulationSummary();
+        RefreshTradeRouteVisuals(null);
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -186,6 +198,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         : "Включить случайные события";
 
     public string SimulationSummaryTitle => "Сводка симуляции";
+    public IReadOnlyList<CaravanMovementMarkerViewModel> ActiveCaravanMovementMarkers => _activeCaravanMovementMarkers;
+    public IReadOnlyList<TradeRouteVisualViewModel> TradeRouteVisuals => _tradeRouteVisuals;
 
     public string SimulationSummaryDayAndHour => $"День {Day}, час {Hour}";
 
@@ -665,11 +679,71 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         var populationEnd = _city.Population;
         var cityStateEnd = _city.CityState;
         _city = _world.SelectedCity;
+        if (simulationResult.WeeklyTradeFlowResult is not null)
+        {
+            RefreshTradeRouteVisuals(simulationResult.WeeklyTradeFlowResult);
+        }
         RefreshAllCityProperties();
         OnPropertyChanged(nameof(Food)); OnPropertyChanged(nameof(Resources)); OnPropertyChanged(nameof(Wealth)); OnPropertyChanged(nameof(WealthTooltip)); OnPropertyChanged(nameof(SettlementMapMarkers)); OnPropertyChanged(nameof(FoodBalanceTooltip)); OnPropertyChanged(nameof(FishingProductionTooltip)); OnPropertyChanged(nameof(ResourcesTooltip)); OnPropertyChanged(nameof(GoodsTooltip)); OnPropertyChanged(nameof(CrimeFlowTooltip)); OnPropertyChanged(nameof(EconomyStocksTooltip)); OnPropertyChanged(nameof(Resources)); OnPropertyChanged(nameof(Goods));
         RefreshEventEntries(); RefreshDailyFoodFlowPreview(); RefreshSimulationSummary();
         AppendSimulationJournalEntry(day, result, eventEffects, populationStart, populationEnd, cityStateStart, cityStateEnd, simulationResult.ActiveEventNamesBeforeAdvance, journalItems);
     }
+
+    private void RefreshTradeRouteVisuals(WorldTradeFlowResult? weeklyTradeResult)
+    {
+        var volumeByRoute = (weeklyTradeResult?.Transfers ?? [])
+            .GroupBy(x => x.RouteId, StringComparer.Ordinal)
+            .ToDictionary(
+                group => group.Key,
+                group => new
+                {
+                    Food = group.Where(x => x.GoodType == TradeGoodType.Food).Sum(x => x.AmountTransferred),
+                    Resources = group.Where(x => x.GoodType == TradeGoodType.Resources).Sum(x => x.AmountTransferred),
+                    Goods = group.Where(x => x.GoodType == TradeGoodType.Goods).Sum(x => x.AmountTransferred)
+                },
+                StringComparer.Ordinal);
+
+        _tradeRouteVisuals.Clear();
+        foreach (var route in _world.TradeRoutes)
+        {
+            var volume = volumeByRoute.GetValueOrDefault(route.Id);
+            _tradeRouteVisuals.Add(new TradeRouteVisualViewModel
+            {
+                RouteId = route.Id,
+                FromSettlementId = route.FromSettlementId,
+                ToSettlementId = route.ToSettlementId,
+                DisplayName = $"{route.FromSettlementId} → {route.ToSettlementId}",
+                Points = route.Points.Select(ToMapPoint).ToList(),
+                IsActive = volume is not null,
+                WeeklyFoodMoved = volume?.Food ?? 0m,
+                WeeklyResourcesMoved = volume?.Resources ?? 0m,
+                WeeklyGoodsMoved = volume?.Goods ?? 0m
+            });
+        }
+
+        _activeCaravanMovementMarkers.Clear();
+        foreach (var routeVisual in _tradeRouteVisuals
+                     .Where(x => x.IsActive && x.TotalWeeklyVolume > 0m)
+                     .OrderByDescending(x => x.TotalWeeklyVolume)
+                     .Take(MaxVisibleCaravanMovementMarkers))
+        {
+            _activeCaravanMovementMarkers.Add(new CaravanMovementMarkerViewModel
+            {
+                RouteId = routeVisual.RouteId,
+                DisplayName = routeVisual.DisplayName,
+                Points = routeVisual.Points,
+                Progress = 0d,
+                FoodMoved = routeVisual.WeeklyFoodMoved,
+                ResourcesMoved = routeVisual.WeeklyResourcesMoved,
+                GoodsMoved = routeVisual.WeeklyGoodsMoved
+            });
+        }
+
+        OnPropertyChanged(nameof(TradeRouteVisuals));
+        OnPropertyChanged(nameof(ActiveCaravanMovementMarkers));
+    }
+
+    private static MapPointViewModel ToMapPoint(RoutePoint point) => new() { X = (double)point.X, Y = (double)point.Y };
 
 
 
@@ -735,6 +809,88 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         _clock.Advance(elapsed);
 
         RefreshClockProperties();
+    }
+
+    private void OnTradeMarkerAnimationTick(object? sender, EventArgs e)
+    {
+        if (_activeCaravanMovementMarkers.Count == 0)
+        {
+            _lastTradeMarkerAnimationTickUtc = DateTimeOffset.UtcNow;
+            return;
+        }
+
+        var now = DateTimeOffset.UtcNow;
+        if (_lastTradeMarkerAnimationTickUtc == default)
+        {
+            _lastTradeMarkerAnimationTickUtc = now;
+        }
+
+        var deltaSeconds = (now - _lastTradeMarkerAnimationTickUtc).TotalSeconds;
+        _lastTradeMarkerAnimationTickUtc = now;
+        var progressDelta = deltaSeconds * 0.08d;
+
+        for (var i = 0; i < _activeCaravanMovementMarkers.Count; i++)
+        {
+            var marker = _activeCaravanMovementMarkers[i];
+            var nextProgress = marker.Progress + progressDelta;
+            while (nextProgress > 1d)
+            {
+                nextProgress -= 1d;
+            }
+
+            _activeCaravanMovementMarkers[i] = new CaravanMovementMarkerViewModel
+            {
+                RouteId = marker.RouteId,
+                DisplayName = marker.DisplayName,
+                Points = marker.Points,
+                Progress = nextProgress,
+                FoodMoved = marker.FoodMoved,
+                ResourcesMoved = marker.ResourcesMoved,
+                GoodsMoved = marker.GoodsMoved
+            };
+        }
+
+        OnPropertyChanged(nameof(ActiveCaravanMovementMarkers));
+    }
+
+    public static MapPointViewModel CalculatePointOnPolyline(IReadOnlyList<MapPointViewModel> points, double progress)
+    {
+        if (points.Count == 0) return new MapPointViewModel { X = 0d, Y = 0d };
+        if (points.Count == 1) return points[0];
+        var clamped = double.Clamp(progress, 0d, 1d);
+
+        var segmentLengths = new double[points.Count - 1];
+        var totalLength = 0d;
+        for (var i = 0; i < points.Count - 1; i++)
+        {
+            var dx = points[i + 1].X - points[i].X;
+            var dy = points[i + 1].Y - points[i].Y;
+            var length = Math.Sqrt(dx * dx + dy * dy);
+            segmentLengths[i] = length;
+            totalLength += length;
+        }
+
+        if (totalLength <= 0d) return points[0];
+        var targetLength = clamped * totalLength;
+        var walked = 0d;
+        for (var i = 0; i < segmentLengths.Length; i++)
+        {
+            var segmentLength = segmentLengths[i];
+            if (segmentLength <= 0d) continue;
+            if (walked + segmentLength >= targetLength)
+            {
+                var t = (targetLength - walked) / segmentLength;
+                return new MapPointViewModel
+                {
+                    X = points[i].X + ((points[i + 1].X - points[i].X) * t),
+                    Y = points[i].Y + ((points[i + 1].Y - points[i].Y) * t)
+                };
+            }
+
+            walked += segmentLength;
+        }
+
+        return points[^1];
     }
 
     private async Task SaveStateAsync()

@@ -1,8 +1,11 @@
 namespace WorldSimulator.Core.Trade;
 
 public sealed record TradeTransferResult(
+    string RouteId,
     string ExporterCityId,
     string ImporterCityId,
+    string FromSettlementId,
+    string ToSettlementId,
     string CaravanId,
     TradeGoodType GoodType,
     decimal AmountTransferred,

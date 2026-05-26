@@ -78,3 +78,17 @@ It is planned to be replaced/removed in a future phase as caravan trade deepens 
 - Sea caravans are larger and more expensive; they are only eligible for port cities when sea-route demand exists.
 - Trade-route travel time stays authored in `TradeRoute.TravelDays` (sea is not automatically faster).
 - Risk systems (loss/robbery/destruction) are deferred to future work.
+
+## Visual trade routes
+
+- На карте отображаются линии всех торговых маршрутов (trade network overlay).
+- После weekly trade активные маршруты подсвечиваются отдельным стилем.
+- Движущийся маркер на маршруте — агрегированная визуализация торгового потока, а не отдельный физический караван.
+- Один маркер может представлять несколько караванов/поставок/сделок за неделю.
+- Ограничение числа маркеров введено специально, чтобы не перегружать карту и WPF UI.
+- Экономика, travel time и distance-симуляция не меняются этим слоем; это только визуализация. Более точная модель travel time/distance будет добавлена позже.
+
+## Rivenstal-Brno branch
+
+- Добавлена дорожная ветка между Rivenstal и Brno как часть торговой сети Ривии.
+- Маршрут задан polyline через промежуточную точку развилки и может быть уточнён authored-координатой в будущем.
