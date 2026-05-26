@@ -1,4 +1,5 @@
 using WorldSimulator.Core.Cities;
+using WorldSimulator.Core.Trade;
 
 namespace WorldSimulator.Core.World;
 
@@ -43,6 +44,24 @@ public static class WorldPresets
                 new SettlementEconomyProfile { SettlementId = "brno", AgriculturePotential = 24m, FishingMultiplier = 0m, HuntingMultiplier = 0.40m, MainlandSupplyMultiplier = 0m, ResourceGatheringMultiplier = 0.35m, GoodsCraftingMultiplier = 0.20m, IsPort = false, IsFortress = false, IsCapital = false },
                 new SettlementEconomyProfile { SettlementId = "wodenz", AgriculturePotential = 36m, FishingMultiplier = 0m, HuntingMultiplier = 0.45m, MainlandSupplyMultiplier = 0m, ResourceGatheringMultiplier = 0.40m, GoodsCraftingMultiplier = 0.35m, IsPort = false, IsFortress = false, IsCapital = false },
                 new SettlementEconomyProfile { SettlementId = "thokur_rus", AgriculturePotential = 2m, FishingMultiplier = 0.70m, HuntingMultiplier = 0.10m, MainlandSupplyMultiplier = 0.20m, ResourceGatheringMultiplier = 0.15m, GoodsCraftingMultiplier = 0.10m, IsPort = true, IsFortress = false, IsCapital = false }
+            ],
+            Caravans =
+            [
+                new Caravan { Id = "gotha_land_1", OwnerSettlementId = "gotha", Type = CaravanType.Land, Capacity = 50m, RequiredWorkers = 5, IsAvailable = true },
+                new Caravan { Id = "gotha_land_2", OwnerSettlementId = "gotha", Type = CaravanType.Land, Capacity = 50m, RequiredWorkers = 5, IsAvailable = true },
+                new Caravan { Id = "gotha_sea_1", OwnerSettlementId = "gotha", Type = CaravanType.Sea, Capacity = 80m, RequiredWorkers = 8, IsAvailable = true },
+                new Caravan { Id = "gotha_sea_2", OwnerSettlementId = "gotha", Type = CaravanType.Sea, Capacity = 80m, RequiredWorkers = 8, IsAvailable = true },
+                new Caravan { Id = "highrock_land_1", OwnerSettlementId = "highrock", Type = CaravanType.Land, Capacity = 50m, RequiredWorkers = 5, IsAvailable = true },
+                new Caravan { Id = "highrock_land_2", OwnerSettlementId = "highrock", Type = CaravanType.Land, Capacity = 50m, RequiredWorkers = 5, IsAvailable = true },
+                new Caravan { Id = "mlynek_land_1", OwnerSettlementId = "mlynek", Type = CaravanType.Land, Capacity = 50m, RequiredWorkers = 5, IsAvailable = true },
+                new Caravan { Id = "wardmark_land_1", OwnerSettlementId = "wardmark", Type = CaravanType.Land, Capacity = 50m, RequiredWorkers = 5, IsAvailable = true },
+                new Caravan { Id = "rivenstal_land_1", OwnerSettlementId = "rivenstal", Type = CaravanType.Land, Capacity = 50m, RequiredWorkers = 5, IsAvailable = true },
+                new Caravan { Id = "rivenstal_land_2", OwnerSettlementId = "rivenstal", Type = CaravanType.Land, Capacity = 50m, RequiredWorkers = 5, IsAvailable = true },
+                new Caravan { Id = "gavern_land_1", OwnerSettlementId = "gavern", Type = CaravanType.Land, Capacity = 50m, RequiredWorkers = 5, IsAvailable = true },
+                new Caravan { Id = "gavern_land_2", OwnerSettlementId = "gavern", Type = CaravanType.Land, Capacity = 50m, RequiredWorkers = 5, IsAvailable = true },
+                new Caravan { Id = "brno_land_1", OwnerSettlementId = "brno", Type = CaravanType.Land, Capacity = 50m, RequiredWorkers = 5, IsAvailable = true },
+                new Caravan { Id = "wodenz_land_1", OwnerSettlementId = "wodenz", Type = CaravanType.Land, Capacity = 50m, RequiredWorkers = 5, IsAvailable = true },
+                new Caravan { Id = "thokur_rus_sea_1", OwnerSettlementId = "thokur_rus", Type = CaravanType.Sea, Capacity = 80m, RequiredWorkers = 8, IsAvailable = true }
             ],
             SelectedCityId = "gotha"
         };
