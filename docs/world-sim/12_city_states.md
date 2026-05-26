@@ -90,3 +90,6 @@
 10. `Stagnation`
 
 `Recovery` пока вне активного приоритета и остаётся reserved/future state.
+
+
+Экономические причины состояний описаны в `docs/world-sim/13_city_economy_model.md`.
