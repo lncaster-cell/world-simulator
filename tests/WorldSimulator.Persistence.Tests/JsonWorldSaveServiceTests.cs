@@ -2,6 +2,7 @@ using System.Text.Json;
 using WorldSimulator.Core.Cities;
 using WorldSimulator.Core.Events;
 using WorldSimulator.Core.Time;
+using WorldSimulator.Core.Trade;
 using WorldSimulator.Core.World;
 using WorldSimulator.Persistence.Saves;
 using Xunit;
@@ -22,6 +23,22 @@ public sealed class JsonWorldSaveServiceTests
         world.Cities[1].Mood = 73;
         world.SelectedCityId = world.Cities[1].Id;
         world.SelectedRegionId = world.Regions[0].Id;
+        world.TradeShipments.Add(new TradeShipment
+        {
+            Id = "s1",
+            CaravanId = world.Caravans[0].Id,
+            RouteId = world.TradeRoutes[0].Id,
+            FromSettlementId = world.TradeRoutes[0].FromSettlementId,
+            ToSettlementId = world.TradeRoutes[0].ToSettlementId,
+            GoodType = TradeGoodType.Food,
+            Amount = 10m,
+            DepartureDay = 7,
+            ArrivalDay = 10,
+            ReturnDay = 13,
+            ExporterWealthDelta = 0.2m,
+            ImporterWealthDelta = -0.2m,
+            Status = TradeShipmentStatus.InTransitToDestination
+        });
 
         var filePath = TempFile();
         try
@@ -35,6 +52,9 @@ public sealed class JsonWorldSaveServiceTests
             Assert.Equal(world.SelectedCityId, loaded.World.SelectedCityId);
             Assert.Equal(world.SelectedRegionId, loaded.World.SelectedRegionId);
             Assert.Equal(world.Caravans.Count, loaded.World.Caravans.Count);
+            Assert.Equal(world.TradeRoutes.Count, loaded.World.TradeRoutes.Count);
+            Assert.Single(loaded.World.TradeShipments);
+            Assert.Equal(10m, loaded.World.TradeShipments[0].Amount);
             Assert.Equal(world.SettlementMapLocations.Count, loaded.World.SettlementMapLocations.Count);
             Assert.Equal(world.SettlementEconomyProfiles.Count, loaded.World.SettlementEconomyProfiles.Count);
             var selectedManager = loaded.EventState.GetManagerOrEmpty(loaded.World.SelectedCityId);

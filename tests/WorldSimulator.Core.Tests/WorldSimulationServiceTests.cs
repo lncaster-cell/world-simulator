@@ -105,6 +105,8 @@ public sealed class WorldSimulationServiceTests
 
         worldA.Cities.Select(c => (c.Id, c.Food, c.Goods, c.Resources, c.Wealth))
             .Should().BeEquivalentTo(worldB.Cities.Select(c => (c.Id, c.Food, c.Goods, c.Resources, c.Wealth)));
+        worldA.TradeShipments.Select(s => (s.CaravanId, s.RouteId, s.GoodType, s.Amount, s.DepartureDay, s.ArrivalDay, s.ReturnDay, s.Status))
+            .Should().BeEquivalentTo(worldB.TradeShipments.Select(s => (s.CaravanId, s.RouteId, s.GoodType, s.Amount, s.DepartureDay, s.ArrivalDay, s.ReturnDay, s.Status)));
     }
     private static WorldSimulationService CreateService(CityEventManager? eventManager = null)
     {
