@@ -662,31 +662,39 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
             return;
         }
 
-        if (!decimal.TryParse(SelectedTradeRouteDistanceDaysInput, NumberStyles.Number, CultureInfo.InvariantCulture, out var parsedDistanceDays)
-            && !decimal.TryParse(SelectedTradeRouteDistanceDaysInput, NumberStyles.Number, CultureInfo.CurrentCulture, out parsedDistanceDays))
-        {
-            AddTechnicalLogEntry("Маршрут не сохранён: DistanceDays имеет некорректный формат.");
-            return;
-        }
-
-        if (parsedDistanceDays < 0.1m)
-        {
-            AddTechnicalLogEntry("Маршрут не сохранён: DistanceDays должен быть не меньше 0.1.");
-            return;
-        }
-
-        SelectedTradeRouteDistanceDays = parsedDistanceDays;
-
-        SelectedTradeRouteForAuthoring.Points = EditedTradeRoutePoints
+        var selectedRoute = SelectedTradeRouteForAuthoring;
+        var updatedPoints = EditedTradeRoutePoints
             .Select(x => new RoutePoint { X = (decimal)Math.Clamp(x.X, 0d, 1d), Y = (decimal)Math.Clamp(x.Y, 0d, 1d) })
             .ToList();
-        SelectedTradeRouteForAuthoring.DistanceDays = SelectedTradeRouteDistanceDays;
+        var updatedRoute = new TradeRoute
+        {
+            Id = selectedRoute.Id,
+            FromSettlementId = selectedRoute.FromSettlementId,
+            ToSettlementId = selectedRoute.ToSettlementId,
+            Type = selectedRoute.Type,
+            Distance = selectedRoute.Distance,
+            TravelDays = selectedRoute.TravelDays,
+            IsEnabled = selectedRoute.IsEnabled,
+            DifficultyMultiplier = selectedRoute.DifficultyMultiplier,
+            Points = updatedPoints
+        };
+
+        var routeIndex = _world.TradeRoutes.FindIndex(x => x.Id == selectedRoute.Id);
+        if (routeIndex < 0)
+        {
+            AddTechnicalLogEntry($"Маршрут {selectedRoute.Id}: не найден для сохранения точек.");
+            return;
+        }
+
+        _world.TradeRoutes[routeIndex] = updatedRoute;
+        SelectedTradeRouteForAuthoring = updatedRoute;
 
         OnPropertyChanged(nameof(TradeRoutes));
+        OnPropertyChanged(nameof(SelectedTradeRouteForAuthoring));
         OnPropertyChanged(nameof(EditedTradeRoutePointCount));
         OnPropertyChanged(nameof(EditedTradeRoutePolylinePoints));
         RefreshTradeRouteVisuals(null);
-        AddTechnicalLogEntry($"Маршрут {SelectedTradeRouteForAuthoring.Id}: сохранено {EditedTradeRoutePoints.Count} точек, DistanceDays={SelectedTradeRouteDistanceDays:0.##}.");
+        AddTechnicalLogEntry($"Маршрут {updatedRoute.Id}: сохранено {EditedTradeRoutePoints.Count} точек.");
     }
 
     private void CopyTradeRoutePoints()
@@ -699,7 +707,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
 
         var lines = EditedTradeRoutePoints.Select(x =>
             $"    new RoutePoint {{ X = {((decimal)Math.Clamp(x.X,0d,1d)).ToString("0.0000", CultureInfo.InvariantCulture)}m, Y = {((decimal)Math.Clamp(x.Y,0d,1d)).ToString("0.0000", CultureInfo.InvariantCulture)}m }}");
-        var text = $"RouteId: {SelectedTradeRouteForAuthoring.Id}{Environment.NewLine}DistanceDays: {SelectedTradeRouteDistanceDays:0.0}{Environment.NewLine}{Environment.NewLine}Points ={Environment.NewLine}[{Environment.NewLine}{string.Join($",{Environment.NewLine}", lines)}{Environment.NewLine}]";
+        var text = $"RouteId: {SelectedTradeRouteForAuthoring.Id}{Environment.NewLine}DistanceDays: {SelectedTradeRouteForAuthoring.TravelDays}{Environment.NewLine}{Environment.NewLine}Points ={Environment.NewLine}[{Environment.NewLine}{string.Join($",{Environment.NewLine}", lines)}{Environment.NewLine}]";
         Clipboard.SetText(text);
         AddTechnicalLogEntry($"Маршрут {SelectedTradeRouteForAuthoring.Id}: Points скопированы в буфер обмена.");
     }
