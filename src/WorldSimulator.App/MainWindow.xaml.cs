@@ -24,7 +24,7 @@ public partial class MainWindow : System.Windows.Window
 
     private void MapContainer_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
-        if (DataContext is not MainWindowViewModel viewModel || !viewModel.IsMapCalibrationModeEnabled)
+        if (DataContext is not MainWindowViewModel viewModel)
         {
             return;
         }
@@ -55,7 +55,15 @@ public partial class MainWindow : System.Windows.Window
         relativeX = Math.Clamp(relativeX, 0d, 1d);
         relativeY = Math.Clamp(relativeY, 0d, 1d);
 
-        viewModel.RegisterMapCalibrationPoint(relativeX, relativeY);
+        if (viewModel.IsMapCalibrationModeEnabled)
+        {
+            viewModel.RegisterMapCalibrationPoint(relativeX, relativeY);
+        }
+
+        if (viewModel.IsTradeRouteAuthoringModeEnabled)
+        {
+            viewModel.RegisterTradeRouteAuthoringPoint(relativeX, relativeY);
+        }
     }
 
     private void OpenCityButton_Click(object sender, System.Windows.RoutedEventArgs e)
