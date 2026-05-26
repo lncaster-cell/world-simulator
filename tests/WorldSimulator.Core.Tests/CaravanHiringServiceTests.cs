@@ -28,8 +28,29 @@ public sealed class CaravanHiringServiceTests
 
     private static SimulationWorld BuildWorld(bool port, bool seaDemand)
     {
-        var a = new City("a","a",1000,500m,1000m,50,50,10,0m,0m,CityState.Growing);
-        var b = new City("b","b",1000,0m,1000m,50,50,10,0m,0m,CityState.Growing);
-        return new SimulationWorld{Cities=[a,b],Regions=[],SettlementMapLocations=[],SettlementEconomyProfiles=[new SettlementEconomyProfile{SettlementId="a",IsPort=port},new SettlementEconomyProfile{SettlementId="b",IsPort=true}],Caravans=[],TradeShipments=[],TradeRoutes=[new TradeRoute{Id="a_b_land",FromSettlementId="a",ToSettlementId="b",Type=CaravanType.Land,IsEnabled=true,TravelDays=2,Distance=10m,Points=[new RoutePoint{X=0,Y=0},new RoutePoint{X=1,Y=1}]},new TradeRoute{Id="a_b_sea",FromSettlementId="a",ToSettlementId="b",Type=CaravanType.Sea,IsEnabled=seaDemand,TravelDays=2,Distance=10m,Points=[new RoutePoint{X=0,Y=0},new RoutePoint{X=1,Y=1}]}],SelectedCityId="a",SelectedRegionId="r"};
+        var a = new City("a","a",1000,500m,1000m,50,50,10,0m,0m,CityState.Prosperous);
+        var b = new City("b","b",1000,0m,1000m,50,50,10,0m,0m,CityState.Prosperous);
+        return new SimulationWorld{Cities=[a,b],Regions=[],SettlementMapLocations=[],SettlementEconomyProfiles=[Profile("a", isPort: port),Profile("b", isPort: true)],Caravans=[],TradeShipments=[],TradeRoutes=[new TradeRoute{Id="a_b_land",FromSettlementId="a",ToSettlementId="b",Type=CaravanType.Land,IsEnabled=true,TravelDays=2,Distance=10m,Points=[new RoutePoint{X=0,Y=0},new RoutePoint{X=1,Y=1}]},new TradeRoute{Id="a_b_sea",FromSettlementId="a",ToSettlementId="b",Type=CaravanType.Sea,IsEnabled=seaDemand,TravelDays=2,Distance=10m,Points=[new RoutePoint{X=0,Y=0},new RoutePoint{X=1,Y=1}]}],SelectedCityId="a",SelectedRegionId="r"};
+    }
+
+    private static SettlementEconomyProfile Profile(
+        string settlementId,
+        bool isPort = false,
+        bool isFortress = false,
+        bool isCapital = false)
+    {
+        return new SettlementEconomyProfile
+        {
+            SettlementId = settlementId,
+            AgriculturePotential = 10m,
+            FishingMultiplier = isPort ? 1m : 0m,
+            HuntingMultiplier = 0.5m,
+            MainlandSupplyMultiplier = isPort ? 1m : 0m,
+            ResourceGatheringMultiplier = 1m,
+            GoodsCraftingMultiplier = 1m,
+            IsPort = isPort,
+            IsFortress = isFortress,
+            IsCapital = isCapital
+        };
     }
 }
