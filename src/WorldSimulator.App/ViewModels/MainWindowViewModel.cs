@@ -555,6 +555,11 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         _dailyWealthFlowResult = wealthFlow;
         _city.Wealth = wealthFlow.EndingWealth;
 
+        if (IsWeeklyUpdateDay(day))
+        {
+            ApplyWeeklyCityUpdate(day);
+        }
+
         if (wealthFlow.TotalDelta != 0m)
         {
             AddTechnicalLogEntry($"День {day}: благосостояние {wealthFlow.StartingWealth:0.##} → {wealthFlow.EndingWealth:0.##}; баланс {wealthFlow.TotalDelta:+0.##;-0.##;0}." +
@@ -638,6 +643,13 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         RefreshDailyFoodFlowPreview();
         RefreshSimulationSummary();
         AppendSimulationJournalEntry(day, result, eventEffects, populationStart, populationEnd, cityStateStart, cityStateEnd, activeEventNamesBeforeAdvance, journalItems);
+    }
+
+    private static bool IsWeeklyUpdateDay(int day) => day > 0 && day % 7 == 0;
+
+    private void ApplyWeeklyCityUpdate(int day)
+    {
+        AddTechnicalLogEntry($"День {day}: недельный пересчёт города.");
     }
 
 

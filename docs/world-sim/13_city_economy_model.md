@@ -301,3 +301,25 @@
 - Благосостояние растёт от торговли, производства и стабильности.
 - Благосостояние падает от дефицитов, преступности, низкой безопасности и кризисных состояний.
 - Казна города/правителя будет добавлена отдельной сущностью в будущем.
+
+## Ежедневные и еженедельные системы
+
+### Daily systems
+
+- food production/consumption;
+- resource gathering;
+- goods crafting;
+- household consumption;
+- immediate stock changes.
+
+### Weekly systems
+
+- crime trend;
+- mood trend;
+- security trend;
+- long-term social pressure;
+- future stability checks.
+
+Запасы (Food, Resources, Goods) меняются ежедневно, потому что это оперативный уровень экономики и потребления.
+
+Социальные показатели (Crime, Mood, Security) лучше пересчитывать еженедельно: так динамика остаётся устойчивой и не «скачет» слишком резко изо дня в день.
