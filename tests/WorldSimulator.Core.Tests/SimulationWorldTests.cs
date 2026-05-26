@@ -38,7 +38,7 @@ public sealed class SimulationWorldTests
     {
         var world = WorldPresets.CreateDefaultWorld();
 
-        world.SettlementMapLocations.Should().OnlyContain(x => world.FindRegion(x.RegionId) is not null);
+        world.SettlementMapLocations.Should().OnlyContain(x => world.FindRegion(x.RegionId) != null);
     }
 
     [Fact]
@@ -245,7 +245,7 @@ public sealed class SimulationWorldTests
     public void DefaultWorld_AllCitiesHaveEconomyProfile()
     {
         var world = WorldPresets.CreateDefaultWorld();
-        world.Cities.Should().OnlyContain(c => world.FindSettlementEconomyProfile(c.Id) is not null);
+        world.Cities.Should().OnlyContain(c => world.FindSettlementEconomyProfile(c.Id) != null);
     }
 
     [Fact]
