@@ -30,7 +30,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     private readonly DailyFoodFlowCalculator _dailyFoodFlowCalculator;
     private readonly FishingProductionCalculator _fishingProductionCalculator = new();
     private readonly MainlandSupplyProductionCalculator _mainlandSupplyProductionCalculator = new();
-    private readonly ResourceGatheringProductionCalculator _resourceGatheringProductionCalculator = new();
+    private readonly GoodsCraftingProductionCalculator _goodsCraftingProductionCalculator = new();
     private readonly CityStateEvaluator _cityStateEvaluator;
     private readonly PopulationChangeCalculator _populationChangeCalculator;
     private readonly CityEventManager _eventManager;
@@ -466,6 +466,19 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
 
         ApplyDailyEventEffects(eventEffects, day);
 
+        var goodsCrafting = _goodsCraftingProductionCalculator.Calculate(_city);
+        _city.Resources -= goodsCrafting.ResourcesConsumed;
+        _city.Goods += goodsCrafting.GoodsProduced;
+
+        if (goodsCrafting.GoodsProduced > 0m || goodsCrafting.ResourcesConsumed > 0m)
+        {
+            AddTechnicalLogEntry($"День {day}: товары +{goodsCrafting.GoodsProduced:0.##} произведены из ресурсов -{goodsCrafting.ResourcesConsumed:0.##}.");
+        }
+        else if (goodsCrafting.ResourcesAvailable <= 0m)
+        {
+            AddTechnicalLogEntry($"День {day}: производство товаров остановлено — нет ресурсов.");
+        }
+
         var completedEvents = _eventManager.AdvanceDay();
         var journalItems = new List<SimulationJournalItem>();
         foreach (var completedEvent in completedEvents)
@@ -512,6 +525,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(Resources));
         OnPropertyChanged(nameof(FoodBalanceTooltip));
         OnPropertyChanged(nameof(FishingProductionTooltip));
+        OnPropertyChanged(nameof(Resources));
+        OnPropertyChanged(nameof(Goods));
         RefreshEventEntries();
         RefreshDailyFoodFlowPreview();
         RefreshSimulationSummary();
