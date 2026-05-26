@@ -8,4 +8,7 @@ public sealed class Caravan
     public required decimal Capacity { get; init; }
     public required int RequiredWorkers { get; init; }
     public required bool IsAvailable { get; init; }
+    public decimal PurchaseCost { get; init; }
+    public decimal UpkeepPerWeek { get; init; }
+    public CaravanStatus Status { get; set; } = CaravanStatus.Idle;
 }

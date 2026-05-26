@@ -190,7 +190,8 @@ public sealed class JsonWorldSaveService
         if (!Enum.TryParse<CaravanType>(caravanData.Type, true, out var caravanType))
             throw new InvalidDataException($"Unknown caravan type '{caravanData.Type}'.");
 
-        return new Caravan { Id = caravanData.Id, OwnerSettlementId = caravanData.OwnerSettlementId, Type = caravanType, Capacity = caravanData.Capacity, RequiredWorkers = caravanData.RequiredWorkers, IsAvailable = caravanData.IsAvailable };
+        Enum.TryParse<CaravanStatus>(caravanData.Status, true, out var caravanStatus);
+        return new Caravan { Id = caravanData.Id, OwnerSettlementId = caravanData.OwnerSettlementId, Type = caravanType, Capacity = caravanData.Capacity, RequiredWorkers = caravanData.RequiredWorkers, IsAvailable = caravanData.IsAvailable, PurchaseCost = caravanData.PurchaseCost, UpkeepPerWeek = caravanData.UpkeepPerWeek, Status = caravanStatus };
     }
 
     private static TradeRoute ToCoreTradeRoute(TradeRouteSaveData routeData)

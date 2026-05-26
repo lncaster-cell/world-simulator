@@ -19,6 +19,7 @@ public sealed class WorldSimulationService
     private readonly DailyWealthFlowCalculator _dailyWealthFlowCalculator;
     private readonly WeeklyCrimeFlowCalculator _weeklyCrimeFlowCalculator;
     private readonly WorldTradeFlowService _worldTradeFlowService;
+    private readonly CaravanHiringService _caravanHiringService;
     private readonly CityStateEvaluator _cityStateEvaluator;
     private readonly PopulationChangeCalculator _populationChangeCalculator;
     private readonly CityEventManager _defaultEventManager;
@@ -38,6 +39,7 @@ public sealed class WorldSimulationService
         DailyWealthFlowCalculator dailyWealthFlowCalculator,
         WeeklyCrimeFlowCalculator weeklyCrimeFlowCalculator,
         WorldTradeFlowService worldTradeFlowService,
+        CaravanHiringService caravanHiringService,
         CityStateEvaluator cityStateEvaluator,
         PopulationChangeCalculator populationChangeCalculator,
         CityEventManager eventManager,
@@ -55,6 +57,7 @@ public sealed class WorldSimulationService
         _dailyWealthFlowCalculator = dailyWealthFlowCalculator;
         _weeklyCrimeFlowCalculator = weeklyCrimeFlowCalculator;
         _worldTradeFlowService = worldTradeFlowService;
+        _caravanHiringService = caravanHiringService;
         _cityStateEvaluator = cityStateEvaluator;
         _populationChangeCalculator = populationChangeCalculator;
         _defaultEventManager = eventManager;
@@ -125,6 +128,7 @@ public sealed class WorldSimulationService
 
         if (IsWeeklyUpdateDay(day))
         {
+            _caravanHiringService.EvaluateAndHire(world);
             weeklyTradeFlowResult = _worldTradeFlowService.RunWeeklyTrade(world, day);
         }
 
