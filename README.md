@@ -1,68 +1,74 @@
 # World Simulator (NWN2 External)
 
-This repository contains design documentation and the initial **C#/.NET/WPF technical skeleton** for an external world simulator for an NWN2 module.
+Репозиторий содержит **рабочий C#/.NET/WPF симулятор мира** для NWN2-модуля (как внешнее desktop-приложение), а также проектную документацию.
 
-## Current stage
+## Текущее состояние на 26 May 2026
 
-- Current stage: **Task 01 skeleton implementation**.
-- A minimal Windows desktop app shell exists.
-- No simulation systems are implemented yet.
+> Важно: часть старых документов в `docs/world-sim/` отражает ранний «docs-only» этап и исторически не соответствует текущей реализации.
 
-## MVP 0.1 focus
+Уже реализовано:
+- доменная модель города и пресеты (включая Gotha);
+- симуляционные калькуляторы: еда, богатство, преступность, потребление, производство;
+- события города, генератор и применение эффектов;
+- караваны/торговые сущности;
+- simulation clock;
+- JSON save/load;
+- WPF UI (карта, окно города, журнал).
 
-MVP 0.1 remains strictly limited to a single city: **Gotha**.
+## Быстрый навигатор для ИИ-агентов
 
-## Solution layout
+- **Стартовая точка для восстановления контекста:** `docs/world-sim/21_agent_navigation_map.md`
+- **Операционные правила для агента:** `docs/world-sim/15_agent_instructions.md`
+- **Архитектура по слоям:** `src/WorldSimulator.App`, `src/WorldSimulator.Core`, `src/WorldSimulator.Persistence`
+- **Проверка изменений по логике:** `tests/WorldSimulator.Core.Tests`
+- **Проверка save/load:** `tests/WorldSimulator.Persistence.Tests`
+
+Рекомендуемый порядок чтения для нового агента:
+1. `README.md`
+2. `docs/world-sim/21_agent_navigation_map.md`
+3. Нужный раздел в `docs/world-sim/` по задаче
+4. Соответствующие тесты (как источник фактического поведения)
+
+## Структура решения
 
 ```text
 WorldSimulator.sln
 src/
-  WorldSimulator.App/          # WPF UI shell
-  WorldSimulator.Core/         # future simulation logic
-  WorldSimulator.Persistence/  # save/load JSON layer
+  WorldSimulator.App/          # WPF UI
+  WorldSimulator.Core/         # симуляция и доменная логика
+  WorldSimulator.Persistence/  # JSON save/load
+tests/
+  WorldSimulator.Core.Tests/
+  WorldSimulator.Persistence.Tests/
+docs/
+  world-sim/
 ```
 
-## Open and run (Windows)
+## Сборка/запуск (Windows)
 
-1. Open `WorldSimulator.sln` in Visual Studio 2022 (or later).
-2. Set `WorldSimulator.App` as startup project.
-3. Build solution:
-
+1. Открыть `WorldSimulator.sln` в Visual Studio 2022+.
+2. Назначить `WorldSimulator.App` startup project.
+3. Сборка:
    ```bash
    dotnet build WorldSimulator.sln
    ```
-
-4. Run app:
-
+4. Запуск:
    ```bash
    dotnet run --project src/WorldSimulator.App/WorldSimulator.App.csproj
    ```
 
-The app currently opens a placeholder main window only.
+## Как получить `.exe`
 
-## Как получить exe
+CI ` .NET build and test` выполняет валидацию (restore/build/test), но не публикует `.exe` на каждый push/PR.
 
-Обычный CI (**.NET build and test**) больше **не** создаёт `.exe` автоматически на каждый push/PR и выполняет только проверку кода (restore/build/test).
+Для публикации использовать ручной workflow **Publish Windows executable**:
+1. GitHub → **Actions**.
+2. Выбрать workflow **Publish Windows executable**.
+3. Нажать **Run workflow**.
+4. Выбрать ветку `main`.
+5. После завершения скачать artifact `world-simulator-win-x64`.
+6. Распаковать `.zip` и запустить `WorldSimulator.App.exe`.
 
-Чтобы собрать Windows `.exe`, используйте ручной workflow:
+## Диагностика
 
-1. Откройте вкладку **Actions** в репозитории GitHub.
-2. В списке workflow выберите **Publish Windows executable**.
-3. Нажмите **Run workflow**.
-4. Выберите ветку `main`.
-5. Подтвердите запуск и дождитесь завершения job.
-6. Откройте завершившийся запуск workflow и в блоке **Artifacts** скачайте `world-simulator-win-x64`.
-7. Распакуйте архив `.zip`.
-8. Запустите `WorldSimulator.App.exe`.
-
-Workflow `Publish Windows executable` публикует self-contained `win-x64` single-file сборку и хранит artifact 14 дней.
-
-## Documentation
-
-All project docs are located in:
-
-- `docs/world-sim/`
-
-## Диагностика падений
-
-Если приложение закрывается само или не открывается, проверьте файл `logs/startup-crash.log` рядом с exe.
+Если приложение закрывается при старте/не открывается, проверить `logs/startup-crash.log` рядом с `.exe`.
