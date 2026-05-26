@@ -192,3 +192,5 @@ This keeps the MVP simulation deterministic, readable in logs, and lightweight w
 
 
 Модель городской экономики описана в `docs/world-sim/13_city_economy_model.md`.
+
+Модель источников производства описана в `docs/world-sim/14_city_production_sources.md`.
