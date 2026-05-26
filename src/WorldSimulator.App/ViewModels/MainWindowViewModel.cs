@@ -31,6 +31,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     private readonly FishingProductionCalculator _fishingProductionCalculator = new();
     private readonly MainlandSupplyProductionCalculator _mainlandSupplyProductionCalculator = new();
     private readonly GoodsCraftingProductionCalculator _goodsCraftingProductionCalculator = new();
+    private readonly ResourceGatheringProductionCalculator _resourceGatheringProductionCalculator = new();
     private readonly CityStateEvaluator _cityStateEvaluator;
     private readonly PopulationChangeCalculator _populationChangeCalculator;
     private readonly CityEventManager _eventManager;
