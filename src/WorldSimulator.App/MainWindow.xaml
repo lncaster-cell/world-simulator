@@ -240,6 +240,8 @@
                         <TextBlock Text="Редактор маршрутов" FontWeight="SemiBold" FontSize="16" Margin="0,0,0,8"/>
                         <CheckBox Content="Режим разметки маршрутов" IsChecked="{Binding IsTradeRouteAuthoringModeEnabled}" Margin="0,0,0,8"/>
                         <ComboBox ItemsSource="{Binding TradeRoutes}" SelectedItem="{Binding SelectedTradeRouteForAuthoring}" DisplayMemberPath="Id" Margin="0,0,0,8"/>
+                        <TextBlock Text="Расстояние / дней пути:" FontWeight="SemiBold"/>
+                        <TextBox Text="{Binding SelectedTradeRouteDistanceDaysInput, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,8"/>
                         <TextBlock Text="Кликайте по дороге на карте, чтобы добавить точки маршрута" TextWrapping="Wrap" Margin="0,0,0,8"/>
                         <WrapPanel Margin="0,0,0,8">
                             <Button Content="Отменить точку" Command="{Binding UndoTradeRoutePointCommand}" Margin="0,0,8,0"/>

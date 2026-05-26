@@ -125,7 +125,7 @@ public sealed class WorldTradeFlowServiceTests
             SettlementMapLocations = [],
             SettlementEconomyProfiles = [],
             Caravans = [new Caravan { Id = "c1", OwnerSettlementId = "a", Type = caravanType, Capacity = caravanCapacity, RequiredWorkers = 1, IsAvailable = available }],
-            TradeRoutes = [new TradeRoute { Id = "route1", FromSettlementId = "a", ToSettlementId = "b", Type = routeType, Distance = 1m, TravelDays = travelDays, IsEnabled = routeEnabled, DifficultyMultiplier = 1m, Points = [] }],
+            TradeRoutes = [new TradeRoute { Id = "route1", FromSettlementId = "a", ToSettlementId = "b", Type = routeType, Distance = 1m, TravelDays = travelDays, DistanceDays = 1m, IsEnabled = routeEnabled, DifficultyMultiplier = 1m, Points = [] }],
             TradeShipments = [],
             SelectedCityId = "a",
             SelectedRegionId = "r"
