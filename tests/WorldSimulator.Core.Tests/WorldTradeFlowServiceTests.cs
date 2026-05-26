@@ -124,6 +124,41 @@ public sealed class WorldTradeFlowServiceTests
         resultA.Should().BeEquivalentTo(resultB);
     }
 
+
+    [Fact]
+    public void Trade_DoesNotHappenWithoutRoute()
+    {
+        var world = BuildWorld(TradeGoodType.Food, 300m, 0m, 50m);
+        world.TradeRoutes.Clear();
+        _service.RunWeeklyTrade(world).Transfers.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void DisabledRoute_BlocksTrade()
+    {
+        var world = BuildWorld(TradeGoodType.Food, 300m, 0m, 50m);
+        world.TradeRoutes[0] = new TradeRoute { Id = "a_b_land", FromSettlementId = "a", ToSettlementId = "b", Type = CaravanType.Land, Distance = 100m, TravelDays = 3, IsEnabled = false, Points = [new RoutePoint { X = 0.1m, Y = 0.1m }, new RoutePoint { X = 0.2m, Y = 0.2m }] };
+        _service.RunWeeklyTrade(world).Transfers.Should().BeEmpty();
+    }
+
+
+
+    [Fact]
+    public void LandCaravan_CannotUseSeaRoute()
+    {
+        var world = BuildWorld(TradeGoodType.Food, 300m, 0m, 50m);
+        world.TradeRoutes[0] = new TradeRoute { Id = "a_b_sea", FromSettlementId = "a", ToSettlementId = "b", Type = CaravanType.Sea, Distance = 100m, TravelDays = 3, IsEnabled = true, Points = [new RoutePoint { X = 0.1m, Y = 0.1m }, new RoutePoint { X = 0.2m, Y = 0.2m }] };
+        _service.RunWeeklyTrade(world).Transfers.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void SeaCaravan_CannotUseLandRoute()
+    {
+        var world = BuildWorld(TradeGoodType.Food, 300m, 0m, 50m);
+        world.Caravans[0] = new Caravan { Id = "c1", OwnerSettlementId = "a", Type = CaravanType.Sea, Capacity = 50m, RequiredWorkers = 1, IsAvailable = true };
+        _service.RunWeeklyTrade(world).Transfers.Should().BeEmpty();
+    }
+
     private void AssertTransfer(TradeGoodType good)
     {
         var world = BuildWorld(good, 100m, 0m, 50m);
@@ -145,6 +180,8 @@ public sealed class WorldTradeFlowServiceTests
             SettlementMapLocations = [],
             SettlementEconomyProfiles = [],
             Caravans = [new Caravan { Id = "c1", OwnerSettlementId = "a", Type = CaravanType.Land, Capacity = caravanCapacity, RequiredWorkers = 1, IsAvailable = available }],
+            TradeRoutes = [new TradeRoute { Id = "a_b_land", FromSettlementId = "a", ToSettlementId = "b", Type = CaravanType.Land, Distance = 100m, TravelDays = 3, IsEnabled = true, Points = [new RoutePoint { X = 0.1m, Y = 0.1m }, new RoutePoint { X = 0.2m, Y = 0.2m }] }],
+            TradeShipments = [],
             SelectedCityId = "a",
             SelectedRegionId = "r"
         };

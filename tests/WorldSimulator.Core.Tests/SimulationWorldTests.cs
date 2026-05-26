@@ -1,4 +1,5 @@
 using FluentAssertions;
+using WorldSimulator.Core.Trade;
 using WorldSimulator.Core.World;
 
 namespace WorldSimulator.Core.Tests;
@@ -278,5 +279,22 @@ public sealed class SimulationWorldTests
     {
         var world = WorldPresets.CreateDefaultWorld();
         world.FindSettlementEconomyProfile("highrock")!.IsCapital.Should().BeTrue();
+    }
+
+
+    [Fact]
+    public void DefaultWorld_HasTradeRoutes()
+    {
+        var world = WorldPresets.CreateDefaultWorld();
+        world.TradeRoutes.Should().NotBeEmpty();
+    }
+
+    [Fact]
+    public void DefaultWorld_TradeRoutes_AreValid()
+    {
+        var world = WorldPresets.CreateDefaultWorld();
+        var knownIds = world.Cities.Select(c => c.Id).ToHashSet();
+        world.TradeRoutes.Select(r => r.Id).Should().OnlyHaveUniqueItems();
+        world.TradeRoutes.Should().OnlyContain(r => TradeRouteValidation.IsValidRoute(r, knownIds));
     }
 }

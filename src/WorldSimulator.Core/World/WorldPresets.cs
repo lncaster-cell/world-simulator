@@ -67,7 +67,7 @@ public static class WorldPresets
                 new Caravan { Id = "wodenz_land_1", OwnerSettlementId = "wodenz", Type = CaravanType.Land, Capacity = 50m, RequiredWorkers = 5, IsAvailable = true },
                 new Caravan { Id = "thokur_rus_sea_1", OwnerSettlementId = "thokur_rus", Type = CaravanType.Sea, Capacity = 80m, RequiredWorkers = 8, IsAvailable = true }
             ],
-            TradeRoutes = BuildDefaultTradeRoutes(),
+            TradeRoutes = TradeRoutePresets.CreateDefaultRoutes(),
             TradeShipments = [],
             SelectedCityId = "gotha",
             SelectedRegionId = RegionPresets.RiviaRegionId
