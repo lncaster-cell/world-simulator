@@ -9,6 +9,8 @@
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
         <conv:MapMarkerCanvasLeftConverter x:Key="MapMarkerCanvasLeftConverter" />
         <conv:MapMarkerCanvasTopConverter x:Key="MapMarkerCanvasTopConverter" />
+        <conv:TradeRoutePointsToPointCollectionConverter x:Key="TradeRoutePointsToPointCollectionConverter" />
+        <conv:CaravanMarkerCanvasCoordinateConverter x:Key="CaravanMarkerCanvasCoordinateConverter" />
     </Window.Resources>
 
     <Grid Margin="16">
@@ -57,6 +59,83 @@
                     <Canvas x:Name="MapOverlay"
                             Background="Transparent"
                             IsHitTestVisible="True">
+                        <ItemsControl ItemsSource="{Binding TradeRouteVisuals}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Polyline StrokeThickness="1.5">
+                                        <Polyline.Style>
+                                            <Style TargetType="Polyline">
+                                                <Setter Property="Stroke" Value="#668B6F47"/>
+                                                <Setter Property="StrokeThickness" Value="1.5"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsActive}" Value="True">
+                                                        <Setter Property="Stroke" Value="#FFDAA520"/>
+                                                        <Setter Property="StrokeThickness" Value="2.8"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Polyline.Style>
+                                        <Polyline.ToolTip>
+                                            <TextBlock TextWrapping="Wrap">
+                                                <Run Text="Маршрут: "/><Run Text="{Binding DisplayName}"/><LineBreak/>
+                                                <Run Text="Объём недели:"/><LineBreak/>
+                                                <Run Text="Еда: "/><Run Text="{Binding WeeklyFoodMoved}"/><LineBreak/>
+                                                <Run Text="Ресурсы: "/><Run Text="{Binding WeeklyResourcesMoved}"/><LineBreak/>
+                                                <Run Text="Товары: "/><Run Text="{Binding WeeklyGoodsMoved}"/><LineBreak/>
+                                                <Run Text="Всего: "/><Run Text="{Binding TotalWeeklyVolume}"/>
+                                            </TextBlock>
+                                        </Polyline.ToolTip>
+                                        <Polyline.Points>
+                                            <MultiBinding Converter="{StaticResource TradeRoutePointsToPointCollectionConverter}">
+                                                <Binding Path="Points"/>
+                                                <Binding ElementName="MapContainer" Path="ActualWidth"/>
+                                                <Binding ElementName="MapImage" Path="ActualWidth"/>
+                                                <Binding ElementName="MapContainer" Path="ActualHeight"/>
+                                                <Binding ElementName="MapImage" Path="ActualHeight"/>
+                                            </MultiBinding>
+                                        </Polyline.Points>
+                                    </Polyline>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <ItemsControl ItemsSource="{Binding ActiveCaravanMovementMarkers}">
+                            <ItemsControl.ItemsPanel><ItemsPanelTemplate><Canvas/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemContainerStyle>
+                                <Style TargetType="ContentPresenter">
+                                    <Setter Property="Canvas.Left">
+                                        <Setter.Value>
+                                            <MultiBinding Converter="{StaticResource CaravanMarkerCanvasCoordinateConverter}" ConverterParameter="X">
+                                                <Binding Path="Points"/>
+                                                <Binding Path="Progress"/>
+                                                <Binding ElementName="MapContainer" Path="ActualWidth"/>
+                                                <Binding ElementName="MapImage" Path="ActualWidth"/>
+                                                <Binding ElementName="MapContainer" Path="ActualHeight"/>
+                                                <Binding ElementName="MapImage" Path="ActualHeight"/>
+                                            </MultiBinding>
+                                        </Setter.Value>
+                                    </Setter>
+                                    <Setter Property="Canvas.Top">
+                                        <Setter.Value>
+                                            <MultiBinding Converter="{StaticResource CaravanMarkerCanvasCoordinateConverter}" ConverterParameter="Y">
+                                                <Binding Path="Points"/>
+                                                <Binding Path="Progress"/>
+                                                <Binding ElementName="MapContainer" Path="ActualWidth"/>
+                                                <Binding ElementName="MapImage" Path="ActualWidth"/>
+                                                <Binding ElementName="MapContainer" Path="ActualHeight"/>
+                                                <Binding ElementName="MapImage" Path="ActualHeight"/>
+                                            </MultiBinding>
+                                        </Setter.Value>
+                                    </Setter>
+                                </Style>
+                            </ItemsControl.ItemContainerStyle>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Ellipse Width="10" Height="10" Fill="#FFB22222" Stroke="#FFFCECC9" StrokeThickness="1" ToolTip="{Binding DisplayName}"/>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
                         <ItemsControl ItemsSource="{Binding SettlementMapMarkers}">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>

@@ -107,7 +107,17 @@ public sealed class WorldTradeFlowService
                     Status = TradeShipmentStatus.InTransitToDestination
                 });
 
-                var transfer = new TradeTransferResult(exporter.Id, importer.Id, caravan.Id, good, amount, wealthDelta, -wealthDelta);
+                var transfer = new TradeTransferResult(
+                    importerCandidate.Route.Id,
+                    exporter.Id,
+                    importer.Id,
+                    exporter.Id,
+                    importer.Id,
+                    caravan.Id,
+                    good,
+                    amount,
+                    wealthDelta,
+                    -wealthDelta);
                 transfers.Add(transfer);
                 settlementStats[exporter.Id].RegisterExport(good, amount, wealthDelta);
                 settlementStats[importer.Id].RegisterImport(good, amount, -wealthDelta);
