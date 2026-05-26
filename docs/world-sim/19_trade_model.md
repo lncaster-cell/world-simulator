@@ -31,15 +31,30 @@
 - No per-item goods or item prices.
 - No diplomacy, factions, war, military logistics, or route ownership constraints.
 
-## Distance/routes/travel time
+## Route-based delayed shipments
 
-Distance, route topology, and travel time are **not implemented yet**.
-These are explicitly future work:
+Trade now creates **delayed shipments** instead of instant stock teleport:
 
-- settlement-to-settlement distance;
-- travel duration;
-- route constraints and risk;
-- cost scaling by distance.
+- Weekly trade pass creates `TradeShipment` records.
+- On departure:
+  - exporter stock is reduced immediately;
+  - importer pays Wealth immediately;
+  - exporter receives Wealth immediately.
+- Cargo arrives only on `ArrivalDay` (`DepartureDay + route.TravelDays`).
+- Caravan remains occupied while shipment is active and is reusable only after `ReturnDay`.
+- Travel timing is authored and deterministic via `TradeRoute.TravelDays` (not map distance calculations).
+
+Current shipment lifecycle:
+
+- `InTransitToDestination` → cargo is traveling to importer.
+- `DeliveredReturning` → cargo delivered, caravan is returning.
+- `Completed` → caravan can be reused; shipment kept as history.
+
+Future work (not part of this phase):
+
+- robbery/loss/destruction during transit;
+- combat/bandits/risk systems;
+- distance-based economics and advanced route costs.
 
 ## MainlandSupply
 
