@@ -9,6 +9,7 @@ using WorldSimulator.Core.Cities;
 using WorldSimulator.Core.Events;
 using WorldSimulator.Core.Resources;
 using WorldSimulator.Core.Time;
+using WorldSimulator.Core.World;
 using WorldSimulator.Persistence.Saves;
 
 namespace WorldSimulator.App.ViewModels;
@@ -25,6 +26,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     private const int MaxSimulationJournalDays = 500;
     private const string GothaCityId = "gotha";
     private const string GothaJournalCityName = "Гота";
+    private SimulationWorld _world;
     private City _city;
     private readonly SimulationClock _clock;
     private readonly DailyFoodFlowCalculator _dailyFoodFlowCalculator;
@@ -56,7 +58,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
 
     public MainWindowViewModel()
     {
-        _city = CityPresets.CreateGotha();
+        _world = WorldPresets.CreateDefaultWorld();
+        _city = _world.SelectedCity;
         _clock = new SimulationClock();
         _dailyFoodFlowCalculator = new DailyFoodFlowCalculator();
         _cityStateEvaluator = new CityStateEvaluator();
@@ -124,6 +127,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     public ICommand SaveCommand { get; }
     public ICommand LoadCommand { get; }
     public ICommand ToggleMapCalibrationModeCommand { get; }
+
+    public IReadOnlyList<City> Cities => _world.Cities;
+
+    public string SettlementCountText => $"Поселений: {_world.Cities.Count}";
 
     public int Day => _clock.Day;
 
@@ -807,6 +814,14 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
 
             var loaded = await _saveService.LoadAsync(SaveFilePath);
             _city = loaded.City;
+
+            var gothaIndex = _world.Cities.FindIndex(c => c.Id == GothaCityId);
+            if (gothaIndex >= 0)
+            {
+                _world.Cities[gothaIndex] = _city;
+            }
+
+            _world.SelectedCityId = GothaCityId;
             _clock.RestoreState(
                 loaded.Clock.Day,
                 loaded.Clock.Hour,
