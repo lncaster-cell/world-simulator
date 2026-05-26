@@ -19,7 +19,7 @@ public sealed class WorldSimulationService
     private readonly WeeklyCrimeFlowCalculator _weeklyCrimeFlowCalculator;
     private readonly CityStateEvaluator _cityStateEvaluator;
     private readonly PopulationChangeCalculator _populationChangeCalculator;
-    private readonly CityEventManager _selectedCityEventManager;
+    private readonly CityEventManager _defaultEventManager;
     private readonly CityEventEffectCalculator _eventEffectCalculator;
     private readonly CityEventGenerator _eventGenerator;
     private readonly Dictionary<string, CityEventManager> _eventManagersByCity = new(StringComparer.Ordinal);
@@ -53,7 +53,7 @@ public sealed class WorldSimulationService
         _weeklyCrimeFlowCalculator = weeklyCrimeFlowCalculator;
         _cityStateEvaluator = cityStateEvaluator;
         _populationChangeCalculator = populationChangeCalculator;
-        _selectedCityEventManager = eventManager;
+        _defaultEventManager = eventManager;
         _eventEffectCalculator = eventEffectCalculator;
         _eventGenerator = eventGenerator;
     }
@@ -64,6 +64,7 @@ public sealed class WorldSimulationService
         var selectedCityEventEffects = CityEventEffectsResult.None;
         var selectedCityPopulationChange = default(PopulationChangeResult);
         var selectedCityCrimeFlow = default(WeeklyCrimeFlowResult);
+        EnsureSelectedCityEventManagerBinding(selectedCityId);
         var selectedCityEventManager = GetOrCreateCityEventManager(selectedCityId);
         var activeEventNamesBeforeAdvance = selectedCityEventManager.ActiveEvents.Select(e => e.Name).ToList();
 
@@ -129,11 +130,19 @@ public sealed class WorldSimulationService
             return manager;
         }
 
-        manager = _eventManagersByCity.Count == 0
-            ? _selectedCityEventManager
-            : new CityEventManager();
+        manager = new CityEventManager();
         _eventManagersByCity[cityId] = manager;
         return manager;
+    }
+
+    private void EnsureSelectedCityEventManagerBinding(string selectedCityId)
+    {
+        if (_eventManagersByCity.TryGetValue(selectedCityId, out _))
+        {
+            return;
+        }
+
+        _eventManagersByCity[selectedCityId] = _defaultEventManager;
     }
 
     private CityDailySimulationResult SimulateCityDay(City city, SettlementEconomyProfile profile, CityEventEffectsResult eventEffects, IReadOnlyCollection<CityEvent> activeEvents)
