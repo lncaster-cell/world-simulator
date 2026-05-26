@@ -674,6 +674,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
             Type = selectedRoute.Type,
             Distance = selectedRoute.Distance,
             TravelDays = selectedRoute.TravelDays,
+            DistanceDays = SelectedTradeRouteDistanceDays,
             IsEnabled = selectedRoute.IsEnabled,
             DifficultyMultiplier = selectedRoute.DifficultyMultiplier,
             Points = updatedPoints
