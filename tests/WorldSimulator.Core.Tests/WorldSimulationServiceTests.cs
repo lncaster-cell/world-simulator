@@ -120,6 +120,7 @@ public sealed class WorldSimulationServiceTests
             new DailyWealthFlowCalculator(),
             new WeeklyCrimeFlowCalculator(),
             new WorldTradeFlowService(),
+            new CaravanHiringService(),
             new CityStateEvaluator(),
             new PopulationChangeCalculator(),
             eventManager ?? new CityEventManager(),

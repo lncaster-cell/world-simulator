@@ -55,3 +55,11 @@ It is planned to be replaced/removed in a future phase as caravan trade deepens 
 - Caravan trade now requires an enabled authored `TradeRoute` with matching `CaravanType`.
 - The same route data will be reused later for travel, patrols, armies, bandits and route-debug visuals.
 - Pathfinding and visual caravan movement along those polylines are future work.
+
+## Caravan hiring economy (city-owned assets)
+- Caravans are city-owned economic assets acquired through weekly hiring evaluation.
+- Caravan count has no hard cap; practical growth is constrained by city Wealth safety reserve, weekly upkeep affordability, worker budget, and measurable trade demand.
+- Land caravans are smaller, cheaper, and route-flexible for land trade pressure.
+- Sea caravans are larger and more expensive; they are only eligible for port cities when sea-route demand exists.
+- Trade-route travel time stays authored in `TradeRoute.TravelDays` (sea is not automatically faster).
+- Risk systems (loss/robbery/destruction) are deferred to future work.

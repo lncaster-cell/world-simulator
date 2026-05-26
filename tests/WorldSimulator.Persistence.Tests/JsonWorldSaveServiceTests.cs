@@ -35,6 +35,9 @@ public sealed class JsonWorldSaveServiceTests
             Assert.Equal(world.SelectedCityId, loaded.World.SelectedCityId);
             Assert.Equal(world.SelectedRegionId, loaded.World.SelectedRegionId);
             Assert.Equal(world.Caravans.Count, loaded.World.Caravans.Count);
+            Assert.Equal(world.Caravans[0].PurchaseCost, loaded.World.Caravans[0].PurchaseCost);
+            Assert.Equal(world.Caravans[0].UpkeepPerWeek, loaded.World.Caravans[0].UpkeepPerWeek);
+            Assert.Equal(world.Caravans[0].Status, loaded.World.Caravans[0].Status);
             Assert.Equal(world.SettlementMapLocations.Count, loaded.World.SettlementMapLocations.Count);
             Assert.Equal(world.SettlementEconomyProfiles.Count, loaded.World.SettlementEconomyProfiles.Count);
             var selectedManager = loaded.EventState.GetManagerOrEmpty(loaded.World.SelectedCityId);
