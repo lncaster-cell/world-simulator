@@ -30,7 +30,7 @@ public sealed class CaravanHiringServiceTests
     {
         var a = new City("a","a",1000,500m,1000m,50,50,10,0m,0m,CityState.Prosperous);
         var b = new City("b","b",1000,0m,1000m,50,50,10,0m,0m,CityState.Prosperous);
-        return new SimulationWorld{Cities=[a,b],Regions=[],SettlementMapLocations=[],SettlementEconomyProfiles=[Profile("a", isPort: port),Profile("b", isPort: true)],Caravans=[],TradeShipments=[],TradeRoutes=[new TradeRoute{Id="a_b_land",FromSettlementId="a",ToSettlementId="b",Type=CaravanType.Land,IsEnabled=true,TravelDays=2,Distance=10m,Points=[new RoutePoint{X=0,Y=0},new RoutePoint{X=1,Y=1}]},new TradeRoute{Id="a_b_sea",FromSettlementId="a",ToSettlementId="b",Type=CaravanType.Sea,IsEnabled=seaDemand,TravelDays=2,Distance=10m,Points=[new RoutePoint{X=0,Y=0},new RoutePoint{X=1,Y=1}]}],SelectedCityId="a",SelectedRegionId="r"};
+        return new SimulationWorld{Cities=[a,b],Regions=[],SettlementMapLocations=[],SettlementEconomyProfiles=[Profile("a", isPort: port),Profile("b", isPort: true)],Caravans=[],TradeShipments=[],TradeRoutes=[new TradeRoute{Id="a_b_land",FromSettlementId="a",ToSettlementId="b",Type=CaravanType.Land,IsEnabled=true,TravelDays=2,DistanceDays=2m,Distance=10m,Points=[new RoutePoint{X=0,Y=0},new RoutePoint{X=1,Y=1}]},new TradeRoute{Id="a_b_sea",FromSettlementId="a",ToSettlementId="b",Type=CaravanType.Sea,IsEnabled=seaDemand,TravelDays=2,DistanceDays=2m,Distance=10m,Points=[new RoutePoint{X=0,Y=0},new RoutePoint{X=1,Y=1}]}],SelectedCityId="a",SelectedRegionId="r"};
     }
 
     private static SettlementEconomyProfile Profile(

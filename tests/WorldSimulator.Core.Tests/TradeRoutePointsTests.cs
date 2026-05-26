@@ -16,6 +16,7 @@ public sealed class TradeRoutePointsTests
             Type = CaravanType.Land,
             Distance = 10m,
             TravelDays = 1,
+            DistanceDays = 1m,
             IsEnabled = true,
             Points = [new RoutePoint { X = 0.1m, Y = 0.2m }, new RoutePoint { X = 0.3m, Y = 0.4m }]
         };
@@ -28,5 +29,12 @@ public sealed class TradeRoutePointsTests
     {
         var routes = TradeRoutePresets.CreateDefaultRoutes();
         routes.Should().OnlyContain(r => r.Points.All(p => p.X >= 0m && p.X <= 1m && p.Y >= 0m && p.Y <= 1m));
+    }
+
+    [Fact]
+    public void TradeRoute_DefaultPresetRoutes_HavePositiveDistanceDays()
+    {
+        var routes = TradeRoutePresets.CreateDefaultRoutes();
+        routes.Should().OnlyContain(r => r.DistanceDays > 0m);
     }
 }

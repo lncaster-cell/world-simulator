@@ -231,6 +231,7 @@ public sealed class JsonWorldSaveService
         Type = route.Type.ToString(),
         Distance = route.Distance,
         TravelDays = route.TravelDays,
+        DistanceDays = route.DistanceDays,
         IsEnabled = route.IsEnabled,
         DifficultyMultiplier = route.DifficultyMultiplier,
         Points = route.Points.Select(point => new RoutePointSaveData { X = point.X, Y = point.Y }).ToList()
@@ -241,6 +242,10 @@ public sealed class JsonWorldSaveService
         if (!Enum.TryParse<CaravanType>(routeData.Type, true, out var caravanType))
             throw new InvalidDataException($"Unknown trade route caravan type '{routeData.Type}'.");
 
+        var defaultDistanceDays = TradeRoutePresets.CreateDefaultRoutes()
+            .FirstOrDefault(x => string.Equals(x.Id, routeData.Id, StringComparison.Ordinal))
+            ?.DistanceDays ?? 1m;
+
         return new TradeRoute
         {
             Id = routeData.Id,
@@ -249,6 +254,7 @@ public sealed class JsonWorldSaveService
             Type = caravanType,
             Distance = routeData.Distance,
             TravelDays = routeData.TravelDays,
+            DistanceDays = routeData.DistanceDays ?? defaultDistanceDays,
             IsEnabled = routeData.IsEnabled,
             DifficultyMultiplier = routeData.DifficultyMultiplier,
             Points = routeData.Points?.Select(point => new RoutePoint { X = point.X, Y = point.Y }).ToList() ?? []

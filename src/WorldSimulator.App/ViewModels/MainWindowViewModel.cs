@@ -67,6 +67,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     private DateTimeOffset _lastTradeMarkerAnimationTickUtc;
     private TradeRoute? _selectedTradeRouteForAuthoring;
     private bool _isTradeRouteAuthoringModeEnabled;
+    private decimal _selectedTradeRouteDistanceDays = 1m;
+    private string _selectedTradeRouteDistanceDaysInput = "1.0";
 
     public MainWindowViewModel()
     {
@@ -510,6 +512,28 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         }
     }
 
+    public decimal SelectedTradeRouteDistanceDays
+    {
+        get => _selectedTradeRouteDistanceDays;
+        set
+        {
+            if (_selectedTradeRouteDistanceDays == value) return;
+            _selectedTradeRouteDistanceDays = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public string SelectedTradeRouteDistanceDaysInput
+    {
+        get => _selectedTradeRouteDistanceDaysInput;
+        set
+        {
+            if (_selectedTradeRouteDistanceDaysInput == value) return;
+            _selectedTradeRouteDistanceDaysInput = value;
+            OnPropertyChanged();
+        }
+    }
+
     public string LastMapCalibrationPointDisplay => _lastMapCalibrationX.HasValue && _lastMapCalibrationY.HasValue
         ? $"Последняя точка карты: X={_lastMapCalibrationX.Value:0.0000}, Y={_lastMapCalibrationY.Value:0.0000}"
         : "Последняя точка карты: нет";
@@ -693,6 +717,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         EditedTradeRoutePoints.Clear();
         if (SelectedTradeRouteForAuthoring is not null)
         {
+            SelectedTradeRouteDistanceDays = SelectedTradeRouteForAuthoring.DistanceDays;
+            SelectedTradeRouteDistanceDaysInput = SelectedTradeRouteDistanceDays.ToString("0.0###", CultureInfo.InvariantCulture);
             foreach (var point in SelectedTradeRouteForAuthoring.Points)
             {
                 EditedTradeRoutePoints.Add(new MapPointViewModel { X = (double)point.X, Y = (double)point.Y });
