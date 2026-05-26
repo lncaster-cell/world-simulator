@@ -30,6 +30,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     private readonly SimulationClock _clock;
     private readonly DailyFoodFlowCalculator _dailyFoodFlowCalculator;
     private readonly FishingProductionCalculator _fishingProductionCalculator = new();
+    private readonly HuntingProductionCalculator _huntingProductionCalculator = new();
+    private readonly AgricultureProductionCalculator _agricultureProductionCalculator = new();
     private readonly MainlandSupplyProductionCalculator _mainlandSupplyProductionCalculator = new();
     private readonly GoodsCraftingProductionCalculator _goodsCraftingProductionCalculator = new();
     private readonly ResourceGatheringProductionCalculator _resourceGatheringProductionCalculator = new();
@@ -207,6 +209,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
 
     public decimal DailyFoodPopulationConsumption => _dailyFoodFlowResult.PopulationConsumption;
 
+    public decimal DailyFoodAgricultureIncome => _dailyFoodFlowResult.AgricultureIncome;
+
     public decimal DailyFoodFishingIncome => _dailyFoodFlowResult.FishingIncome;
 
     public decimal DailyFoodHuntingIncome => _dailyFoodFlowResult.HuntingIncome;
@@ -220,6 +224,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     public decimal DailyFoodEndingFood => _dailyFoodFlowResult.EndingFood;
 
     public string DailyFoodPopulationConsumptionDisplay => $"-{DailyFoodPopulationConsumption:0.##}";
+
+    public string DailyFoodAgricultureIncomeDisplay => FormatSigned(DailyFoodAgricultureIncome);
 
     public string DailyFoodFishingIncomeDisplay => FormatSigned(DailyFoodFishingIncome);
 
@@ -238,6 +244,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
               $"Прогноз на день:{Environment.NewLine}" +
               $"Начальная пища: {DailyFoodStartingFood:0.##}{Environment.NewLine}" +
               $"Потребление населения: {DailyFoodPopulationConsumptionDisplay}{Environment.NewLine}" +
+              $"Земледелие: {DailyFoodAgricultureIncomeDisplay}{Environment.NewLine}" +
               $"Рыбалка: {DailyFoodFishingIncomeDisplay}{Environment.NewLine}" +
               $"Охота: {DailyFoodHuntingIncomeDisplay}{Environment.NewLine}" +
               $"Поставки с материка: {DailyFoodMainlandSupplyIncomeDisplay}{Environment.NewLine}" +
@@ -668,7 +675,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         }
 
         AddTechnicalLogEntry(
-            $"День {day}: пища {result.StartingFood:0.##} → {result.EndingFood:0.##}; баланс {result.TotalDelta:+0.##;-0.##;0} (потребление -{result.PopulationConsumption:0.##}, рыбалка {result.FishingIncome:+0.##;-0.##;0}, охота {result.HuntingIncome:+0.##;-0.##;0}, поставки {result.MainlandSupplyIncome:+0.##;-0.##;0}, события {result.EventDelta:+0.##;-0.##;0}).");
+            $"День {day}: пища {result.StartingFood:0.##} → {result.EndingFood:0.##}; баланс {result.TotalDelta:+0.##;-0.##;0} (потребление -{result.PopulationConsumption:0.##}, земледелие {result.AgricultureIncome:+0.##;-0.##;0}, рыбалка {result.FishingIncome:+0.##;-0.##;0}, охота {result.HuntingIncome:+0.##;-0.##;0}, поставки {result.MainlandSupplyIncome:+0.##;-0.##;0}, события {result.EventDelta:+0.##;-0.##;0}).");
 
         var populationEnd = _city.Population;
         var cityStateEnd = _city.CityState;
@@ -923,6 +930,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
 
         OnPropertyChanged(nameof(DailyFoodStartingFood));
         OnPropertyChanged(nameof(DailyFoodPopulationConsumption));
+        OnPropertyChanged(nameof(DailyFoodAgricultureIncome));
         OnPropertyChanged(nameof(DailyFoodFishingIncome));
         OnPropertyChanged(nameof(DailyFoodHuntingIncome));
         OnPropertyChanged(nameof(DailyFoodMainlandSupplyIncome));
@@ -930,6 +938,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(DailyFoodTotalDelta));
         OnPropertyChanged(nameof(DailyFoodEndingFood));
         OnPropertyChanged(nameof(DailyFoodPopulationConsumptionDisplay));
+        OnPropertyChanged(nameof(DailyFoodAgricultureIncomeDisplay));
         OnPropertyChanged(nameof(DailyFoodFishingIncomeDisplay));
         OnPropertyChanged(nameof(DailyFoodHuntingIncomeDisplay));
         OnPropertyChanged(nameof(DailyFoodMainlandSupplyIncomeDisplay));
@@ -967,14 +976,18 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     {
         var effects = eventEffects ?? _eventEffectCalculator.Calculate(_city, _eventManager.ActiveEvents);
         var baseInputs = DailyFoodFlowInputs.GothaPlaceholder;
+        var profile = _world.FindSettlementEconomyProfile(_city.Id);
         var fishing = _fishingProductionCalculator.Calculate(_city, _eventManager.ActiveEvents);
+        var hunting = _huntingProductionCalculator.Calculate(_city);
         var mainlandSupply = _mainlandSupplyProductionCalculator.Calculate(_city, _eventManager.ActiveEvents);
+        var agricultureIncome = profile is null ? 0m : _agricultureProductionCalculator.Calculate(_city, profile).FinalOutput;
 
         return new DailyFoodFlowInputs
         {
-            FishingIncome = fishing.FinalOutput,
-            HuntingIncome = baseInputs.HuntingIncome,
-            MainlandSupplyIncome = mainlandSupply.FinalOutput + effects.MainlandSupplyDelta,
+            AgricultureIncome = agricultureIncome,
+            FishingIncome = fishing.FinalOutput * (profile?.FishingMultiplier ?? 1m),
+            HuntingIncome = hunting.FinalOutput * (profile?.HuntingMultiplier ?? 1m),
+            MainlandSupplyIncome = mainlandSupply.FinalOutput * (profile?.MainlandSupplyMultiplier ?? 1m) + effects.MainlandSupplyDelta,
             EventDelta = baseInputs.EventDelta + effects.FoodDelta
         };
     }
@@ -1232,7 +1245,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     }
 
     private static string BuildFoodCalculationText(DailyFoodFlowResult result) =>
-        $"Потребление: -{result.PopulationConsumption:0.##}.{Environment.NewLine}Рыбалка: {result.FishingIncome:+0.##;-0.##;0}.{Environment.NewLine}Охота: {result.HuntingIncome:+0.##;-0.##;0}.{Environment.NewLine}Поставки: {result.MainlandSupplyIncome:+0.##;-0.##;0}.{Environment.NewLine}События: {result.EventDelta:+0.##;-0.##;0}.";
+        $"Потребление: -{result.PopulationConsumption:0.##}.{Environment.NewLine}Земледелие: {result.AgricultureIncome:+0.##;-0.##;0}.{Environment.NewLine}Рыбалка: {result.FishingIncome:+0.##;-0.##;0}.{Environment.NewLine}Охота: {result.HuntingIncome:+0.##;-0.##;0}.{Environment.NewLine}Поставки: {result.MainlandSupplyIncome:+0.##;-0.##;0}.{Environment.NewLine}События: {result.EventDelta:+0.##;-0.##;0}.";
 
     private static string BuildJournalSummary(DailyFoodFlowResult foodResult, IReadOnlyList<SimulationJournalItem> items, int populationStart, int populationEnd)
     {

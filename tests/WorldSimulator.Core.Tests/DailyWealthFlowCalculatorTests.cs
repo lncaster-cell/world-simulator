@@ -57,7 +57,7 @@ public sealed class DailyWealthFlowCalculatorTests
     {
         var city = new City("id","city",population,1000m,wealth,50,security,crime,100m,50m,state);
         return _calculator.Calculate(city,
-            new DailyFoodFlowResult{StartingFood=1000m,PopulationConsumption=populationConsumption,FishingIncome=0m,HuntingIncome=0m,MainlandSupplyIncome=mainlandSupply,EventDelta=0m,TotalDelta=0m,EndingFood=endingFood},
+            new DailyFoodFlowResult{StartingFood=1000m,PopulationConsumption=populationConsumption,AgricultureIncome=0m,FishingIncome=0m,HuntingIncome=0m,MainlandSupplyIncome=mainlandSupply,EventDelta=0m,TotalDelta=0m,EndingFood=endingFood},
             new GoodsCraftingProductionResult{NaturalPotential=0m,RequiredWorkers=0,AssignedWorkers=0,WorkerCoverage=0m,ExtraWorkers=0,OverstaffBonus=0m,MoodModifier=1m,SecurityModifier=1m,StateModifier=1m,ResourceCostPerGoods=1m,PotentialGoodsOutput=0m,ResourcesNeeded=0m,ResourcesAvailable=0m,ResourcesConsumed=0m,GoodsProduced=goodsProduced},
             Household(goodsShortage, resourcesShortage, population));
     }

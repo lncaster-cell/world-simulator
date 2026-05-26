@@ -28,6 +28,7 @@ public sealed class DailyFoodFlowCalculatorTests
 
         Assert.Equal(1000m, result.StartingFood);
         Assert.Equal(84m, result.PopulationConsumption);
+        Assert.Equal(0m, result.AgricultureIncome);
         Assert.Equal(20m, result.FishingIncome);
         Assert.Equal(8m, result.HuntingIncome);
         Assert.Equal(40m, result.MainlandSupplyIncome);
@@ -75,6 +76,7 @@ public sealed class DailyFoodFlowCalculatorTests
 
         var result = _calculator.Calculate(city, new DailyFoodFlowInputs
         {
+            AgricultureIncome = 0m,
             FishingIncome = 0m,
             HuntingIncome = 0m,
             MainlandSupplyIncome = 0m,
@@ -91,6 +93,7 @@ public sealed class DailyFoodFlowCalculatorTests
 
         var result = _calculator.Calculate(gotha, new DailyFoodFlowInputs
         {
+            AgricultureIncome = 0m,
             FishingIncome = 20m,
             HuntingIncome = 8m,
             MainlandSupplyIncome = 40m,
@@ -108,6 +111,7 @@ public sealed class DailyFoodFlowCalculatorTests
 
         var result = _calculator.Calculate(gotha, new DailyFoodFlowInputs
         {
+            AgricultureIncome = 0m,
             FishingIncome = 20m,
             HuntingIncome = 8m,
             MainlandSupplyIncome = 40m,
@@ -127,6 +131,7 @@ public sealed class DailyFoodFlowCalculatorTests
 
         Assert.Equal(0m, result.TotalDelta);
         Assert.Equal(0m, result.PopulationConsumption);
+        Assert.Equal(0m, result.AgricultureIncome);
         Assert.Equal(0m, result.FishingIncome);
         Assert.Equal(0m, result.HuntingIncome);
         Assert.Equal(0m, result.MainlandSupplyIncome);
@@ -144,6 +149,23 @@ public sealed class DailyFoodFlowCalculatorTests
 
         Assert.Equal(777m, result.StartingFood);
         Assert.Equal(777m, result.EndingFood);
+    }
+
+    [Fact]
+    public void AgricultureIncome_Is_Included_In_TotalDelta()
+    {
+        var gotha = CityPresets.CreateGotha();
+
+        var result = _calculator.Calculate(gotha, new DailyFoodFlowInputs
+        {
+            AgricultureIncome = 10m,
+            FishingIncome = 20m,
+            HuntingIncome = 8m,
+            MainlandSupplyIncome = 40m,
+            EventDelta = 0m
+        });
+
+        Assert.Equal(-6m, result.TotalDelta);
     }
 
 }

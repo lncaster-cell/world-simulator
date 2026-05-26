@@ -8,11 +8,14 @@ public sealed class DailyFoodFlowInputs
 {
     public static DailyFoodFlowInputs GothaPlaceholder { get; } = new()
     {
+        AgricultureIncome = 0m,
         FishingIncome = 20m,
         HuntingIncome = 8m,
         MainlandSupplyIncome = 40m,
         EventDelta = 0m
     };
+
+    public decimal AgricultureIncome { get; init; }
 
     public decimal FishingIncome { get; init; }
 

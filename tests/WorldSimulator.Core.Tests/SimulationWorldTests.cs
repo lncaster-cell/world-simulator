@@ -177,4 +177,43 @@ public sealed class SimulationWorldTests
         location!.X.Should().BeGreaterThanOrEqualTo(0m).And.BeLessThanOrEqualTo(1m);
         location.Y.Should().BeGreaterThanOrEqualTo(0m).And.BeLessThanOrEqualTo(1m);
     }
+
+    [Fact]
+    public void DefaultWorld_AllCitiesHaveEconomyProfile()
+    {
+        var world = WorldPresets.CreateDefaultWorld();
+        world.Cities.Should().OnlyContain(c => world.FindSettlementEconomyProfile(c.Id) is not null);
+    }
+
+    [Fact]
+    public void DefaultWorld_AllEconomyProfilesPointToKnownCityIds()
+    {
+        var world = WorldPresets.CreateDefaultWorld();
+        var knownIds = world.Cities.Select(c => c.Id).ToHashSet();
+        world.SettlementEconomyProfiles.Should().OnlyContain(x => knownIds.Contains(x.SettlementId));
+    }
+
+    [Fact]
+    public void DefaultWorld_NonPortVillages_HaveNoMainlandSupplyMultiplier()
+    {
+        var world = WorldPresets.CreateDefaultWorld();
+        var nonPortVillageIds = new[] { "mlynek", "rivenstal", "brno", "wodenz" };
+        world.SettlementEconomyProfiles
+            .Where(x => nonPortVillageIds.Contains(x.SettlementId))
+            .Should().OnlyContain(x => x.MainlandSupplyMultiplier == 0m);
+    }
+
+    [Fact]
+    public void DefaultWorld_Gotha_IsPort()
+    {
+        var world = WorldPresets.CreateDefaultWorld();
+        world.FindSettlementEconomyProfile("gotha")!.IsPort.Should().BeTrue();
+    }
+
+    [Fact]
+    public void DefaultWorld_Highrock_IsCapital()
+    {
+        var world = WorldPresets.CreateDefaultWorld();
+        world.FindSettlementEconomyProfile("highrock")!.IsCapital.Should().BeTrue();
+    }
 }

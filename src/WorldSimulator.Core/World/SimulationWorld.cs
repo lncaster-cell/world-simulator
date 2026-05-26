@@ -6,6 +6,7 @@ public sealed class SimulationWorld
 {
     public required List<City> Cities { get; init; }
     public required List<SettlementMapLocation> SettlementMapLocations { get; init; }
+    public required List<SettlementEconomyProfile> SettlementEconomyProfiles { get; init; }
     public required string SelectedCityId { get; set; }
 
     public City SelectedCity => Cities.First(c => c.Id == SelectedCityId);
@@ -18,5 +19,10 @@ public sealed class SimulationWorld
     public SettlementMapLocation? FindSettlementMapLocation(string settlementId)
     {
         return SettlementMapLocations.FirstOrDefault(x => x.SettlementId == settlementId);
+    }
+
+    public SettlementEconomyProfile? FindSettlementEconomyProfile(string settlementId)
+    {
+        return SettlementEconomyProfiles.FirstOrDefault(x => x.SettlementId == settlementId);
     }
 }
