@@ -2,6 +2,8 @@ namespace WorldSimulator.Core.Events;
 
 public sealed class CityEventEffectsResult
 {
+    public static CityEventEffectsResult None { get; } = new();
+
     public decimal FoodDelta { get; init; }
 
     public int MoodDelta { get; init; }
