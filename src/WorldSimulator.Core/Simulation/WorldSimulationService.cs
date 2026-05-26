@@ -19,9 +19,10 @@ public sealed class WorldSimulationService
     private readonly WeeklyCrimeFlowCalculator _weeklyCrimeFlowCalculator;
     private readonly CityStateEvaluator _cityStateEvaluator;
     private readonly PopulationChangeCalculator _populationChangeCalculator;
-    private readonly CityEventManager _eventManager;
+    private readonly CityEventManager _selectedCityEventManager;
     private readonly CityEventEffectCalculator _eventEffectCalculator;
     private readonly CityEventGenerator _eventGenerator;
+    private readonly Dictionary<string, CityEventManager> _eventManagersByCity = new(StringComparer.Ordinal);
 
     public WorldSimulationService(
         DailyFoodFlowCalculator dailyFoodFlowCalculator,
@@ -52,7 +53,7 @@ public sealed class WorldSimulationService
         _weeklyCrimeFlowCalculator = weeklyCrimeFlowCalculator;
         _cityStateEvaluator = cityStateEvaluator;
         _populationChangeCalculator = populationChangeCalculator;
-        _eventManager = eventManager;
+        _selectedCityEventManager = eventManager;
         _eventEffectCalculator = eventEffectCalculator;
         _eventGenerator = eventGenerator;
     }
@@ -63,7 +64,8 @@ public sealed class WorldSimulationService
         var selectedCityEventEffects = CityEventEffectsResult.None;
         var selectedCityPopulationChange = default(PopulationChangeResult);
         var selectedCityCrimeFlow = default(WeeklyCrimeFlowResult);
-        var activeEventNamesBeforeAdvance = _eventManager.ActiveEvents.Select(e => e.Name).ToList();
+        var selectedCityEventManager = GetOrCreateCityEventManager(selectedCityId);
+        var activeEventNamesBeforeAdvance = selectedCityEventManager.ActiveEvents.Select(e => e.Name).ToList();
 
         foreach (var city in world.Cities)
         {
@@ -71,22 +73,21 @@ public sealed class WorldSimulationService
             if (profile is null) continue;
 
             var isSelectedCity = city.Id == selectedCityId;
-            var eventEffects = isSelectedCity ? _eventEffectCalculator.Calculate(city, _eventManager.ActiveEvents) : CityEventEffectsResult.None;
-            var activeEvents = isSelectedCity ? _eventManager.ActiveEvents : Array.Empty<CityEvent>();
+            var eventManager = GetOrCreateCityEventManager(city.Id);
+            var eventEffects = _eventEffectCalculator.Calculate(city, eventManager.ActiveEvents);
+            var activeEvents = eventManager.ActiveEvents;
             var cityResult = SimulateCityDay(city, profile, eventEffects, activeEvents);
             city.CityState = _cityStateEvaluator.Evaluate(city);
-
-            if (!isSelectedCity) continue;
-
-            selectedCityResult = cityResult;
-            selectedCityEventEffects = eventEffects;
 
             if (IsWeeklyUpdateDay(day))
             {
                 var householdConsumption = _householdConsumptionCalculator.Calculate(city);
                 var crimeFlow = _weeklyCrimeFlowCalculator.Calculate(city, cityResult.FoodFlow, householdConsumption);
                 city.Crime = crimeFlow.EndingCrime;
-                selectedCityCrimeFlow = crimeFlow;
+                if (isSelectedCity)
+                {
+                    selectedCityCrimeFlow = crimeFlow;
+                }
             }
 
             var populationChange = _populationChangeCalculator.Calculate(city);
@@ -95,22 +96,44 @@ public sealed class WorldSimulationService
                 city.Population = populationChange.EndingPopulation;
             }
 
+            eventManager.AdvanceDay();
+
+            if (randomEventsEnabled && city.Population > 0 && city.CityState != CityState.Abandoned)
+            {
+                var generationResult = _eventGenerator.TryGenerate(day, eventManager.ActiveEvents);
+                if (generationResult.WasGenerated && generationResult.Event is not null)
+                {
+                    eventManager.AddEvent(generationResult.Event);
+                }
+            }
+
+            if (!isSelectedCity) continue;
+
+            selectedCityResult = cityResult;
+            selectedCityEventEffects = eventEffects;
             selectedCityPopulationChange = populationChange;
         }
 
-        var completedEvents = _eventManager.AdvanceDay();
-        CityEvent? generatedEvent = null;
-        var selectedCity = world.FindCity(selectedCityId);
-        if (randomEventsEnabled && selectedCity is not null && selectedCity.Population > 0 && selectedCity.CityState != CityState.Abandoned)
-        {
-            var generationResult = _eventGenerator.TryGenerate(day, _eventManager.ActiveEvents);
-            if (generationResult.WasGenerated && generationResult.Event is not null && _eventManager.AddEvent(generationResult.Event))
-            {
-                generatedEvent = generationResult.Event;
-            }
-        }
+        var completedEvents = selectedCityEventManager.CompletedEvents;
+        var generatedEvent = selectedCityEventManager.ActiveEvents
+            .OrderByDescending(e => e.StartedDay)
+            .FirstOrDefault(e => e.StartedDay == day);
 
         return new WorldDayAdvanceResult(selectedCityResult, selectedCityEventEffects, selectedCityPopulationChange, selectedCityCrimeFlow, completedEvents, generatedEvent, activeEventNamesBeforeAdvance);
+    }
+
+    private CityEventManager GetOrCreateCityEventManager(string cityId)
+    {
+        if (_eventManagersByCity.TryGetValue(cityId, out var manager))
+        {
+            return manager;
+        }
+
+        manager = _eventManagersByCity.Count == 0
+            ? _selectedCityEventManager
+            : new CityEventManager();
+        _eventManagersByCity[cityId] = manager;
+        return manager;
     }
 
     private CityDailySimulationResult SimulateCityDay(City city, SettlementEconomyProfile profile, CityEventEffectsResult eventEffects, IReadOnlyCollection<CityEvent> activeEvents)
