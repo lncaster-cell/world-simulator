@@ -2,6 +2,7 @@ using WorldSimulator.Core.Cities;
 using WorldSimulator.Core.Events;
 using WorldSimulator.Core.Resources;
 using WorldSimulator.Core.World;
+using WorldSimulator.Core.Trade;
 
 namespace WorldSimulator.Core.Simulation;
 
@@ -17,6 +18,7 @@ public sealed class WorldSimulationService
     private readonly HouseholdConsumptionCalculator _householdConsumptionCalculator;
     private readonly DailyWealthFlowCalculator _dailyWealthFlowCalculator;
     private readonly WeeklyCrimeFlowCalculator _weeklyCrimeFlowCalculator;
+    private readonly WorldTradeFlowService _worldTradeFlowService;
     private readonly CityStateEvaluator _cityStateEvaluator;
     private readonly PopulationChangeCalculator _populationChangeCalculator;
     private readonly CityEventManager _defaultEventManager;
@@ -35,6 +37,7 @@ public sealed class WorldSimulationService
         HouseholdConsumptionCalculator householdConsumptionCalculator,
         DailyWealthFlowCalculator dailyWealthFlowCalculator,
         WeeklyCrimeFlowCalculator weeklyCrimeFlowCalculator,
+        WorldTradeFlowService worldTradeFlowService,
         CityStateEvaluator cityStateEvaluator,
         PopulationChangeCalculator populationChangeCalculator,
         CityEventManager eventManager,
@@ -51,6 +54,7 @@ public sealed class WorldSimulationService
         _householdConsumptionCalculator = householdConsumptionCalculator;
         _dailyWealthFlowCalculator = dailyWealthFlowCalculator;
         _weeklyCrimeFlowCalculator = weeklyCrimeFlowCalculator;
+        _worldTradeFlowService = worldTradeFlowService;
         _cityStateEvaluator = cityStateEvaluator;
         _populationChangeCalculator = populationChangeCalculator;
         _defaultEventManager = eventManager;
@@ -67,6 +71,8 @@ public sealed class WorldSimulationService
         EnsureSelectedCityEventManagerBinding(selectedCityId);
         var selectedCityEventManager = GetOrCreateCityEventManager(selectedCityId);
         var activeEventNamesBeforeAdvance = selectedCityEventManager.ActiveEvents.Select(e => e.Name).ToList();
+
+        WorldTradeFlowResult? weeklyTradeFlowResult = null;
 
         foreach (var city in world.Cities)
         {
@@ -115,12 +121,17 @@ public sealed class WorldSimulationService
             selectedCityPopulationChange = populationChange;
         }
 
+        if (IsWeeklyUpdateDay(day))
+        {
+            weeklyTradeFlowResult = _worldTradeFlowService.RunWeeklyTrade(world);
+        }
+
         var completedEvents = selectedCityEventManager.CompletedEvents;
         var generatedEvent = selectedCityEventManager.ActiveEvents
             .OrderByDescending(e => e.StartedDay)
             .FirstOrDefault(e => e.StartedDay == day);
 
-        return new WorldDayAdvanceResult(selectedCityResult, selectedCityEventEffects, selectedCityPopulationChange, selectedCityCrimeFlow, completedEvents, generatedEvent, activeEventNamesBeforeAdvance);
+        return new WorldDayAdvanceResult(selectedCityResult, selectedCityEventEffects, selectedCityPopulationChange, selectedCityCrimeFlow, weeklyTradeFlowResult, completedEvents, generatedEvent, activeEventNamesBeforeAdvance);
     }
 
     public WorldEventState ExportEventState()
@@ -242,6 +253,7 @@ public sealed record WorldDayAdvanceResult(
     CityEventEffectsResult SelectedCityEventEffects,
     PopulationChangeResult? SelectedCityPopulationChange,
     WeeklyCrimeFlowResult? SelectedCityCrimeFlow,
+    WorldTradeFlowResult? WeeklyTradeFlowResult,
     IReadOnlyList<CityEvent> CompletedEvents,
     CityEvent? GeneratedEvent,
     IReadOnlyList<string> ActiveEventNamesBeforeAdvance);
