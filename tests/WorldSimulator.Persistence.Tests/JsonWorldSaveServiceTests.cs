@@ -155,8 +155,45 @@ public sealed class JsonWorldSaveServiceTests
             var loaded = await service.LoadAsync(filePath);
             Assert.Equal(world.TradeRoutes.Count, loaded.World.TradeRoutes.Count);
             Assert.All(loaded.World.TradeRoutes, route => Assert.True(route.Points.Count >= 2));
+            Assert.All(loaded.World.TradeRoutes, route => Assert.True(route.DistanceDays > 0m));
             Assert.Equal(world.TradeRoutes[0].Points[0].X, loaded.World.TradeRoutes[0].Points[0].X);
             Assert.Equal(world.TradeRoutes[0].Points[0].Y, loaded.World.TradeRoutes[0].Points[0].Y);
+            Assert.Equal(world.TradeRoutes[0].DistanceDays, loaded.World.TradeRoutes[0].DistanceDays);
+        }
+        finally { Cleanup(filePath); }
+    }
+
+    [Fact]
+    public async Task LoadAsync_TradeRouteWithoutDistanceDays_UsesPresetFallback()
+    {
+        var service = new JsonWorldSaveService();
+        var filePath = TempFile();
+        var presetRoute = TradeRoutePresets.CreateDefaultRoutes().First();
+
+        var save = new
+        {
+            Version = 2,
+            SavedAtUtc = DateTime.UtcNow,
+            Clock = new { Day = 1, Hour = 0, IsRunning = false, AccumulatedRealTime = "00:00:00", RealTimePerGameHour = "00:05:00" },
+            World = new
+            {
+                Cities = new[] { new { Id = "gotha", Name = "Gotha", Population = 1, Food = 1, Wealth = 1, Mood = 1, Security = 1, Crime = 1, Resources = 1, Goods = 1, CityState = "Stagnation" }, new { Id = "highrock", Name = "Highrock", Population = 1, Food = 1, Wealth = 1, Mood = 1, Security = 1, Crime = 1, Resources = 1, Goods = 1, CityState = "Stagnation" }, new { Id = "mlynek", Name = "Mlynek", Population = 1, Food = 1, Wealth = 1, Mood = 1, Security = 1, Crime = 1, Resources = 1, Goods = 1, CityState = "Stagnation" } },
+                Regions = new[] { new { Id = "rivia", DisplayName = "Rivia", MapAssetId = "x" } },
+                SettlementMapLocations = Array.Empty<object>(),
+                SettlementEconomyProfiles = Array.Empty<object>(),
+                Caravans = Array.Empty<object>(),
+                TradeRoutes = new[] { new { Id = presetRoute.Id, presetRoute.FromSettlementId, presetRoute.ToSettlementId, Type = presetRoute.Type.ToString(), Distance = presetRoute.Distance, TravelDays = presetRoute.TravelDays, IsEnabled = true, DifficultyMultiplier = 1m, Points = new[] { new { X = 0.1m, Y = 0.1m }, new { X = 0.2m, Y = 0.2m } } } },
+                TradeShipments = Array.Empty<object>(),
+                SelectedCityId = "gotha",
+                SelectedRegionId = "rivia"
+            }
+        };
+
+        try
+        {
+            await File.WriteAllTextAsync(filePath, JsonSerializer.Serialize(save));
+            var loaded = await service.LoadAsync(filePath);
+            Assert.Equal(presetRoute.DistanceDays, loaded.World.TradeRoutes[0].DistanceDays);
         }
         finally { Cleanup(filePath); }
     }

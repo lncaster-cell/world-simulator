@@ -13,13 +13,14 @@ public static class TradeRouteValidation
                && route.Points.Count >= 2
                && route.Points.All(IsValidPoint)
                && route.Distance > 0m
-               && route.TravelDays > 0;
+               && route.TravelDays > 0
+               && route.DistanceDays >= 0.1m;
     }
 
     public static TradeRoute? FindEnabledRoute(SimulationWorld world, string fromSettlementId, string toSettlementId, CaravanType caravanType)
     {
         return world.TradeRoutes
-            .Where(r => r.IsEnabled && r.Type == caravanType && r.Distance > 0m && r.TravelDays > 0)
+            .Where(r => r.IsEnabled && r.Type == caravanType && r.Distance > 0m && r.TravelDays > 0 && r.DistanceDays >= 0.1m)
             .Where(r => (r.FromSettlementId == fromSettlementId && r.ToSettlementId == toSettlementId) || (r.FromSettlementId == toSettlementId && r.ToSettlementId == fromSettlementId))
             .OrderBy(r => r.Id, StringComparer.Ordinal)
             .FirstOrDefault();

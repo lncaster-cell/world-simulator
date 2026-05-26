@@ -99,6 +99,37 @@
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
 
+                        <Polyline Stroke="#FF00B7FF" StrokeThickness="2.5" StrokeDashArray="2,2" IsHitTestVisible="False">
+                            <Polyline.Points>
+                                <MultiBinding Converter="{StaticResource TradeRoutePointsToPointCollectionConverter}">
+                                    <Binding Path="EditedTradeRoutePolylinePoints"/>
+                                    <Binding ElementName="MapContainer" Path="ActualWidth"/>
+                                    <Binding ElementName="MapImage" Path="ActualWidth"/>
+                                    <Binding ElementName="MapContainer" Path="ActualHeight"/>
+                                    <Binding ElementName="MapImage" Path="ActualHeight"/>
+                                </MultiBinding>
+                            </Polyline.Points>
+                        </Polyline>
+
+                        <ItemsControl ItemsSource="{Binding EditedTradeRoutePoints}">
+                            <ItemsControl.ItemsPanel><ItemsPanelTemplate><Canvas/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemContainerStyle>
+                                <Style TargetType="ContentPresenter">
+                                    <Setter Property="Canvas.Left">
+                                        <Setter.Value><MultiBinding Converter="{StaticResource MapMarkerCanvasLeftConverter}"><Binding Path="X"/><Binding ElementName="MapContainer" Path="ActualWidth"/><Binding ElementName="MapImage" Path="ActualWidth"/></MultiBinding></Setter.Value>
+                                    </Setter>
+                                    <Setter Property="Canvas.Top">
+                                        <Setter.Value><MultiBinding Converter="{StaticResource MapMarkerCanvasTopConverter}"><Binding Path="Y"/><Binding ElementName="MapContainer" Path="ActualHeight"/><Binding ElementName="MapImage" Path="ActualHeight"/></MultiBinding></Setter.Value>
+                                    </Setter>
+                                </Style>
+                            </ItemsControl.ItemContainerStyle>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Ellipse Width="8" Height="8" Fill="#FF00B7FF" Stroke="#FFFFFFFF" StrokeThickness="1" ToolTip="{Binding X}"/>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
                         <ItemsControl ItemsSource="{Binding ActiveCaravanMovementMarkers}">
                             <ItemsControl.ItemsPanel><ItemsPanelTemplate><Canvas/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                             <ItemsControl.ItemContainerStyle>
@@ -202,6 +233,26 @@
             </Border>
 
             <StackPanel Grid.Column="2">
+                
+
+                <Border BorderBrush="LightGray" BorderThickness="1" CornerRadius="6" Padding="12" Margin="0,0,0,12">
+                    <StackPanel>
+                        <TextBlock Text="Редактор маршрутов" FontWeight="SemiBold" FontSize="16" Margin="0,0,0,8"/>
+                        <CheckBox Content="Режим разметки маршрутов" IsChecked="{Binding IsTradeRouteAuthoringModeEnabled}" Margin="0,0,0,8"/>
+                        <ComboBox ItemsSource="{Binding TradeRoutes}" SelectedItem="{Binding SelectedTradeRouteForAuthoring}" DisplayMemberPath="Id" Margin="0,0,0,8"/>
+                        <TextBlock Text="Расстояние / дней пути:" FontWeight="SemiBold"/>
+                        <TextBox Text="{Binding SelectedTradeRouteDistanceDaysInput, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,8"/>
+                        <TextBlock Text="Кликайте по дороге на карте, чтобы добавить точки маршрута" TextWrapping="Wrap" Margin="0,0,0,8"/>
+                        <WrapPanel Margin="0,0,0,8">
+                            <Button Content="Отменить точку" Command="{Binding UndoTradeRoutePointCommand}" Margin="0,0,8,0"/>
+                            <Button Content="Очистить" Command="{Binding ClearTradeRoutePointsCommand}" Margin="0,0,8,0"/>
+                            <Button Content="Сохранить" Command="{Binding SaveTradeRoutePointsCommand}" Margin="0,0,8,0"/>
+                            <Button Content="Скопировать Points" Command="{Binding CopyTradeRoutePointsCommand}"/>
+                        </WrapPanel>
+                        <TextBlock Text="{Binding EditedTradeRoutePointCount, StringFormat=Точек: {0}}"/>
+                    </StackPanel>
+                </Border>
+
                 <Border BorderBrush="LightGray" BorderThickness="1" CornerRadius="6" Padding="12" Margin="0,0,0,12">
                     <StackPanel>
                         <TextBlock Text="{Binding SimulationSummaryTitle}" FontWeight="SemiBold" FontSize="16" Margin="0,0,0,8"/>

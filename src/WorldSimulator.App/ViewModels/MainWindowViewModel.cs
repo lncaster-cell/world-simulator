@@ -1,7 +1,9 @@
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.ComponentModel;
 using System.IO;
 using System.Runtime.CompilerServices;
+using System.Windows;
 using System.Windows.Input;
 using System.Windows.Threading;
 using WorldSimulator.App.Infrastructure;
@@ -63,6 +65,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     private readonly List<TradeRouteVisualViewModel> _tradeRouteVisuals = [];
     private readonly DispatcherTimer _tradeMarkerAnimationTimer;
     private DateTimeOffset _lastTradeMarkerAnimationTickUtc;
+    private TradeRoute? _selectedTradeRouteForAuthoring;
+    private bool _isTradeRouteAuthoringModeEnabled;
+    private decimal _selectedTradeRouteDistanceDays = 1m;
+    private string _selectedTradeRouteDistanceDaysInput = "1.0";
 
     public MainWindowViewModel()
     {
@@ -113,6 +119,11 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         SaveCommand = new AsyncRelayCommand(SaveStateAsync);
         LoadCommand = new AsyncRelayCommand(LoadStateAsync);
         ToggleMapCalibrationModeCommand = new RelayCommand(ToggleMapCalibrationMode);
+        AddTradeRoutePointCommand = new RelayCommand<MapPointViewModel>(AddTradeRoutePoint);
+        UndoTradeRoutePointCommand = new RelayCommand(UndoTradeRoutePoint);
+        ClearTradeRoutePointsCommand = new RelayCommand(ClearTradeRoutePoints);
+        SaveTradeRoutePointsCommand = new RelayCommand(SaveTradeRoutePoints);
+        CopyTradeRoutePointsCommand = new RelayCommand(CopyTradeRoutePoints);
 
         _lastTickUtc = DateTimeOffset.UtcNow;
         _timer = new DispatcherTimer
@@ -129,6 +140,13 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         _tradeMarkerAnimationTimer.Tick += OnTradeMarkerAnimationTick;
         _timer.Start();
         _tradeMarkerAnimationTimer.Start();
+
+        EditedTradeRoutePoints.CollectionChanged += (_, _) =>
+        {
+            OnPropertyChanged(nameof(EditedTradeRoutePointCount));
+            OnPropertyChanged(nameof(EditedTradeRoutePolylinePoints));
+        };
+        SelectedTradeRouteForAuthoring = _world.TradeRoutes.FirstOrDefault();
 
         RefreshCityState();
         RefreshDailyFoodFlowPreview();
@@ -160,6 +178,11 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     public ICommand SaveCommand { get; }
     public ICommand LoadCommand { get; }
     public ICommand ToggleMapCalibrationModeCommand { get; }
+    public ICommand AddTradeRoutePointCommand { get; }
+    public ICommand UndoTradeRoutePointCommand { get; }
+    public ICommand ClearTradeRoutePointsCommand { get; }
+    public ICommand SaveTradeRoutePointsCommand { get; }
+    public ICommand CopyTradeRoutePointsCommand { get; }
 
     public IReadOnlyList<City> Cities => _world.Cities;
 
@@ -200,6 +223,13 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     public string SimulationSummaryTitle => "Сводка симуляции";
     public IReadOnlyList<CaravanMovementMarkerViewModel> ActiveCaravanMovementMarkers => _activeCaravanMovementMarkers;
     public IReadOnlyList<TradeRouteVisualViewModel> TradeRouteVisuals => _tradeRouteVisuals;
+    public IReadOnlyList<TradeRoute> TradeRoutes => _world.TradeRoutes;
+    public ObservableCollection<MapPointViewModel> EditedTradeRoutePoints { get; } = [];
+    public int EditedTradeRoutePointCount => EditedTradeRoutePoints.Count;
+    public bool HasSelectedTradeRouteForAuthoring => SelectedTradeRouteForAuthoring is not null;
+    public List<RoutePoint> EditedTradeRoutePolylinePoints => EditedTradeRoutePoints
+        .Select(x => new RoutePoint { X = (decimal)Math.Clamp(x.X, 0d, 1d), Y = (decimal)Math.Clamp(x.Y, 0d, 1d) })
+        .ToList();
 
     public string SimulationSummaryDayAndHour => $"День {Day}, час {Hour}";
 
@@ -458,6 +488,52 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         ? "Выключить калибровку карты"
         : "Включить калибровку карты";
 
+    public bool IsTradeRouteAuthoringModeEnabled
+    {
+        get => _isTradeRouteAuthoringModeEnabled;
+        set
+        {
+            if (_isTradeRouteAuthoringModeEnabled == value) return;
+            _isTradeRouteAuthoringModeEnabled = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public TradeRoute? SelectedTradeRouteForAuthoring
+    {
+        get => _selectedTradeRouteForAuthoring;
+        set
+        {
+            if (_selectedTradeRouteForAuthoring == value) return;
+            _selectedTradeRouteForAuthoring = value;
+            ReloadEditedTradeRoutePointsFromSelectedRoute();
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(HasSelectedTradeRouteForAuthoring));
+        }
+    }
+
+    public decimal SelectedTradeRouteDistanceDays
+    {
+        get => _selectedTradeRouteDistanceDays;
+        set
+        {
+            if (_selectedTradeRouteDistanceDays == value) return;
+            _selectedTradeRouteDistanceDays = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public string SelectedTradeRouteDistanceDaysInput
+    {
+        get => _selectedTradeRouteDistanceDaysInput;
+        set
+        {
+            if (_selectedTradeRouteDistanceDaysInput == value) return;
+            _selectedTradeRouteDistanceDaysInput = value;
+            OnPropertyChanged();
+        }
+    }
+
     public string LastMapCalibrationPointDisplay => _lastMapCalibrationX.HasValue && _lastMapCalibrationY.HasValue
         ? $"Последняя точка карты: X={_lastMapCalibrationX.Value:0.0000}, Y={_lastMapCalibrationY.Value:0.0000}"
         : "Последняя точка карты: нет";
@@ -552,6 +628,98 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         AddTechnicalLogEntry(IsMapCalibrationModeEnabled
             ? "Режим калибровки карты включен."
             : "Режим калибровки карты выключен.");
+    }
+
+    public void RegisterTradeRouteAuthoringPoint(double relativeX, double relativeY)
+    {
+        if (!IsTradeRouteAuthoringModeEnabled || SelectedTradeRouteForAuthoring is null)
+        {
+            return;
+        }
+
+        AddTradeRoutePoint(new MapPointViewModel { X = Math.Clamp(relativeX, 0d, 1d), Y = Math.Clamp(relativeY, 0d, 1d) });
+    }
+
+    private void AddTradeRoutePoint(MapPointViewModel? point)
+    {
+        if (SelectedTradeRouteForAuthoring is null || point is null) return;
+        EditedTradeRoutePoints.Add(new MapPointViewModel { X = Math.Clamp(point.X, 0d, 1d), Y = Math.Clamp(point.Y, 0d, 1d) });
+    }
+
+    private void UndoTradeRoutePoint()
+    {
+        if (EditedTradeRoutePoints.Count > 0) EditedTradeRoutePoints.RemoveAt(EditedTradeRoutePoints.Count - 1);
+    }
+
+    private void ClearTradeRoutePoints() => EditedTradeRoutePoints.Clear();
+
+    private void SaveTradeRoutePoints()
+    {
+        if (SelectedTradeRouteForAuthoring is null) return;
+        if (EditedTradeRoutePoints.Count < 2)
+        {
+            AddTechnicalLogEntry("Маршрут не сохранён: нужно минимум 2 точки.");
+            return;
+        }
+
+        if (!decimal.TryParse(SelectedTradeRouteDistanceDaysInput, NumberStyles.Number, CultureInfo.InvariantCulture, out var parsedDistanceDays)
+            && !decimal.TryParse(SelectedTradeRouteDistanceDaysInput, NumberStyles.Number, CultureInfo.CurrentCulture, out parsedDistanceDays))
+        {
+            AddTechnicalLogEntry("Маршрут не сохранён: DistanceDays имеет некорректный формат.");
+            return;
+        }
+
+        if (parsedDistanceDays < 0.1m)
+        {
+            AddTechnicalLogEntry("Маршрут не сохранён: DistanceDays должен быть не меньше 0.1.");
+            return;
+        }
+
+        SelectedTradeRouteDistanceDays = parsedDistanceDays;
+
+        SelectedTradeRouteForAuthoring.Points = EditedTradeRoutePoints
+            .Select(x => new RoutePoint { X = (decimal)Math.Clamp(x.X, 0d, 1d), Y = (decimal)Math.Clamp(x.Y, 0d, 1d) })
+            .ToList();
+        SelectedTradeRouteForAuthoring.DistanceDays = SelectedTradeRouteDistanceDays;
+
+        OnPropertyChanged(nameof(TradeRoutes));
+        OnPropertyChanged(nameof(EditedTradeRoutePointCount));
+        OnPropertyChanged(nameof(EditedTradeRoutePolylinePoints));
+        RefreshTradeRouteVisuals(null);
+        AddTechnicalLogEntry($"Маршрут {SelectedTradeRouteForAuthoring.Id}: сохранено {EditedTradeRoutePoints.Count} точек, DistanceDays={SelectedTradeRouteDistanceDays:0.##}.");
+    }
+
+    private void CopyTradeRoutePoints()
+    {
+        if (SelectedTradeRouteForAuthoring is null || EditedTradeRoutePoints.Count == 0)
+        {
+            AddTechnicalLogEntry("Копирование Points недоступно: маршрут не выбран или точки отсутствуют.");
+            return;
+        }
+
+        var lines = EditedTradeRoutePoints.Select(x =>
+            $"    new RoutePoint {{ X = {((decimal)Math.Clamp(x.X,0d,1d)).ToString("0.0000", CultureInfo.InvariantCulture)}m, Y = {((decimal)Math.Clamp(x.Y,0d,1d)).ToString("0.0000", CultureInfo.InvariantCulture)}m }}");
+        var text = $"RouteId: {SelectedTradeRouteForAuthoring.Id}{Environment.NewLine}DistanceDays: {SelectedTradeRouteDistanceDays:0.0}{Environment.NewLine}{Environment.NewLine}Points ={Environment.NewLine}[{Environment.NewLine}{string.Join($",{Environment.NewLine}", lines)}{Environment.NewLine}]";
+        Clipboard.SetText(text);
+        AddTechnicalLogEntry($"Маршрут {SelectedTradeRouteForAuthoring.Id}: Points скопированы в буфер обмена.");
+    }
+
+    private void ReloadEditedTradeRoutePointsFromSelectedRoute()
+    {
+        EditedTradeRoutePoints.Clear();
+        if (SelectedTradeRouteForAuthoring is not null)
+        {
+            SelectedTradeRouteDistanceDays = SelectedTradeRouteForAuthoring.DistanceDays;
+            SelectedTradeRouteDistanceDaysInput = SelectedTradeRouteDistanceDays.ToString("0.0###", CultureInfo.InvariantCulture);
+            foreach (var point in SelectedTradeRouteForAuthoring.Points)
+            {
+                EditedTradeRoutePoints.Add(new MapPointViewModel { X = (double)point.X, Y = (double)point.Y });
+            }
+        }
+
+        OnPropertyChanged(nameof(EditedTradeRoutePoints));
+        OnPropertyChanged(nameof(EditedTradeRoutePointCount));
+        OnPropertyChanged(nameof(EditedTradeRoutePolylinePoints));
     }
 
     private void Start()

@@ -21,6 +21,7 @@ public sealed class TradeRoute
     public required CaravanType Type { get; init; }
     public required decimal Distance { get; init; }
     public required int TravelDays { get; init; }
+    public required decimal DistanceDays { get; set; }
     public required bool IsEnabled { get; init; }
     public decimal DifficultyMultiplier { get; init; } = 1m;
     public required List<RoutePoint> Points { get; init; }
