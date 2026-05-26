@@ -307,6 +307,6 @@ public sealed class SimulationWorldTests
         route!.FromSettlementId.Should().Be("rivenstal");
         route.ToSettlementId.Should().Be("brno");
         route.Points.Should().HaveCountGreaterOrEqualTo(2);
-        route.Points.Should().OnlyContain(p => p.X is >= 0m and <= 1m && p.Y is >= 0m and <= 1m);
+        route.Points.Should().OnlyContain(p => p.X >= 0m && p.X <= 1m && p.Y >= 0m && p.Y <= 1m);
     }
 }
