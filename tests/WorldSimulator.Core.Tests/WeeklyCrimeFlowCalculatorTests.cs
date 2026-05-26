@@ -136,6 +136,7 @@ public sealed class WeeklyCrimeFlowCalculatorTests
         PopulationConsumption = consumption,
         FishingIncome = 0m,
         HuntingIncome = 0m,
+        AgricultureIncome = 0m,
         MainlandSupplyIncome = 0m,
         EventDelta = 0m,
         TotalDelta = 0m,
