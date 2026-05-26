@@ -74,6 +74,8 @@ public sealed class WorldSimulationService
 
         WorldTradeFlowResult? weeklyTradeFlowResult = null;
 
+        _worldTradeFlowService.ProcessShipments(world, day);
+
         foreach (var city in world.Cities)
         {
             var profile = world.FindSettlementEconomyProfile(city.Id);
@@ -123,7 +125,7 @@ public sealed class WorldSimulationService
 
         if (IsWeeklyUpdateDay(day))
         {
-            weeklyTradeFlowResult = _worldTradeFlowService.RunWeeklyTrade(world);
+            weeklyTradeFlowResult = _worldTradeFlowService.RunWeeklyTrade(world, day);
         }
 
         var completedEvents = selectedCityEventManager.CompletedEvents;

@@ -28,6 +28,8 @@ public sealed class SimulationWorldSaveData
     public List<SettlementMapLocationSaveData> SettlementMapLocations { get; set; } = new();
     public List<SettlementEconomyProfileSaveData> SettlementEconomyProfiles { get; set; } = new();
     public List<CaravanSaveData> Caravans { get; set; } = new();
+    public List<TradeRouteSaveData> TradeRoutes { get; set; } = new();
+    public List<TradeShipmentSaveData> TradeShipments { get; set; } = new();
     public string SelectedCityId { get; set; } = string.Empty;
     public string SelectedRegionId { get; set; } = string.Empty;
 }
@@ -122,3 +124,6 @@ public sealed record WorldLoadResult(
     SimulationWorld World,
     SimulationClock Clock,
     WorldEventState EventState);
+
+public sealed class TradeRouteSaveData { public string Id { get; set; } = string.Empty; public string FromSettlementId { get; set; } = string.Empty; public string ToSettlementId { get; set; } = string.Empty; public string Type { get; set; } = string.Empty; public decimal Distance { get; set; } public int TravelDays { get; set; } public bool IsEnabled { get; set; } public decimal DifficultyMultiplier { get; set; } = 1m; }
+public sealed class TradeShipmentSaveData { public string Id { get; set; } = string.Empty; public string CaravanId { get; set; } = string.Empty; public string RouteId { get; set; } = string.Empty; public string FromSettlementId { get; set; } = string.Empty; public string ToSettlementId { get; set; } = string.Empty; public string GoodType { get; set; } = string.Empty; public decimal Amount { get; set; } public int DepartureDay { get; set; } public int ArrivalDay { get; set; } public int ReturnDay { get; set; } public decimal ExporterWealthDelta { get; set; } public decimal ImporterWealthDelta { get; set; } public string Status { get; set; } = string.Empty; }

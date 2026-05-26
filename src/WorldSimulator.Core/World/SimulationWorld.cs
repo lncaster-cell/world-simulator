@@ -10,6 +10,8 @@ public sealed class SimulationWorld
     public required List<SettlementMapLocation> SettlementMapLocations { get; init; }
     public required List<SettlementEconomyProfile> SettlementEconomyProfiles { get; init; }
     public required List<Caravan> Caravans { get; init; }
+    public required List<TradeRoute> TradeRoutes { get; init; }
+    public required List<TradeShipment> TradeShipments { get; init; }
     public required string SelectedCityId { get; set; }
     public required string SelectedRegionId { get; set; }
 
