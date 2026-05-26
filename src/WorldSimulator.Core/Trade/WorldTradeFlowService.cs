@@ -26,11 +26,15 @@ public sealed class WorldTradeFlowService
                     AddStock(importer, shipment.GoodType, shipment.Amount);
                 }
                 shipment.Status = TradeShipmentStatus.DeliveredReturning;
+                var arrivedCaravan = world.Caravans.FirstOrDefault(c => c.Id == shipment.CaravanId);
+                if (arrivedCaravan is not null) arrivedCaravan.Status = CaravanStatus.Returning;
             }
 
             if (shipment.Status == TradeShipmentStatus.DeliveredReturning && currentDay >= shipment.ReturnDay)
             {
                 shipment.Status = TradeShipmentStatus.Completed;
+                var completedCaravan = world.Caravans.FirstOrDefault(c => c.Id == shipment.CaravanId);
+                if (completedCaravan is not null) completedCaravan.Status = CaravanStatus.Idle;
             }
         }
     }
@@ -85,6 +89,7 @@ public sealed class WorldTradeFlowService
                 exporter.Wealth += wealthDelta;
                 importer.Wealth -= wealthDelta;
 
+                caravan.Status = CaravanStatus.InTransit;
                 world.TradeShipments.Add(new TradeShipment
                 {
                     Id = $"shipment_{caravan.Id}_{currentDay}_{good}",
