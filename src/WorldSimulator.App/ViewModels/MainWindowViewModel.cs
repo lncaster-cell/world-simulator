@@ -66,9 +66,12 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     private readonly DispatcherTimer _tradeMarkerAnimationTimer;
     private DateTimeOffset _lastTradeMarkerAnimationTickUtc;
     private TradeRoute? _selectedTradeRouteForAuthoring;
-    private City? _routeAuthoringFromSettlement;
-    private City? _routeAuthoringToSettlement;
+    private City? _routeAuthoringOriginSettlement;
+    private City? _routeAuthoringDestinationCandidateSettlement;
+    private City? _activeRouteAuthoringDestinationSettlement;
     private string _routeAuthoringRouteIdDisplay = "RouteId: —";
+    private string? _currentDraftDestinationId;
+    private readonly Dictionary<string, List<MapPointViewModel>> _routeAuthoringDraftPointsByDestinationId = [];
     private bool _isTradeRouteAuthoringModeEnabled;
     private decimal _selectedTradeRouteDistanceDays = 1m;
     private string _selectedTradeRouteDistanceDaysInput = "1.0";
@@ -127,6 +130,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         ClearTradeRoutePointsCommand = new RelayCommand(ClearTradeRoutePoints);
         SaveTradeRoutePointsCommand = new RelayCommand(SaveTradeRoutePoints);
         CopyTradeRoutePointsCommand = new RelayCommand(CopyTradeRoutePoints);
+        AddRouteAuthoringDestinationCommand = new RelayCommand(AddRouteAuthoringDestination);
 
         _lastTickUtc = DateTimeOffset.UtcNow;
         _timer = new DispatcherTimer
@@ -186,6 +190,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     public ICommand ClearTradeRoutePointsCommand { get; }
     public ICommand SaveTradeRoutePointsCommand { get; }
     public ICommand CopyTradeRoutePointsCommand { get; }
+    public ICommand AddRouteAuthoringDestinationCommand { get; }
 
     public IReadOnlyList<City> Cities => _world.Cities;
 
@@ -228,9 +233,13 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     public IReadOnlyList<TradeRouteVisualViewModel> TradeRouteVisuals => _tradeRouteVisuals;
     public IReadOnlyList<TradeRoute> TradeRoutes => _world.TradeRoutes;
     public IReadOnlyList<City> RouteAuthoringSettlements => _world.Cities;
+    public IReadOnlyList<City> AvailableRouteAuthoringDestinations => _world.Cities;
+    public ObservableCollection<City> RouteAuthoringDestinationSettlements { get; } = [];
     public ObservableCollection<MapPointViewModel> EditedTradeRoutePoints { get; } = [];
     public int EditedTradeRoutePointCount => EditedTradeRoutePoints.Count;
     public int EditedTradeRouteIntermediatePointCount => EditedTradeRoutePoints.Count;
+    public int RouteAuthoringDestinationCount => RouteAuthoringDestinationSettlements.Count;
+    public bool CanAddMoreRouteAuthoringDestinations => RouteAuthoringDestinationSettlements.Count < 8;
     public bool HasSelectedTradeRouteForAuthoring => SelectedTradeRouteForAuthoring is not null;
     public List<RoutePoint> EditedTradeRoutePolylinePoints => BuildFullRoutePoints();
     public string RouteAuthoringRouteIdDisplay => _routeAuthoringRouteIdDisplay;
@@ -503,27 +512,39 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         }
     }
 
-    public City? RouteAuthoringFromSettlement
+    public City? RouteAuthoringOriginSettlement
     {
-        get => _routeAuthoringFromSettlement;
+        get => _routeAuthoringOriginSettlement;
         set
         {
-            if (_routeAuthoringFromSettlement == value) return;
-            _routeAuthoringFromSettlement = value;
+            if (_routeAuthoringOriginSettlement == value) return;
+            _routeAuthoringOriginSettlement = value;
             OnPropertyChanged();
-            ResolveRouteAuthoringSelection();
+            ResetRouteAuthoringOriginState();
         }
     }
 
-    public City? RouteAuthoringToSettlement
+    public City? RouteAuthoringDestinationCandidateSettlement
     {
-        get => _routeAuthoringToSettlement;
+        get => _routeAuthoringDestinationCandidateSettlement;
         set
         {
-            if (_routeAuthoringToSettlement == value) return;
-            _routeAuthoringToSettlement = value;
+            if (_routeAuthoringDestinationCandidateSettlement == value) return;
+            _routeAuthoringDestinationCandidateSettlement = value;
             OnPropertyChanged();
-            ResolveRouteAuthoringSelection();
+        }
+    }
+
+    public City? ActiveRouteAuthoringDestinationSettlement
+    {
+        get => _activeRouteAuthoringDestinationSettlement;
+        set
+        {
+            if (_activeRouteAuthoringDestinationSettlement == value) return;
+            SaveCurrentActiveDraftPoints();
+            _activeRouteAuthoringDestinationSettlement = value;
+            OnPropertyChanged();
+            LoadActiveRouteDraftOrExisting();
         }
     }
 
@@ -664,9 +685,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         {
             return;
         }
-        if (RouteAuthoringFromSettlement is null || RouteAuthoringToSettlement is null)
+        if (RouteAuthoringOriginSettlement is null || ActiveRouteAuthoringDestinationSettlement is null)
         {
-            AddTechnicalLogEntry("Выберите поселение отправления и назначения.");
+            AddTechnicalLogEntry("Выберите пункт отправления и активный пункт назначения.");
             return;
         }
 
@@ -688,12 +709,12 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
 
     private void SaveTradeRoutePoints()
     {
-        if (RouteAuthoringFromSettlement is null || RouteAuthoringToSettlement is null)
+        if (RouteAuthoringOriginSettlement is null || ActiveRouteAuthoringDestinationSettlement is null)
         {
-            AddTechnicalLogEntry("Маршрут не сохранён: выберите поселение отправления и назначения.");
+            AddTechnicalLogEntry("Маршрут не сохранён: выберите пункт отправления и активный пункт назначения.");
             return;
         }
-        if (RouteAuthoringFromSettlement.Id == RouteAuthoringToSettlement.Id)
+        if (RouteAuthoringOriginSettlement.Id == ActiveRouteAuthoringDestinationSettlement.Id)
         {
             AddTechnicalLogEntry("Маршрут не сохранён: отправление и назначение совпадают.");
             return;
@@ -716,13 +737,13 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
             return;
         }
 
-        var existingRoute = FindRouteBetween(RouteAuthoringFromSettlement, RouteAuthoringToSettlement);
+        var existingRoute = FindRouteBetween(RouteAuthoringOriginSettlement, ActiveRouteAuthoringDestinationSettlement);
         var updatedRoute = new TradeRoute
         {
-            Id = existingRoute?.Id ?? $"{RouteAuthoringFromSettlement.Id}_{RouteAuthoringToSettlement.Id}",
-            FromSettlementId = existingRoute?.FromSettlementId ?? RouteAuthoringFromSettlement.Id,
-            ToSettlementId = existingRoute?.ToSettlementId ?? RouteAuthoringToSettlement.Id,
-            Type = existingRoute?.Type ?? InferRouteType(RouteAuthoringFromSettlement.Id, RouteAuthoringToSettlement.Id),
+            Id = existingRoute?.Id ?? $"{RouteAuthoringOriginSettlement.Id}_{ActiveRouteAuthoringDestinationSettlement.Id}",
+            FromSettlementId = existingRoute?.FromSettlementId ?? RouteAuthoringOriginSettlement.Id,
+            ToSettlementId = existingRoute?.ToSettlementId ?? ActiveRouteAuthoringDestinationSettlement.Id,
+            Type = existingRoute?.Type ?? InferRouteType(RouteAuthoringOriginSettlement.Id, ActiveRouteAuthoringDestinationSettlement.Id),
             Distance = existingRoute?.Distance ?? 100m,
             TravelDays = existingRoute?.TravelDays ?? 3,
             DistanceDays = SelectedTradeRouteDistanceDays,
@@ -752,16 +773,16 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
 
     private void CopyTradeRoutePoints()
     {
-        if (RouteAuthoringFromSettlement is null || RouteAuthoringToSettlement is null)
+        if (RouteAuthoringOriginSettlement is null || ActiveRouteAuthoringDestinationSettlement is null)
         {
-            AddTechnicalLogEntry("Копирование Points недоступно: выберите поселения отправления и назначения.");
+            AddTechnicalLogEntry("Копирование Points недоступно: выберите пункт отправления и активный пункт назначения.");
             return;
         }
         var fullPoints = BuildFullRoutePoints();
-        var routeId = SelectedTradeRouteForAuthoring?.Id ?? $"{RouteAuthoringFromSettlement.Id}_{RouteAuthoringToSettlement.Id}";
+        var routeId = SelectedTradeRouteForAuthoring?.Id ?? $"{RouteAuthoringOriginSettlement.Id}_{ActiveRouteAuthoringDestinationSettlement.Id}";
         var lines = fullPoints.Select(x =>
             $"    new RoutePoint {{ X = {((decimal)Math.Clamp(x.X,0d,1d)).ToString("0.0000", CultureInfo.InvariantCulture)}m, Y = {((decimal)Math.Clamp(x.Y,0d,1d)).ToString("0.0000", CultureInfo.InvariantCulture)}m }}");
-        var text = $"RouteId: {routeId}{Environment.NewLine}From: {RouteAuthoringFromSettlement.Id}{Environment.NewLine}To: {RouteAuthoringToSettlement.Id}{Environment.NewLine}DistanceDays: {SelectedTradeRouteDistanceDays:0.0###}{Environment.NewLine}{Environment.NewLine}Points ={Environment.NewLine}[{Environment.NewLine}{string.Join($",{Environment.NewLine}", lines)}{Environment.NewLine}]";
+        var text = $"RouteId: {routeId}{Environment.NewLine}From: {RouteAuthoringOriginSettlement.Id}{Environment.NewLine}To: {ActiveRouteAuthoringDestinationSettlement.Id}{Environment.NewLine}DistanceDays: {SelectedTradeRouteDistanceDays:0.0###}{Environment.NewLine}{Environment.NewLine}Points ={Environment.NewLine}[{Environment.NewLine}{string.Join($",{Environment.NewLine}", lines)}{Environment.NewLine}]";
         Clipboard.SetText(text);
         AddTechnicalLogEntry($"Маршрут {routeId}: Points скопированы.");
     }
@@ -789,18 +810,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         (route.FromSettlementId == from.Id && route.ToSettlementId == to.Id)
         || (route.FromSettlementId == to.Id && route.ToSettlementId == from.Id));
 
-    private void ResolveRouteAuthoringSelection()
+    private void ResolveRouteAuthoringSelection(City origin, City destination)
     {
-        if (RouteAuthoringFromSettlement is null || RouteAuthoringToSettlement is null)
-        {
-            return;
-        }
-        if (RouteAuthoringFromSettlement.Id == RouteAuthoringToSettlement.Id)
-        {
-            return;
-        }
-
-        var existingRoute = FindRouteBetween(RouteAuthoringFromSettlement, RouteAuthoringToSettlement);
+        var existingRoute = FindRouteBetween(origin, destination);
         if (existingRoute is not null)
         {
             SelectedTradeRouteForAuthoring = existingRoute;
@@ -812,7 +824,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
             EditedTradeRoutePoints.Clear();
             SelectedTradeRouteDistanceDays = 1m;
             SelectedTradeRouteDistanceDaysInput = "1.0";
-            _routeAuthoringRouteIdDisplay = $"Новый маршрут: {RouteAuthoringFromSettlement.Id}_{RouteAuthoringToSettlement.Id}";
+            _routeAuthoringRouteIdDisplay = $"Новый маршрут: {origin.Id}_{destination.Id}";
         }
         OnPropertyChanged(nameof(RouteAuthoringRouteIdDisplay));
     }
@@ -820,12 +832,12 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     private List<RoutePoint> BuildFullRoutePoints()
     {
         var fullPoints = new List<RoutePoint>();
-        if (RouteAuthoringFromSettlement is not null && TryGetSettlementPoint(RouteAuthoringFromSettlement.Id, out var start))
+        if (RouteAuthoringOriginSettlement is not null && TryGetSettlementPoint(RouteAuthoringOriginSettlement.Id, out var start))
         {
             fullPoints.Add(start);
         }
         fullPoints.AddRange(EditedTradeRoutePoints.Select(x => new RoutePoint { X = (decimal)Math.Clamp(x.X, 0d, 1d), Y = (decimal)Math.Clamp(x.Y, 0d, 1d) }));
-        if (RouteAuthoringToSettlement is not null && TryGetSettlementPoint(RouteAuthoringToSettlement.Id, out var end))
+        if (ActiveRouteAuthoringDestinationSettlement is not null && TryGetSettlementPoint(ActiveRouteAuthoringDestinationSettlement.Id, out var end))
         {
             fullPoints.Add(end);
         }
@@ -846,6 +858,88 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
 
     private static CaravanType InferRouteType(string fromId, string toId)
         => fromId == "thokur_rus" || toId == "thokur_rus" ? CaravanType.Sea : CaravanType.Land;
+
+    private void AddRouteAuthoringDestination()
+    {
+        if (RouteAuthoringOriginSettlement is null)
+        {
+            AddTechnicalLogEntry("Сначала выберите пункт отправления.");
+            return;
+        }
+        var destination = RouteAuthoringDestinationCandidateSettlement;
+        if (destination is null) return;
+        if (destination.Id == RouteAuthoringOriginSettlement.Id)
+        {
+            AddTechnicalLogEntry("Пункт назначения не может совпадать с пунктом отправления.");
+            return;
+        }
+        if (RouteAuthoringDestinationSettlements.Any(x => x.Id == destination.Id))
+        {
+            AddTechnicalLogEntry("Пункт назначения уже добавлен.");
+            return;
+        }
+        if (RouteAuthoringDestinationSettlements.Count >= 8)
+        {
+            AddTechnicalLogEntry("Можно выбрать максимум 8 пунктов назначения.");
+            return;
+        }
+        RouteAuthoringDestinationSettlements.Add(destination);
+        OnPropertyChanged(nameof(RouteAuthoringDestinationCount));
+        OnPropertyChanged(nameof(CanAddMoreRouteAuthoringDestinations));
+        if (ActiveRouteAuthoringDestinationSettlement is null)
+        {
+            ActiveRouteAuthoringDestinationSettlement = destination;
+        }
+    }
+
+    private void ResetRouteAuthoringOriginState()
+    {
+        _routeAuthoringDraftPointsByDestinationId.Clear();
+        _currentDraftDestinationId = null;
+        RouteAuthoringDestinationSettlements.Clear();
+        ActiveRouteAuthoringDestinationSettlement = null;
+        RouteAuthoringDestinationCandidateSettlement = null;
+        EditedTradeRoutePoints.Clear();
+        SelectedTradeRouteForAuthoring = null;
+        SelectedTradeRouteDistanceDays = 1m;
+        SelectedTradeRouteDistanceDaysInput = "1.0";
+        _routeAuthoringRouteIdDisplay = "RouteId: —";
+        OnPropertyChanged(nameof(RouteAuthoringRouteIdDisplay));
+        OnPropertyChanged(nameof(RouteAuthoringDestinationCount));
+        OnPropertyChanged(nameof(CanAddMoreRouteAuthoringDestinations));
+        AddTechnicalLogEntry("Источник маршрутов изменён, список назначений очищен.");
+    }
+
+    private void SaveCurrentActiveDraftPoints()
+    {
+        if (string.IsNullOrWhiteSpace(_currentDraftDestinationId)) return;
+        _routeAuthoringDraftPointsByDestinationId[_currentDraftDestinationId] = EditedTradeRoutePoints
+            .Select(x => new MapPointViewModel { X = x.X, Y = x.Y })
+            .ToList();
+    }
+
+    private void LoadActiveRouteDraftOrExisting()
+    {
+        EditedTradeRoutePoints.Clear();
+        if (RouteAuthoringOriginSettlement is null || ActiveRouteAuthoringDestinationSettlement is null)
+        {
+            _currentDraftDestinationId = null;
+            _routeAuthoringRouteIdDisplay = "RouteId: —";
+            OnPropertyChanged(nameof(RouteAuthoringRouteIdDisplay));
+            return;
+        }
+
+        _currentDraftDestinationId = ActiveRouteAuthoringDestinationSettlement.Id;
+        if (_routeAuthoringDraftPointsByDestinationId.TryGetValue(_currentDraftDestinationId, out var draftPoints))
+        {
+            foreach (var point in draftPoints)
+            {
+                EditedTradeRoutePoints.Add(new MapPointViewModel { X = point.X, Y = point.Y });
+            }
+        }
+
+        ResolveRouteAuthoringSelection(RouteAuthoringOriginSettlement, ActiveRouteAuthoringDestinationSettlement);
+    }
 
     private void Start()
     {
