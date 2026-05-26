@@ -49,8 +49,8 @@
                             <TextBlock Grid.Row="5" Grid.Column="0" Text="Безопасность:" FontWeight="SemiBold"/>
                             <TextBlock Grid.Row="5" Grid.Column="2" Text="{Binding Security}"/>
 
-                            <TextBlock Grid.Row="6" Grid.Column="0" Text="Преступность:" FontWeight="SemiBold"/>
-                            <TextBlock Grid.Row="6" Grid.Column="2" Text="{Binding Crime}"/>
+                            <TextBlock Grid.Row="6" Grid.Column="0" Text="Преступность:" FontWeight="SemiBold" ToolTip="{Binding CrimeFlowTooltip}"/>
+                            <TextBlock Grid.Row="6" Grid.Column="2" Text="{Binding Crime}" ToolTip="{Binding CrimeFlowTooltip}"/>
 
                             <TextBlock Grid.Row="7" Grid.Column="0" Text="День:" FontWeight="SemiBold"/>
                             <TextBlock Grid.Row="7" Grid.Column="2" Text="{Binding Day}"/>

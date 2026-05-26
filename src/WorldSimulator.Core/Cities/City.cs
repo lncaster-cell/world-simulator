@@ -94,7 +94,7 @@ public sealed class City
     public int Crime
     {
         get => _crime;
-        set => _crime = Math.Clamp(value, MetricMin, MetricMax);
+        set => _crime = Math.Clamp(value, 1, MetricMax);
     }
 
     public decimal Resources
