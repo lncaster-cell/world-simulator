@@ -22,7 +22,7 @@ public sealed class WorldSimulationService
     private readonly CityEventManager _defaultEventManager;
     private readonly CityEventEffectCalculator _eventEffectCalculator;
     private readonly CityEventGenerator _eventGenerator;
-    private readonly Dictionary<string, CityEventManager> _eventManagersByCity = new(StringComparer.Ordinal);
+    private readonly WorldEventState _eventState = new();
 
     public WorldSimulationService(
         DailyFoodFlowCalculator dailyFoodFlowCalculator,
@@ -123,26 +123,33 @@ public sealed class WorldSimulationService
         return new WorldDayAdvanceResult(selectedCityResult, selectedCityEventEffects, selectedCityPopulationChange, selectedCityCrimeFlow, completedEvents, generatedEvent, activeEventNamesBeforeAdvance);
     }
 
+    public WorldEventState ExportEventState()
+    {
+        return _eventState;
+    }
+
+    public void ImportEventState(WorldEventState eventState, string selectedCityId)
+    {
+        ArgumentNullException.ThrowIfNull(eventState);
+        ArgumentException.ThrowIfNullOrWhiteSpace(selectedCityId);
+
+        _eventState.ReplaceWith(eventState.EventManagersByCity);
+        EnsureSelectedCityEventManagerBinding(selectedCityId);
+    }
+
     private CityEventManager GetOrCreateCityEventManager(string cityId)
     {
-        if (_eventManagersByCity.TryGetValue(cityId, out var manager))
-        {
-            return manager;
-        }
-
-        manager = new CityEventManager();
-        _eventManagersByCity[cityId] = manager;
-        return manager;
+        return _eventState.GetOrCreateManager(cityId);
     }
 
     private void EnsureSelectedCityEventManagerBinding(string selectedCityId)
     {
-        if (_eventManagersByCity.TryGetValue(selectedCityId, out _))
+        if (_eventState.EventManagersByCity.TryGetValue(selectedCityId, out _))
         {
             return;
         }
 
-        _eventManagersByCity[selectedCityId] = _defaultEventManager;
+        _eventState.SetManager(selectedCityId, _defaultEventManager);
     }
 
     private CityDailySimulationResult SimulateCityDay(City city, SettlementEconomyProfile profile, CityEventEffectsResult eventEffects, IReadOnlyCollection<CityEvent> activeEvents)

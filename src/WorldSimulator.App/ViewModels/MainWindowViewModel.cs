@@ -740,7 +740,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         {
             // TODO: Текущий save/load сохраняет выбранный город и не сериализует полное состояние SimulationWorld.Cities.
             // TODO: В отдельном PR сохранить/восстанавливать все города мира.
-            await _saveService.SaveAsync(SaveFilePath, _world, _clock, _eventManager);
+            await _saveService.SaveAsync(SaveFilePath, _world, _clock, _worldSimulationService.ExportEventState());
             AddTechnicalLogEntry($"Состояние сохранено: {SaveFilePath}");
             SetLastImportantChange("состояние сохранено.");
             RefreshSimulationSummary();
@@ -772,9 +772,11 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
                 loaded.Clock.RealTimePerGameHour);
             _lastTickUtc = DateTimeOffset.UtcNow;
 
-            _eventManager.Restore(loaded.ActiveEvents, loaded.CompletedEvents);
+            _worldSimulationService.ImportEventState(loaded.EventState, _world.SelectedCityId);
+            var selectedCityEventManager = loaded.EventState.GetManagerOrEmpty(_world.SelectedCityId);
+            _eventManager.Restore(selectedCityEventManager.ActiveEvents, selectedCityEventManager.CompletedEvents);
             RefreshEventEntries();
-            AddTechnicalLogEntry($"События загружены: активных {loaded.ActiveEvents.Count}, завершённых {loaded.CompletedEvents.Count}.");
+            AddTechnicalLogEntry($"События загружены: активных {selectedCityEventManager.ActiveEvents.Count}, завершённых {selectedCityEventManager.CompletedEvents.Count}.");
             AddTechnicalLogEntry($"Состояние загружено: {SaveFilePath}");
             SetLastImportantChange("состояние загружено.");
 
