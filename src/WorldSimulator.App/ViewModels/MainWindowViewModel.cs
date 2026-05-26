@@ -781,7 +781,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         var fullPoints = BuildFullRoutePoints();
         var routeId = SelectedTradeRouteForAuthoring?.Id ?? $"{RouteAuthoringOriginSettlement.Id}_{ActiveRouteAuthoringDestinationSettlement.Id}";
         var lines = fullPoints.Select(x =>
-            $"    new RoutePoint {{ X = {((decimal)Math.Clamp(x.X,0d,1d)).ToString("0.0000", CultureInfo.InvariantCulture)}m, Y = {((decimal)Math.Clamp(x.Y,0d,1d)).ToString("0.0000", CultureInfo.InvariantCulture)}m }}");
+            $"    new RoutePoint {{ X = {Math.Clamp(x.X, 0m, 1m).ToString("0.0000", CultureInfo.InvariantCulture)}m, Y = {Math.Clamp(x.Y, 0m, 1m).ToString("0.0000", CultureInfo.InvariantCulture)}m }}");
         var text = $"RouteId: {routeId}{Environment.NewLine}From: {RouteAuthoringOriginSettlement.Id}{Environment.NewLine}To: {ActiveRouteAuthoringDestinationSettlement.Id}{Environment.NewLine}DistanceDays: {SelectedTradeRouteDistanceDays:0.0###}{Environment.NewLine}{Environment.NewLine}Points ={Environment.NewLine}[{Environment.NewLine}{string.Join($",{Environment.NewLine}", lines)}{Environment.NewLine}]";
         Clipboard.SetText(text);
         AddTechnicalLogEntry($"Маршрут {routeId}: Points скопированы.");
