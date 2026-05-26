@@ -25,7 +25,6 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     private const int MaxTechnicalLogEntries = 500;
     private const int MaxSimulationJournalDays = 500;
     private const string GothaCityId = "gotha";
-    private const string GothaJournalCityName = "Гота";
     private SimulationWorld _world;
     private City _city;
     private readonly SimulationClock _clock;
@@ -76,8 +75,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         SetFastSpeedCommand = new RelayCommand(SetFastSpeed);
         SetVeryFastSpeedCommand = new RelayCommand(SetVeryFastSpeed);
         SetTurboSpeedCommand = new RelayCommand(SetTurboSpeed);
-        SelectGothaCommand = new RelayCommand(SelectGotha);
-        OpenSelectedCityCommand = new RelayCommand(OpenSelectedCity, () => IsGothaSelected);
+        SelectSettlementCommand = new RelayCommand<string>(SelectSettlement);
+        OpenSelectedCityCommand = new RelayCommand(OpenSelectedCity, () => !string.IsNullOrWhiteSpace(_world.SelectedCityId));
         TriggerFireEventCommand = new RelayCommand(() => TryStartEvent(CityEventPresets.CreateFire));
         TriggerDiseaseEventCommand = new RelayCommand(() => TryStartEvent(CityEventPresets.CreateDisease));
         TriggerRatInfestationEventCommand = new RelayCommand(() => TryStartEvent(CityEventPresets.CreateRatInfestation));
@@ -114,7 +113,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     public ICommand SetVeryFastSpeedCommand { get; }
     public ICommand SetTurboSpeedCommand { get; }
 
-    public ICommand SelectGothaCommand { get; }
+    public ICommand SelectSettlementCommand { get; }
 
     public ICommand OpenSelectedCityCommand { get; }
 
@@ -387,13 +386,14 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
 
     public bool HasCompletedEventEntries => _eventManager.CompletedEvents.Count > 0;
 
-    public bool IsGothaSelected { get; private set; }
 
     public bool IsCityPanelVisible { get; private set; }
 
     public int SelectedCityTabIndex { get; private set; }
 
-    public string SelectedCityName => IsGothaSelected ? _city.Name : string.Empty;
+    public string SelectedCityName => _city.Name;
+
+    public IReadOnlyList<SettlementMapMarkerViewModel> SettlementMapMarkers => BuildSettlementMapMarkers();
 
     public bool IsMapCalibrationModeEnabled
     {
@@ -419,9 +419,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         ? $"Последняя точка карты: X={_lastMapCalibrationX.Value:0.0000}, Y={_lastMapCalibrationY.Value:0.0000}"
         : "Последняя точка карты: нет";
 
-    public string SelectedCityProfile => IsGothaSelected
-        ? "Гота — малый пограничный прибрежный портовый город"
-        : string.Empty;
+    public string SelectedCityProfile => $"{_city.Name} — профиль поселения";
 
     public string SelectedJournalCityId
     {
@@ -441,7 +439,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         }
     }
 
-    public string CurrentJournalCityName => SelectedJournalCityId == GothaCityId ? GothaJournalCityName : SelectedJournalCityId;
+    public string CurrentJournalCityName => _city.Name;
 
     public string CityJournalTitle => $"Летопись города: {CurrentJournalCityName}";
 
@@ -457,19 +455,31 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         return new City(_city.Id, _city.Name, _city.Population, _city.Food, _city.Wealth, _city.Mood, _city.Security, _city.Crime, _city.Resources, _city.Goods, _city.CityState);
     }
 
-    private void SelectGotha()
+    private void SelectSettlement(string? settlementId)
     {
-        IsGothaSelected = true;
-        RefreshSelectedCityProperties();
-    }
-
-    private void OpenSelectedCity()
-    {
-        if (!IsGothaSelected)
+        if (string.IsNullOrWhiteSpace(settlementId))
         {
             return;
         }
 
+        var selectedCity = _world.FindCity(settlementId);
+        if (selectedCity is null)
+        {
+            return;
+        }
+
+        _world.SelectedCityId = selectedCity.Id;
+        _city = _world.SelectedCity;
+        SelectedJournalCityId = _city.Id;
+
+        RefreshAllCityProperties();
+        RefreshSelectedCityProperties();
+        RefreshDailyFoodFlowPreview();
+        RefreshSimulationSummary();
+    }
+
+    private void OpenSelectedCity()
+    {
         IsCityPanelVisible = true;
         SelectedCityTabIndex = 0;
         OnPropertyChanged(nameof(IsCityPanelVisible));
@@ -666,7 +676,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(Resources));
         OnPropertyChanged(nameof(Wealth));
         OnPropertyChanged(nameof(WealthTooltip));
+        OnPropertyChanged(nameof(SettlementMapMarkers));
         OnPropertyChanged(nameof(WealthTooltip));
+        OnPropertyChanged(nameof(SettlementMapMarkers));
         OnPropertyChanged(nameof(FoodBalanceTooltip));
         OnPropertyChanged(nameof(FishingProductionTooltip));
         OnPropertyChanged(nameof(ResourcesTooltip));
@@ -718,6 +730,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(Population));
         OnPropertyChanged(nameof(DailyFoodConsumption));
         OnPropertyChanged(nameof(WealthTooltip));
+        OnPropertyChanged(nameof(SettlementMapMarkers));
         OnPropertyChanged(nameof(FoodBalanceTooltip));
         OnPropertyChanged(nameof(FishingProductionTooltip));
         OnPropertyChanged(nameof(ResourcesTooltip));
@@ -815,13 +828,13 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
             var loaded = await _saveService.LoadAsync(SaveFilePath);
             _city = loaded.City;
 
-            var gothaIndex = _world.Cities.FindIndex(c => c.Id == GothaCityId);
-            if (gothaIndex >= 0)
+            var selectedIndex = _world.Cities.FindIndex(c => c.Id == _world.SelectedCityId);
+            if (selectedIndex >= 0)
             {
-                _world.Cities[gothaIndex] = _city;
+                _world.Cities[selectedIndex] = _city;
             }
 
-            _world.SelectedCityId = GothaCityId;
+            _world.SelectedCityId = _city.Id;
             _clock.RestoreState(
                 loaded.Clock.Day,
                 loaded.Clock.Hour,
@@ -870,10 +883,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
 
     private void RefreshSelectedCityProperties()
     {
-        OnPropertyChanged(nameof(IsGothaSelected));
         OnPropertyChanged(nameof(SelectedCityName));
         OnPropertyChanged(nameof(SelectedCityProfile));
         OnPropertyChanged(nameof(CityStateDisplay));
+        OnPropertyChanged(nameof(SettlementMapMarkers));
 
         if (OpenSelectedCityCommand is RelayCommand openSelectedCityCommand)
         {
@@ -901,6 +914,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(Goods));
         OnPropertyChanged(nameof(DailyFoodConsumption));
         OnPropertyChanged(nameof(WealthTooltip));
+        OnPropertyChanged(nameof(SettlementMapMarkers));
     }
 
     private void RefreshDailyFoodFlowPreview()
@@ -928,6 +942,27 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(SimulationSummaryFoodBalance));
     }
 
+
+    private IReadOnlyList<SettlementMapMarkerViewModel> BuildSettlementMapMarkers()
+    {
+        var citiesById = _world.Cities.ToDictionary(c => c.Id, StringComparer.Ordinal);
+
+        return _world.SettlementMapLocations
+            .Where(location => citiesById.ContainsKey(location.SettlementId))
+            .Select(location =>
+            {
+                var city = citiesById[location.SettlementId];
+                return new SettlementMapMarkerViewModel
+                {
+                    SettlementId = city.Id,
+                    DisplayName = city.Name,
+                    X = location.X,
+                    Y = location.Y,
+                    IsSelected = city.Id == _world.SelectedCityId
+                };
+            })
+            .ToList();
+    }
     private DailyFoodFlowInputs BuildDailyFoodFlowInputs(CityEventEffectsResult? eventEffects = null)
     {
         var effects = eventEffects ?? _eventEffectCalculator.Calculate(_city, _eventManager.ActiveEvents);
@@ -1038,6 +1073,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(CityStateDisplay));
         OnPropertyChanged(nameof(FishingProductionTooltip));
         OnPropertyChanged(nameof(WealthTooltip));
+        OnPropertyChanged(nameof(SettlementMapMarkers));
         OnPropertyChanged(nameof(SimulationSummaryCityState));
     }
 
@@ -1140,8 +1176,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         var entry = new SimulationJournalEntry
         {
             Day = day,
-            CityId = GothaCityId,
-            CityName = GothaJournalCityName,
+            CityId = _city.Id,
+            CityName = _city.Name,
             CityState = ToRussianCityState(cityStateEnd),
             PopulationStart = populationStart,
             PopulationEnd = populationEnd,

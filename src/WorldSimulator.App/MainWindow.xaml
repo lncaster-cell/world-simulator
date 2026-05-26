@@ -1,11 +1,14 @@
 <Window x:Class="WorldSimulator.App.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:conv="clr-namespace:WorldSimulator.App.Converters"
         Title="Симулятор мира MVP 0.1"
         Height="720"
         Width="1200">
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+        <conv:MapMarkerCanvasLeftConverter x:Key="MapMarkerCanvasLeftConverter" />
+        <conv:MapMarkerCanvasTopConverter x:Key="MapMarkerCanvasTopConverter" />
     </Window.Resources>
 
     <Grid Margin="16">
@@ -54,29 +57,67 @@
                     <Canvas x:Name="MapOverlay"
                             Background="Transparent"
                             IsHitTestVisible="True">
-                        <Button x:Name="GothaHotspotButton"
-                                Width="34"
-                                Height="34"
-                                Command="{Binding SelectGothaCommand}"
-                                ToolTip="Гота"
-                                Background="Transparent"
-                                BorderThickness="0"
-                                IsHitTestVisible="True">
-                            <Grid>
-                                <Ellipse Width="18"
-                                         Height="18"
-                                         Fill="#66FFAA00"
-                                         Stroke="#CCFFAA00"
-                                         StrokeThickness="2"
-                                         HorizontalAlignment="Center"
-                                         VerticalAlignment="Center"/>
-                                <Ellipse Width="6"
-                                         Height="6"
-                                         Fill="#FFFFAA00"
-                                         HorizontalAlignment="Center"
-                                         VerticalAlignment="Center"/>
-                            </Grid>
-                        </Button>
+                        <ItemsControl ItemsSource="{Binding SettlementMapMarkers}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <Canvas/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemContainerStyle>
+                                <Style TargetType="ContentPresenter">
+                                    <Setter Property="Canvas.Left">
+                                        <Setter.Value>
+                                            <MultiBinding Converter="{StaticResource MapMarkerCanvasLeftConverter}">
+                                                <Binding Path="X"/>
+                                                <Binding ElementName="MapContainer" Path="ActualWidth"/>
+                                                <Binding ElementName="MapImage" Path="ActualWidth"/>
+                                            </MultiBinding>
+                                        </Setter.Value>
+                                    </Setter>
+                                    <Setter Property="Canvas.Top">
+                                        <Setter.Value>
+                                            <MultiBinding Converter="{StaticResource MapMarkerCanvasTopConverter}">
+                                                <Binding Path="Y"/>
+                                                <Binding ElementName="MapContainer" Path="ActualHeight"/>
+                                                <Binding ElementName="MapImage" Path="ActualHeight"/>
+                                            </MultiBinding>
+                                        </Setter.Value>
+                                    </Setter>
+                                </Style>
+                            </ItemsControl.ItemContainerStyle>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Button Width="22"
+                                            Height="22"
+                                            Command="{Binding DataContext.SelectSettlementCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                            CommandParameter="{Binding SettlementId}"
+                                            ToolTip="{Binding DisplayName}"
+                                            Background="Transparent"
+                                            BorderThickness="0"
+                                            IsHitTestVisible="True">
+                                        <Grid>
+                                            <Ellipse Fill="#66FFAA00" Stroke="#CCFFAA00" StrokeThickness="2">
+                                                <Ellipse.Style>
+                                                    <Style TargetType="Ellipse">
+                                                        <Setter Property="Width" Value="14"/>
+                                                        <Setter Property="Height" Value="14"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                                <Setter Property="Width" Value="18"/>
+                                                                <Setter Property="Height" Value="18"/>
+                                                                <Setter Property="StrokeThickness" Value="3"/>
+                                                                <Setter Property="Fill" Value="#99FFD166"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Ellipse.Style>
+                                            </Ellipse>
+                                            <Ellipse Width="5" Height="5" Fill="#FFFFAA00"/>
+                                        </Grid>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
                     </Canvas>
                 </Grid>
             </Border>
@@ -99,7 +140,7 @@
                         CornerRadius="6"
                         Padding="12"
                         Margin="0,0,0,12"
-                        Visibility="{Binding IsGothaSelected, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        Visibility="Visible">
                     <StackPanel>
                         <TextBlock Text="Выбранный город" FontWeight="SemiBold" FontSize="16" Margin="0,0,0,10"/>
                         <TextBlock Text="{Binding SelectedCityName}" FontSize="18" FontWeight="Bold" Margin="0,0,0,8"/>

@@ -5,9 +5,6 @@ namespace WorldSimulator.App;
 
 public partial class MainWindow : System.Windows.Window
 {
-    private const double GothaMapX = 0.6664;
-    private const double GothaMapY = 0.2322;
-
     private CityWindow? _cityWindow;
     private LogWindow? _logWindow;
 
@@ -15,50 +12,15 @@ public partial class MainWindow : System.Windows.Window
     {
         InitializeComponent();
         DataContext = new MainWindowViewModel();
-        Loaded += (_, _) => UpdateGothaMarkerPosition();
     }
 
     private void MapContainer_SizeChanged(object sender, System.Windows.SizeChangedEventArgs e)
     {
-        UpdateGothaMarkerPosition();
     }
 
     private void MapImage_SizeChanged(object sender, System.Windows.SizeChangedEventArgs e)
     {
-        UpdateGothaMarkerPosition();
     }
-
-    private void UpdateGothaMarkerPosition()
-    {
-        if (MapContainer.ActualWidth <= 0 || MapContainer.ActualHeight <= 0 || MapImage.Source is null)
-        {
-            return;
-        }
-
-        var sourceWidth = MapImage.Source.Width;
-        var sourceHeight = MapImage.Source.Height;
-
-        if (sourceWidth <= 0 || sourceHeight <= 0)
-        {
-            return;
-        }
-
-        var scale = System.Math.Min(MapContainer.ActualWidth / sourceWidth, MapContainer.ActualHeight / sourceHeight);
-        var renderedWidth = sourceWidth * scale;
-        var renderedHeight = sourceHeight * scale;
-        var renderedLeft = (MapContainer.ActualWidth - renderedWidth) / 2;
-        var renderedTop = (MapContainer.ActualHeight - renderedHeight) / 2;
-
-        MapOverlay.Width = MapContainer.ActualWidth;
-        MapOverlay.Height = MapContainer.ActualHeight;
-
-        var hotspotCenterX = renderedLeft + renderedWidth * GothaMapX;
-        var hotspotCenterY = renderedTop + renderedHeight * GothaMapY;
-
-        System.Windows.Controls.Canvas.SetLeft(GothaHotspotButton, hotspotCenterX - GothaHotspotButton.Width / 2);
-        System.Windows.Controls.Canvas.SetTop(GothaHotspotButton, hotspotCenterY - GothaHotspotButton.Height / 2);
-    }
-
 
     private void MapContainer_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
@@ -98,7 +60,7 @@ public partial class MainWindow : System.Windows.Window
 
     private void OpenCityButton_Click(object sender, System.Windows.RoutedEventArgs e)
     {
-        if (DataContext is not MainWindowViewModel viewModel || !viewModel.IsGothaSelected)
+        if (DataContext is not MainWindowViewModel viewModel)
         {
             return;
         }
