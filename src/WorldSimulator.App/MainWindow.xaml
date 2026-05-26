@@ -10,6 +10,7 @@
         <conv:MapMarkerCanvasLeftConverter x:Key="MapMarkerCanvasLeftConverter" />
         <conv:MapMarkerCanvasTopConverter x:Key="MapMarkerCanvasTopConverter" />
         <conv:TradeRoutePointsToPointCollectionConverter x:Key="TradeRoutePointsToPointCollectionConverter" />
+        <conv:TradeRoutePointsToSmoothPathGeometryConverter x:Key="TradeRoutePointsToSmoothPathGeometryConverter" />
         <conv:CaravanMarkerCanvasCoordinateConverter x:Key="CaravanMarkerCanvasCoordinateConverter" />
     </Window.Resources>
 
@@ -36,18 +37,41 @@
                 <Button Content="Старт" Command="{Binding StartCommand}" Width="90" Margin="0,0,8,0"/>
                 <Button Content="Пауза" Command="{Binding PauseCommand}" Width="90" Margin="0,0,16,0"/>
                 <Button Content="Сохранить" Command="{Binding SaveCommand}" Width="110" Margin="0,0,8,0"/>
-                <Button Content="Загрузить" Command="{Binding LoadCommand}" Width="110"/>
+                <Button Content="Загрузить" Command="{Binding LoadCommand}" Width="110" Margin="0,0,8,0"/>
+                <ToggleButton Content="Редактор маршрутов" IsChecked="{Binding IsTradeRouteAuthoringModeEnabled}" Width="160"/>
             </StackPanel>
         </Border>
 
         <Grid Grid.Row="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="2*"/>
                 <ColumnDefinition Width="16"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
+            <Border Grid.Row="0" Grid.ColumnSpan="3" BorderBrush="LightGray" BorderThickness="1" CornerRadius="6" Padding="10" Margin="0,0,0,10"
+                    Visibility="{Binding IsTradeRouteAuthoringModeEnabled, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <WrapPanel VerticalAlignment="Center">
+                    <TextBlock Text="Редактор маршрутов" FontWeight="SemiBold" Margin="0,0,12,0" VerticalAlignment="Center"/>
+                    <TextBlock Text="Откуда:" VerticalAlignment="Center"/>
+                    <ComboBox Width="170" Margin="6,0,8,0" ItemsSource="{Binding RouteAuthoringSettlements}" SelectedItem="{Binding RouteAuthoringFromSettlement}" DisplayMemberPath="Name"/>
+                    <TextBlock Text="Куда:" VerticalAlignment="Center"/>
+                    <ComboBox Width="170" Margin="6,0,8,0" ItemsSource="{Binding RouteAuthoringSettlements}" SelectedItem="{Binding RouteAuthoringToSettlement}" DisplayMemberPath="Name"/>
+                    <TextBlock Text="Дней:" VerticalAlignment="Center"/>
+                    <TextBox Width="70" Margin="6,0,8,0" Text="{Binding SelectedTradeRouteDistanceDaysInput, UpdateSourceTrigger=PropertyChanged}"/>
+                    <TextBlock Text="{Binding EditedTradeRouteIntermediatePointCount, StringFormat=Точек: {0}}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <TextBlock Text="{Binding RouteAuthoringRouteIdDisplay}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <Button Content="Отменить" Command="{Binding UndoTradeRoutePointCommand}" Margin="0,0,8,0"/>
+                    <Button Content="Очистить" Command="{Binding ClearTradeRoutePointsCommand}" Margin="0,0,8,0"/>
+                    <Button Content="Сохранить" Command="{Binding SaveTradeRoutePointsCommand}" Margin="0,0,8,0"/>
+                    <Button Content="Скопировать Points" Command="{Binding CopyTradeRoutePointsCommand}"/>
+                </WrapPanel>
+            </Border>
 
-            <Border Grid.Column="0" BorderBrush="LightGray" BorderThickness="1" CornerRadius="6" Padding="8">
+            <Border Grid.Row="1" Grid.Column="0" BorderBrush="LightGray" BorderThickness="1" CornerRadius="6" Padding="8">
                 <Grid x:Name="MapContainer"
                       MouseLeftButtonDown="MapContainer_MouseLeftButtonDown"
                       SizeChanged="MapContainer_SizeChanged">
@@ -99,7 +123,18 @@
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
 
-                        <Polyline Stroke="#FF00B7FF" StrokeThickness="2.5" StrokeDashArray="2,2" IsHitTestVisible="False">
+                        <Path Stroke="#FF00B7FF" StrokeThickness="2.5" StrokeDashArray="2,2" IsHitTestVisible="False">
+                            <Path.Data>
+                                <MultiBinding Converter="{StaticResource TradeRoutePointsToSmoothPathGeometryConverter}">
+                                    <Binding Path="EditedTradeRoutePolylinePoints"/>
+                                    <Binding ElementName="MapContainer" Path="ActualWidth"/>
+                                    <Binding ElementName="MapImage" Path="ActualWidth"/>
+                                    <Binding ElementName="MapContainer" Path="ActualHeight"/>
+                                    <Binding ElementName="MapImage" Path="ActualHeight"/>
+                                </MultiBinding>
+                            </Path.Data>
+                        </Path>
+                        <Polyline Stroke="#8800B7FF" StrokeThickness="1.5" StrokeDashArray="2,2" IsHitTestVisible="False">
                             <Polyline.Points>
                                 <MultiBinding Converter="{StaticResource TradeRoutePointsToPointCollectionConverter}">
                                     <Binding Path="EditedTradeRoutePolylinePoints"/>
@@ -232,26 +267,7 @@
                 </Grid>
             </Border>
 
-            <StackPanel Grid.Column="2">
-                
-
-                <Border BorderBrush="LightGray" BorderThickness="1" CornerRadius="6" Padding="12" Margin="0,0,0,12">
-                    <StackPanel>
-                        <TextBlock Text="Редактор маршрутов" FontWeight="SemiBold" FontSize="16" Margin="0,0,0,8"/>
-                        <CheckBox Content="Режим разметки маршрутов" IsChecked="{Binding IsTradeRouteAuthoringModeEnabled}" Margin="0,0,0,8"/>
-                        <ComboBox ItemsSource="{Binding TradeRoutes}" SelectedItem="{Binding SelectedTradeRouteForAuthoring}" DisplayMemberPath="Id" Margin="0,0,0,8"/>
-                        <TextBlock Text="Расстояние / дней пути:" FontWeight="SemiBold"/>
-                        <TextBox Text="{Binding SelectedTradeRouteDistanceDaysInput, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,8"/>
-                        <TextBlock Text="Кликайте по дороге на карте, чтобы добавить точки маршрута" TextWrapping="Wrap" Margin="0,0,0,8"/>
-                        <WrapPanel Margin="0,0,0,8">
-                            <Button Content="Отменить точку" Command="{Binding UndoTradeRoutePointCommand}" Margin="0,0,8,0"/>
-                            <Button Content="Очистить" Command="{Binding ClearTradeRoutePointsCommand}" Margin="0,0,8,0"/>
-                            <Button Content="Сохранить" Command="{Binding SaveTradeRoutePointsCommand}" Margin="0,0,8,0"/>
-                            <Button Content="Скопировать Points" Command="{Binding CopyTradeRoutePointsCommand}"/>
-                        </WrapPanel>
-                        <TextBlock Text="{Binding EditedTradeRoutePointCount, StringFormat=Точек: {0}}"/>
-                    </StackPanel>
-                </Border>
+            <StackPanel Grid.Row="1" Grid.Column="2">
 
                 <Border BorderBrush="LightGray" BorderThickness="1" CornerRadius="6" Padding="12" Margin="0,0,0,12">
                     <StackPanel>
