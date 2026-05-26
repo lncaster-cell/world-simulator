@@ -82,6 +82,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
             _dailyWealthFlowCalculator,
             _weeklyCrimeFlowCalculator,
             new WorldTradeFlowService(),
+            new CaravanHiringService(),
             _cityStateEvaluator,
             new PopulationChangeCalculator(),
             _eventManager,
