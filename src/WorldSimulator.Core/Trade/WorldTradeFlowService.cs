@@ -56,7 +56,8 @@ public sealed class WorldTradeFlowService
                     continue;
                 }
 
-                var amount = decimal.Min(surplus, decimal.Min(importer.Deficit, caravan.Capacity));
+                var affordableAmount = CalculateAffordableAmount(importer.City.Wealth);
+                var amount = decimal.Min(surplus, decimal.Min(importer.Deficit, decimal.Min(caravan.Capacity, affordableAmount)));
                 amount = decimal.Round(amount, 2, MidpointRounding.AwayFromZero);
                 if (amount <= 0m)
                 {
@@ -65,9 +66,14 @@ public sealed class WorldTradeFlowService
 
                 ApplyTransfer(exporter, importer.City, good, amount);
 
-                var wealthDelta = decimal.Min(MaxWealthDeltaPerTransfer, decimal.Round(amount * WealthPerUnitTransferred, 2, MidpointRounding.AwayFromZero));
+                var wealthDelta = CalculateWealthDelta(amount, importer.City.Wealth);
+                if (wealthDelta <= 0m)
+                {
+                    continue;
+                }
+
                 exporter.Wealth += wealthDelta;
-                importer.City.Wealth = Math.Max(0m, importer.City.Wealth - wealthDelta);
+                importer.City.Wealth -= wealthDelta;
 
                 var transfer = new TradeTransferResult(exporter.Id, importer.City.Id, caravan.Id, good, amount, wealthDelta, -wealthDelta);
                 transfers.Add(transfer);
@@ -91,6 +97,27 @@ public sealed class WorldTradeFlowService
             decimal.Abs(transfers.Sum(t => t.ImporterWealthDelta)));
     }
 
+
+    private static decimal CalculateAffordableAmount(decimal importerWealth)
+    {
+        if (importerWealth <= 0m)
+        {
+            return 0m;
+        }
+
+        if (importerWealth >= MaxWealthDeltaPerTransfer)
+        {
+            return decimal.MaxValue;
+        }
+
+        return decimal.Round(importerWealth / WealthPerUnitTransferred, 2, MidpointRounding.ToZero);
+    }
+
+    private static decimal CalculateWealthDelta(decimal amount, decimal importerWealth)
+    {
+        var rawDelta = decimal.Round(amount * WealthPerUnitTransferred, 2, MidpointRounding.AwayFromZero);
+        return decimal.Min(importerWealth, decimal.Min(MaxWealthDeltaPerTransfer, rawDelta));
+    }
     private static void ApplyTransfer(City exporter, City importer, TradeGoodType good, decimal amount)
     {
         switch (good)
