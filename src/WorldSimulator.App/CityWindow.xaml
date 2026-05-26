@@ -69,8 +69,8 @@
                 <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                     <StackPanel Margin="8">
                         <TextBlock Text="Текущие запасы" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,10"/>
-                        <TextBlock Text="Пища:" FontWeight="SemiBold"/>
-                        <TextBlock Text="{Binding Food}" Margin="0,0,0,6"/>
+                        <TextBlock Text="Пища:" FontWeight="SemiBold" ToolTip="{Binding FoodBalanceTooltip}"/>
+                        <TextBlock Text="{Binding Food}" ToolTip="{Binding FoodBalanceTooltip}" Margin="0,0,0,6"/>
                         <TextBlock Text="Богатство:" FontWeight="SemiBold"/>
                         <TextBlock Text="{Binding Wealth}" Margin="0,0,0,6"/>
                         <TextBlock Text="Ресурсы:" FontWeight="SemiBold"/>
@@ -93,16 +93,16 @@
                         <TextBlock Text="{Binding DailyFoodStartingFood}" Margin="0,0,0,6"/>
                         <TextBlock Text="Потребление населения:" FontWeight="SemiBold"/>
                         <TextBlock Text="{Binding DailyFoodPopulationConsumptionDisplay}" Margin="0,0,0,6"/>
-                        <TextBlock Text="Рыбалка:" FontWeight="SemiBold"/>
-                        <TextBlock Text="{Binding DailyFoodFishingIncomeDisplay}" Margin="0,0,0,6"/>
+                        <TextBlock Text="Рыбалка:" FontWeight="SemiBold" ToolTip="{Binding FishingProductionTooltip}"/>
+                        <TextBlock Text="{Binding DailyFoodFishingIncomeDisplay}" ToolTip="{Binding FishingProductionTooltip}" Margin="0,0,0,6"/>
                         <TextBlock Text="Охота:" FontWeight="SemiBold"/>
                         <TextBlock Text="{Binding DailyFoodHuntingIncomeDisplay}" Margin="0,0,0,6"/>
                         <TextBlock Text="Поставки с материка:" FontWeight="SemiBold"/>
                         <TextBlock Text="{Binding DailyFoodMainlandSupplyIncomeDisplay}" Margin="0,0,0,6"/>
                         <TextBlock Text="Влияние событий:" FontWeight="SemiBold"/>
                         <TextBlock Text="{Binding DailyFoodEventDeltaDisplay}" Margin="0,0,0,6"/>
-                        <TextBlock Text="Дневной баланс:" FontWeight="SemiBold"/>
-                        <TextBlock Text="{Binding DailyFoodTotalDeltaDisplay}" Margin="0,0,0,6"/>
+                        <TextBlock Text="Дневной баланс:" FontWeight="SemiBold" ToolTip="{Binding FoodBalanceTooltip}"/>
+                        <TextBlock Text="{Binding DailyFoodTotalDeltaDisplay}" ToolTip="{Binding FoodBalanceTooltip}" Margin="0,0,0,6"/>
                         <TextBlock Text="Ожидаемая пища после дня:" FontWeight="SemiBold"/>
                         <TextBlock Text="{Binding DailyFoodEndingFood}" Margin="0,0,0,6"/>
                     </StackPanel>
