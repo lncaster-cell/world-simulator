@@ -141,6 +141,25 @@ public sealed class JsonWorldSaveServiceTests
         finally { Cleanup(filePath); }
     }
 
+
+
+    [Fact]
+    public async Task SaveLoad_Preserves_TradeRoutes_AndRoutePoints()
+    {
+        var service = new JsonWorldSaveService();
+        var world = WorldPresets.CreateDefaultWorld();
+        var filePath = TempFile();
+        try
+        {
+            await service.SaveAsync(filePath, world, new SimulationClock(), new WorldEventState());
+            var loaded = await service.LoadAsync(filePath);
+            Assert.Equal(world.TradeRoutes.Count, loaded.World.TradeRoutes.Count);
+            Assert.All(loaded.World.TradeRoutes, route => Assert.True(route.Points.Count >= 2));
+            Assert.Equal(world.TradeRoutes[0].Points[0].X, loaded.World.TradeRoutes[0].Points[0].X);
+            Assert.Equal(world.TradeRoutes[0].Points[0].Y, loaded.World.TradeRoutes[0].Points[0].Y);
+        }
+        finally { Cleanup(filePath); }
+    }
     private static WorldEventState CreateEventStateWithEvents()
     {
         var manager = new CityEventManager();

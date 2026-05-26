@@ -60,3 +60,13 @@ Future work (not part of this phase):
 
 `MainlandSupply` remains in the simulation for now and is still active.
 It is planned to be replaced/removed in a future phase as caravan trade deepens and becomes the primary external supply mechanism.
+
+## Authored route polylines
+
+- `SettlementMapLocation` remains visual-only placement for settlements on the world map.
+- `TradeRoute` is now authoritative route/path data for inter-settlement movement and trade permissions.
+- Route lines are authored world data (deterministic presets), not generated pathfinding.
+- `TradeRoute.Points` are approximate normalized (0..1) polyline points, easy to edit for road/sea lane shaping.
+- Caravan trade now requires an enabled authored `TradeRoute` with matching `CaravanType`.
+- The same route data will be reused later for travel, patrols, armies, bandits and route-debug visuals.
+- Pathfinding and visual caravan movement along those polylines are future work.

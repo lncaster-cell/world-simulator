@@ -7,6 +7,12 @@ public enum TradeShipmentStatus
     Completed
 }
 
+public sealed class RoutePoint
+{
+    public required decimal X { get; init; }
+    public required decimal Y { get; init; }
+}
+
 public sealed class TradeRoute
 {
     public required string Id { get; init; }
@@ -17,6 +23,7 @@ public sealed class TradeRoute
     public required int TravelDays { get; init; }
     public required bool IsEnabled { get; init; }
     public decimal DifficultyMultiplier { get; init; } = 1m;
+    public required List<RoutePoint> Points { get; init; }
 }
 
 public sealed class TradeShipment
