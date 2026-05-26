@@ -34,6 +34,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     private readonly ResourceGatheringProductionCalculator _resourceGatheringProductionCalculator = new();
     private readonly HouseholdConsumptionCalculator _householdConsumptionCalculator = new();
     private readonly DailyWealthFlowCalculator _dailyWealthFlowCalculator = new();
+    private readonly WeeklyCrimeFlowCalculator _weeklyCrimeFlowCalculator = new();
     private readonly CityStateEvaluator _cityStateEvaluator;
     private readonly PopulationChangeCalculator _populationChangeCalculator;
     private readonly CityEventManager _eventManager;
@@ -264,6 +265,33 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
                    $"Дефицит: {householdConsumption.GoodsShortage:0.##}{Environment.NewLine}{Environment.NewLine}" +
                    $"Итог:{Environment.NewLine}" +
                    $"Ожидаемый баланс товаров за день: {expectedBalance:+0.##;-0.##;0}";
+        }
+    }
+
+
+    public string CrimeFlowTooltip
+    {
+        get
+        {
+            var foodFlow = _dailyFoodFlowCalculator.Calculate(_city, BuildDailyFoodFlowInputs());
+            var householdConsumption = _householdConsumptionCalculator.Calculate(_city);
+            var crimeFlow = _weeklyCrimeFlowCalculator.Calculate(_city, foodFlow, householdConsumption);
+
+            return $"Преступность:{Environment.NewLine}" +
+                   $"Текущее значение: {Crime}{Environment.NewLine}{Environment.NewLine}" +
+                   $"Недельные причины роста/снижения:{Environment.NewLine}" +
+                   $"Пища: {FormatSigned(crimeFlow.FoodPressure)}{Environment.NewLine}" +
+                   $"Товары: {FormatSigned(crimeFlow.GoodsShortagePressure)}{Environment.NewLine}" +
+                   $"Ресурсы: {FormatSigned(crimeFlow.ResourcesShortagePressure)}{Environment.NewLine}" +
+                   $"Настроение: {FormatSigned(crimeFlow.MoodPressure)}{Environment.NewLine}" +
+                   $"Безопасность: {FormatSigned(crimeFlow.SecurityPressure)}{Environment.NewLine}" +
+                   $"Состояние города: {FormatSigned(crimeFlow.CityStatePressure)}{Environment.NewLine}" +
+                   $"Менталитет: {FormatSigned(crimeFlow.MentalityPressure)}{Environment.NewLine}" +
+                   $"Законы: {FormatSigned(crimeFlow.LawPressure)}{Environment.NewLine}" +
+                   $"Глобальные события: {FormatSigned(crimeFlow.GlobalEventsPressure)}{Environment.NewLine}" +
+                   $"Меры порядка: -{crimeFlow.FutureOrderMeasuresReduction:0}{Environment.NewLine}{Environment.NewLine}" +
+                   $"Итог недели: {FormatSigned(crimeFlow.ClampedDelta)}{Environment.NewLine}" +
+                   $"Ожидаемая преступность: {crimeFlow.EndingCrime}";
         }
     }
 
@@ -636,6 +664,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(FishingProductionTooltip));
         OnPropertyChanged(nameof(ResourcesTooltip));
         OnPropertyChanged(nameof(GoodsTooltip));
+        OnPropertyChanged(nameof(CrimeFlowTooltip));
         OnPropertyChanged(nameof(EconomyStocksTooltip));
         OnPropertyChanged(nameof(Resources));
         OnPropertyChanged(nameof(Goods));
@@ -649,7 +678,19 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
 
     private void ApplyWeeklyCityUpdate(int day)
     {
-        AddTechnicalLogEntry($"День {day}: недельный пересчёт города.");
+        var foodFlow = _dailyFoodFlowResult;
+        var householdConsumption = _householdConsumptionCalculator.Calculate(_city);
+        var crimeFlow = _weeklyCrimeFlowCalculator.Calculate(_city, foodFlow, householdConsumption);
+
+        _city.Crime = crimeFlow.EndingCrime;
+
+        if (crimeFlow.Changed)
+        {
+            AddTechnicalLogEntry($"День {day}: преступность {crimeFlow.StartingCrime} → {crimeFlow.EndingCrime}; недельный баланс {crimeFlow.ClampedDelta:+0;-0;0}.");
+        }
+
+        OnPropertyChanged(nameof(Crime));
+        OnPropertyChanged(nameof(CrimeFlowTooltip));
     }
 
 
@@ -840,6 +881,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(Mood));
         OnPropertyChanged(nameof(Security));
         OnPropertyChanged(nameof(Crime));
+        OnPropertyChanged(nameof(CrimeFlowTooltip));
         OnPropertyChanged(nameof(Resources));
         OnPropertyChanged(nameof(Goods));
         OnPropertyChanged(nameof(DailyFoodConsumption));
