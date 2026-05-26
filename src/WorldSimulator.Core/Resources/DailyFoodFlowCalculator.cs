@@ -17,6 +17,7 @@ public sealed class DailyFoodFlowCalculator
             {
                 StartingFood = startingFood,
                 PopulationConsumption = 0m,
+                AgricultureIncome = 0m,
                 FishingIncome = 0m,
                 HuntingIncome = 0m,
                 MainlandSupplyIncome = 0m,
@@ -28,6 +29,7 @@ public sealed class DailyFoodFlowCalculator
 
         var populationConsumption = city.CalculateDailyFoodConsumption();
         var totalDelta =
+            inputs.AgricultureIncome +
             inputs.FishingIncome +
             inputs.HuntingIncome +
             inputs.MainlandSupplyIncome +
@@ -40,6 +42,7 @@ public sealed class DailyFoodFlowCalculator
         {
             StartingFood = startingFood,
             PopulationConsumption = populationConsumption,
+            AgricultureIncome = inputs.AgricultureIncome,
             FishingIncome = inputs.FishingIncome,
             HuntingIncome = inputs.HuntingIncome,
             MainlandSupplyIncome = inputs.MainlandSupplyIncome,

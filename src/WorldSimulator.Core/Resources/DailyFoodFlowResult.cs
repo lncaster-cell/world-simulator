@@ -11,6 +11,8 @@ public sealed class DailyFoodFlowResult
 
     public required decimal PopulationConsumption { get; init; }
 
+    public required decimal AgricultureIncome { get; init; }
+
     public required decimal FishingIncome { get; init; }
 
     public required decimal HuntingIncome { get; init; }
