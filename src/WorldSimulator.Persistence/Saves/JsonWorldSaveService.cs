@@ -27,13 +27,12 @@ public sealed class JsonWorldSaveService
             Clock = new ClockSaveData { Day = clock.Day, Hour = clock.Hour, IsRunning = clock.IsRunning, AccumulatedRealTime = clock.AccumulatedRealTime, RealTimePerGameHour = clock.RealTimePerGameHour },
             World = new SimulationWorldSaveData
             {
-                Cities = world.Cities.Select(ToSaveData).ToList(),
+                Cities = world.Cities.Select(city => ToSaveData(city)).ToList(),
                 Regions = world.Regions.Select(r => new RegionSaveData { Id = r.Id, DisplayName = r.DisplayName, MapAssetId = r.MapAssetId }).ToList(),
                 SettlementMapLocations = world.SettlementMapLocations.Select(x => new SettlementMapLocationSaveData { SettlementId = x.SettlementId, RegionId = x.RegionId, X = x.X, Y = x.Y }).ToList(),
                 SettlementEconomyProfiles = world.SettlementEconomyProfiles.Select(x => new SettlementEconomyProfileSaveData { SettlementId = x.SettlementId, AgriculturePotential = x.AgriculturePotential, FishingMultiplier = x.FishingMultiplier, HuntingMultiplier = x.HuntingMultiplier, MainlandSupplyMultiplier = x.MainlandSupplyMultiplier, ResourceGatheringMultiplier = x.ResourceGatheringMultiplier, GoodsCraftingMultiplier = x.GoodsCraftingMultiplier, IsPort = x.IsPort, IsFortress = x.IsFortress, IsCapital = x.IsCapital }).ToList(),
-                Caravans = world.Caravans.Select(x => new CaravanSaveData { Id = x.Id, OwnerSettlementId = x.OwnerSettlementId, Type = x.Type.ToString(), Capacity = x.Capacity, RequiredWorkers = x.RequiredWorkers, IsAvailable = x.IsAvailable }).ToList(),
-                TradeRoutes = world.TradeRoutes.Select(x => new TradeRouteSaveData { Id = x.Id, FromSettlementId = x.FromSettlementId, ToSettlementId = x.ToSettlementId, Type = x.Type.ToString(), Distance = x.Distance, TravelDays = x.TravelDays, IsEnabled = x.IsEnabled, DifficultyMultiplier = x.DifficultyMultiplier, Points = x.Points.Select(p => new RoutePointSaveData { X = p.X, Y = p.Y }).ToList() }).ToList(),
-                TradeShipments = world.TradeShipments.Select(x => new TradeShipmentSaveData { Id = x.Id, CaravanId = x.CaravanId, RouteId = x.RouteId, FromSettlementId = x.FromSettlementId, ToSettlementId = x.ToSettlementId, GoodType = x.GoodType.ToString(), Amount = x.Amount, DepartureDay = x.DepartureDay, ArrivalDay = x.ArrivalDay, ReturnDay = x.ReturnDay, ExporterWealthDelta = x.ExporterWealthDelta, ImporterWealthDelta = x.ImporterWealthDelta, Status = x.Status.ToString() }).ToList(),
+                Caravans = world.Caravans.Select(x => new CaravanSaveData { Id = x.Id, OwnerSettlementId = x.OwnerSettlementId, Type = x.Type.ToString(), Capacity = x.Capacity, RequiredWorkers = x.RequiredWorkers, IsAvailable = x.IsAvailable, PurchaseCost = x.PurchaseCost, UpkeepPerWeek = x.UpkeepPerWeek, Status = x.Status.ToString() }).ToList(),
+                TradeRoutes = world.TradeRoutes.Select(route => ToSaveData(route)).ToList(),
                 SelectedCityId = world.SelectedCityId,
                 SelectedRegionId = world.SelectedRegionId
             },
@@ -194,12 +193,36 @@ public sealed class JsonWorldSaveService
         return new Caravan { Id = caravanData.Id, OwnerSettlementId = caravanData.OwnerSettlementId, Type = caravanType, Capacity = caravanData.Capacity, RequiredWorkers = caravanData.RequiredWorkers, IsAvailable = caravanData.IsAvailable, PurchaseCost = caravanData.PurchaseCost, UpkeepPerWeek = caravanData.UpkeepPerWeek, Status = caravanStatus };
     }
 
+    private static TradeRouteSaveData ToSaveData(TradeRoute route) => new()
+    {
+        Id = route.Id,
+        FromSettlementId = route.FromSettlementId,
+        ToSettlementId = route.ToSettlementId,
+        Type = route.Type.ToString(),
+        Distance = route.Distance,
+        TravelDays = route.TravelDays,
+        IsEnabled = route.IsEnabled,
+        DifficultyMultiplier = route.DifficultyMultiplier,
+        Points = route.Points.Select(point => new RoutePointSaveData { X = point.X, Y = point.Y }).ToList()
+    };
+
     private static TradeRoute ToCoreTradeRoute(TradeRouteSaveData routeData)
     {
         if (!Enum.TryParse<CaravanType>(routeData.Type, true, out var caravanType))
             throw new InvalidDataException($"Unknown trade route caravan type '{routeData.Type}'.");
 
-        return new TradeRoute { Id = routeData.Id, FromSettlementId = routeData.FromSettlementId, ToSettlementId = routeData.ToSettlementId, Type = caravanType, Distance = routeData.Distance, TravelDays = routeData.TravelDays, IsEnabled = routeData.IsEnabled, DifficultyMultiplier = routeData.DifficultyMultiplier, Points = (routeData.Points ?? []).Select(p => new RoutePoint { X = p.X, Y = p.Y }).ToList() };
+        return new TradeRoute
+        {
+            Id = routeData.Id,
+            FromSettlementId = routeData.FromSettlementId,
+            ToSettlementId = routeData.ToSettlementId,
+            Type = caravanType,
+            Distance = routeData.Distance,
+            TravelDays = routeData.TravelDays,
+            IsEnabled = routeData.IsEnabled,
+            DifficultyMultiplier = routeData.DifficultyMultiplier,
+            Points = routeData.Points?.Select(point => new RoutePoint { X = point.X, Y = point.Y }).ToList() ?? []
+        };
     }
 
     private static TradeShipment ToCoreTradeShipment(TradeShipmentSaveData shipmentData)
