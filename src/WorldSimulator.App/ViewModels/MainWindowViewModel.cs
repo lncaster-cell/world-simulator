@@ -30,6 +30,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     private readonly DailyFoodFlowCalculator _dailyFoodFlowCalculator;
     private readonly FishingProductionCalculator _fishingProductionCalculator = new();
     private readonly MainlandSupplyProductionCalculator _mainlandSupplyProductionCalculator = new();
+    private readonly ResourceGatheringProductionCalculator _resourceGatheringProductionCalculator = new();
     private readonly CityStateEvaluator _cityStateEvaluator;
     private readonly PopulationChangeCalculator _populationChangeCalculator;
     private readonly CityEventManager _eventManager;
@@ -456,6 +457,13 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         var result = _dailyFoodFlowCalculator.Calculate(_city, BuildDailyFoodFlowInputs(eventEffects));
         _dailyFoodFlowCalculator.Apply(_city, result);
 
+        var resourceGathering = _resourceGatheringProductionCalculator.Calculate(_city);
+        _city.Resources += resourceGathering.FinalOutput;
+        if (resourceGathering.FinalOutput > 0m)
+        {
+            AddTechnicalLogEntry($"День {day}: ресурсы +{resourceGathering.FinalOutput:0.##} от сбора ресурсов.");
+        }
+
         ApplyDailyEventEffects(eventEffects, day);
 
         var completedEvents = _eventManager.AdvanceDay();
@@ -501,6 +509,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         var populationEnd = _city.Population;
         var cityStateEnd = _city.CityState;
         OnPropertyChanged(nameof(Food));
+        OnPropertyChanged(nameof(Resources));
         OnPropertyChanged(nameof(FoodBalanceTooltip));
         OnPropertyChanged(nameof(FishingProductionTooltip));
         RefreshEventEntries();
