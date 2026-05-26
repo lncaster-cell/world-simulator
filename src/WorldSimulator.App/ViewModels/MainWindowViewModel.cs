@@ -11,6 +11,7 @@ using WorldSimulator.Core.Resources;
 using WorldSimulator.Core.Time;
 using WorldSimulator.Core.Simulation;
 using WorldSimulator.Core.World;
+using WorldSimulator.Core.Trade;
 using WorldSimulator.Persistence.Saves;
 
 namespace WorldSimulator.App.ViewModels;
@@ -80,6 +81,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
             _householdConsumptionCalculator,
             _dailyWealthFlowCalculator,
             _weeklyCrimeFlowCalculator,
+            new WorldTradeFlowService(),
             _cityStateEvaluator,
             new PopulationChangeCalculator(),
             _eventManager,

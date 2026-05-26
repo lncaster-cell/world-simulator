@@ -1,130 +1,47 @@
 # 19 — Caravan-based trade model
 
-## Purpose
+## Status
 
-Этот документ фиксирует новую модель торговли между поселениями мира.
+- MVP caravan-based trade implementation: **Implemented**.
+- Version in this PR is intentionally abstract and deterministic.
 
-Цель модели:
+## Current MVP behavior (implemented)
 
-- заменить абстрактную «торговлю из воздуха» реальным обменом между городами;
-- связать экономику поселений в единую сеть;
-- сделать торговлю ограниченной логистикой (караванами), а не бесконечным источником ресурсов.
+- Weekly world-level trade pass runs after local city production/consumption.
+- Trade uses existing `world.Caravans` and only `IsAvailable` caravans.
+- Supported aggregated goods:
+  - `Food`
+  - `Goods`
+  - `Resources`
+- Export/import logic:
+  - exporter trades only surplus above safe reserve;
+  - importer receives only up to target reserve deficit;
+  - transfer is clamped by exporter surplus, importer deficit, and caravan capacity.
+- Small abstract wealth effect:
+  - exporter gets a small positive `Wealth` delta;
+  - importer pays a small `Wealth` cost;
+  - deltas are clamped to avoid runaway wealth generation.
+- Deterministic ordering:
+  - settlements and caravans are processed in stable ID order;
+  - no randomness is used.
 
-## Core principle
+## Simplifications kept in MVP
 
-Торговля в MVP строится только через караваны.
+- Any available caravan may execute trade with any settlement pair in the world.
+- No per-item goods or item prices.
+- No diplomacy, factions, war, military logistics, or route ownership constraints.
 
-Ключевой принцип:
+## Distance/routes/travel time
 
-- каждый город потенциально может торговать с любым другим городом;
-- обмен происходит только если есть доступный караван нужного типа;
-- город экспортирует то, что у него в избытке;
-- город импортирует то, чего не хватает или скоро будет не хватать.
+Distance, route topology, and travel time are **not implemented yet**.
+These are explicitly future work:
 
-## Trade goods
+- settlement-to-settlement distance;
+- travel duration;
+- route constraints and risk;
+- cost scaling by distance.
 
-Торговля работает с тремя агрегированными группами:
+## MainlandSupply
 
-- `Food`;
-- `Resources`;
-- `Goods`.
-
-Другие типы товаров в MVP не добавляются.
-
-## Surplus and deficit
-
-Каждый город рассчитывает целевые резервы (target reserve):
-
-- `Food reserve`;
-- `Resources reserve`;
-- `Goods reserve`.
-
-Правила:
-
-- если текущий stock выше целевого запаса — это `surplus`;
-- если текущий stock ниже целевого запаса — это `deficit`.
-
-`Surplus` используется как база для sell intent.
-`Deficit` используется как база для buy intent.
-
-## Caravans
-
-Караваны принадлежат конкретным городам. Количество караванов у города ограничено доступной рабочей силой и заданным лимитом.
-
-Модель каравана:
-
-- `OwnerSettlementId`;
-- `Type`: `Land` / `Sea`;
-- `Capacity`;
-- `RequiredWorkers`;
-- `IsAvailable`.
-
-MVP-значения:
-
-- `Land caravan capacity = 50`;
-- `Land caravan required workers = 5`;
-- `Sea caravan capacity = 80`;
-- `Sea caravan required workers = 8`.
-
-## Land and sea caravans
-
-В модели есть два логистических типа:
-
-- `Land caravans` — сухопутная торговля;
-- `Sea caravans` — морская торговля.
-
-Тип каравана определяет, может ли быть выполнена конкретная сделка по маршруту соответствующего вида.
-
-## Weekly trade cycle
-
-Торговый цикл выполняется раз в неделю:
-
-1. Города рассчитывают `surplus/deficit`.
-2. Города формируют `buy/sell intent`.
-3. Город ищет партнёра с `surplus` нужного товара.
-4. Если доступен караван подходящего типа, происходит сделка.
-5. Запасы перемещаются между городами.
-6. `Wealth` пересчитывается по результату обмена.
-
-## Wealth effect
-
-Эффект для `Wealth` / Благосостояния:
-
-- если город продаёт `surplus` — `Wealth` растёт;
-- если город только закупает и ничего не продаёт — `Wealth` падает;
-- если обмен в целом сбалансирован — `Wealth` меняется слабо.
-
-## Why MainlandSupply must be removed
-
-`MainlandSupplyProduction` был временным placeholder-механизмом для раннего этапа экономики.
-
-Долгосрочно он конфликтует с caravan-based trade моделью, потому что создаёт `Food/Resources/Goods` «из воздуха», в обход реальных поселений и логистики.
-
-Требование к эволюции модели:
-
-- после внедрения caravan trade `MainlandSupply` должен быть удалён или полностью заменён;
-- после удаления `Food/Resources/Goods` должны приходить от реальных поселений мира, а не из абстрактного внешнего источника.
-
-## Future distance and travel time
-
-На этапе MVP расстояние между городами не участвует в формуле торговли.
-
-В следующем этапе будет добавлено:
-
-- расстояние между поселениями;
-- время в пути каравана;
-- стоимость и риск дальних маршрутов;
-- влияние дальности на частоту и объём сделок.
-
-## Out of scope for MVP
-
-В рамках данного PR и текущего MVP **не** делается:
-
-- реализация кода торговли;
-- создание/спавн караванов в рантайме;
-- удаление `MainlandSupply`;
-- внедрение самой логики межпоселенческой торговли;
-- изменения `save/load`;
-- изменения UI.
-
-Этот документ задаёт целевую архитектуру и правила будущей реализации.
+`MainlandSupply` remains in the simulation for now and is still active.
+It is planned to be replaced/removed in a future phase as caravan trade deepens and becomes the primary external supply mechanism.

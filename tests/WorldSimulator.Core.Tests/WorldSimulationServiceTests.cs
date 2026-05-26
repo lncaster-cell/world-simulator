@@ -4,6 +4,7 @@ using WorldSimulator.Core.Events;
 using WorldSimulator.Core.Resources;
 using WorldSimulator.Core.Simulation;
 using WorldSimulator.Core.World;
+using WorldSimulator.Core.Trade;
 
 namespace WorldSimulator.Core.Tests;
 
@@ -89,6 +90,22 @@ public sealed class WorldSimulationServiceTests
         secondResult.SelectedCityResult!.CityId.Should().Be(worldB.Cities[1].Id);
     }
 
+
+    [Fact]
+    public void AdvanceDay_SelectedCityIdDoesNotAffectWeeklyTradeExecution()
+    {
+        var worldA = WorldPresets.CreateDefaultWorld();
+        var worldB = WorldPresets.CreateDefaultWorld();
+
+        var serviceA = CreateService();
+        var serviceB = CreateService();
+
+        serviceA.AdvanceDay(worldA, worldA.Cities[0].Id, day: 7, randomEventsEnabled: false);
+        serviceB.AdvanceDay(worldB, worldB.Cities[1].Id, day: 7, randomEventsEnabled: false);
+
+        worldA.Cities.Select(c => (c.Id, c.Food, c.Goods, c.Resources, c.Wealth))
+            .Should().BeEquivalentTo(worldB.Cities.Select(c => (c.Id, c.Food, c.Goods, c.Resources, c.Wealth)));
+    }
     private static WorldSimulationService CreateService(CityEventManager? eventManager = null)
     {
         return new WorldSimulationService(
@@ -102,6 +119,7 @@ public sealed class WorldSimulationServiceTests
             new HouseholdConsumptionCalculator(),
             new DailyWealthFlowCalculator(),
             new WeeklyCrimeFlowCalculator(),
+            new WorldTradeFlowService(),
             new CityStateEvaluator(),
             new PopulationChangeCalculator(),
             eventManager ?? new CityEventManager(),
