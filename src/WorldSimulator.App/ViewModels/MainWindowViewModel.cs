@@ -38,6 +38,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     private readonly ResourceGatheringProductionCalculator _resourceGatheringProductionCalculator = new();
     private readonly HouseholdConsumptionCalculator _householdConsumptionCalculator = new();
     private readonly DailyWealthFlowCalculator _dailyWealthFlowCalculator = new();
+    private readonly WeeklyCrimeFlowCalculator _weeklyCrimeFlowCalculator;
+    private readonly CityStateEvaluator _cityStateEvaluator;
     private readonly CityEventManager _eventManager;
     private readonly CityEventEffectCalculator _eventEffectCalculator;
     private readonly CityEventGenerator _eventGenerator;
@@ -62,6 +64,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         _city = _world.SelectedCity;
         _clock = new SimulationClock();
         _dailyFoodFlowCalculator = new DailyFoodFlowCalculator();
+        _weeklyCrimeFlowCalculator = new WeeklyCrimeFlowCalculator();
+        _cityStateEvaluator = new CityStateEvaluator();
         _eventManager = new CityEventManager();
         _eventEffectCalculator = new CityEventEffectCalculator();
         _eventGenerator = new CityEventGenerator(new SystemRandomProvider());
@@ -75,8 +79,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
             _resourceGatheringProductionCalculator,
             _householdConsumptionCalculator,
             _dailyWealthFlowCalculator,
-            new WeeklyCrimeFlowCalculator(),
-            new CityStateEvaluator(),
+            _weeklyCrimeFlowCalculator,
+            _cityStateEvaluator,
             new PopulationChangeCalculator(),
             _eventManager,
             _eventEffectCalculator,
