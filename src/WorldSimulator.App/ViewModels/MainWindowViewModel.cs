@@ -852,7 +852,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
             point = new RoutePoint { X = location.X, Y = location.Y };
             return true;
         }
-        point = new RoutePoint();
+        point = new RoutePoint { X = 0m, Y = 0m };
         return false;
     }
 
