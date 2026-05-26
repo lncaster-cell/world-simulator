@@ -71,12 +71,12 @@
                         <TextBlock Text="Текущие запасы" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,10"/>
                         <TextBlock Text="Пища:" FontWeight="SemiBold" ToolTip="{Binding FoodBalanceTooltip}"/>
                         <TextBlock Text="{Binding Food}" ToolTip="{Binding FoodBalanceTooltip}" Margin="0,0,0,6"/>
-                        <TextBlock Text="Богатство:" FontWeight="SemiBold"/>
-                        <TextBlock Text="{Binding Wealth}" Margin="0,0,0,6"/>
-                        <TextBlock Text="Ресурсы:" FontWeight="SemiBold" ToolTip="{Binding ResourcesTooltip}"/>
-                        <TextBlock Text="{Binding Resources}" ToolTip="{Binding ResourcesTooltip}" Margin="0,0,0,6"/>
-                        <TextBlock Text="Товары:" FontWeight="SemiBold" ToolTip="{Binding GoodsTooltip}"/>
-                        <TextBlock Text="{Binding Goods}" ToolTip="{Binding GoodsTooltip}" Margin="0,0,0,10"/>
+                        <TextBlock Text="Благосостояние:" FontWeight="SemiBold" ToolTip="{Binding WealthTooltip}"/>
+                        <TextBlock Text="{Binding Wealth}" ToolTip="{Binding WealthTooltip}" Margin="0,0,0,6"/>
+                        <TextBlock Text="Ресурсы:" FontWeight="SemiBold"/>
+                        <TextBlock Text="{Binding Resources}" Margin="0,0,0,6"/>
+                        <TextBlock Text="Товары:" FontWeight="SemiBold"/>
+                        <TextBlock Text="{Binding Goods}" Margin="0,0,0,10"/>
                         <TextBlock Text="Значения запасов в MVP указаны в условных единицах."
                                    FontStyle="Italic"
                                    Foreground="DimGray"
