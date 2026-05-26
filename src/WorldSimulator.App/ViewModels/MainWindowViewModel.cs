@@ -736,7 +736,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         {
             // TODO: Текущий save/load сохраняет выбранный город и не сериализует полное состояние SimulationWorld.Cities.
             // TODO: В отдельном PR сохранить/восстанавливать все города мира.
-            await _saveService.SaveAsync(SaveFilePath, _city, _clock, _eventManager);
+            await _saveService.SaveAsync(SaveFilePath, _world, _clock, _eventManager);
             AddTechnicalLogEntry($"Состояние сохранено: {SaveFilePath}");
             SetLastImportantChange("состояние сохранено.");
             RefreshSimulationSummary();
@@ -758,15 +758,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
             }
 
             var loaded = await _saveService.LoadAsync(SaveFilePath);
-            _city = loaded.City;
-
-            var selectedIndex = _world.Cities.FindIndex(c => c.Id == _world.SelectedCityId);
-            if (selectedIndex >= 0)
-            {
-                _world.Cities[selectedIndex] = _city;
-            }
-
-            _world.SelectedCityId = _city.Id;
+            _world = loaded.World;
+            _city = _world.SelectedCity;
             _clock.RestoreState(
                 loaded.Clock.Day,
                 loaded.Clock.Hour,
