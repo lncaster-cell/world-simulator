@@ -87,7 +87,7 @@
                         <TextBlock Text="{Binding SimulationSummaryTitle}" FontWeight="SemiBold" FontSize="16" Margin="0,0,0,8"/>
                         <TextBlock Text="{Binding SimulationSummaryDayAndHour}" Margin="0,0,0,4"/>
                         <TextBlock Text="{Binding SimulationSummaryCityState}" Margin="0,0,0,4"/>
-                        <TextBlock Text="{Binding SimulationSummaryFoodBalance}" Margin="0,0,0,4"/>
+                        <TextBlock Text="{Binding SimulationSummaryFoodBalance}" ToolTip="{Binding FoodBalanceTooltip}" Margin="0,0,0,4"/>
                         <TextBlock Text="{Binding SimulationSummaryActiveEvents}" Margin="0,0,0,4"/>
                         <TextBlock Text="{Binding SimulationSummaryRandomEventsStatus}" Margin="0,0,0,4"/>
                         <TextBlock Text="{Binding SimulationSummaryLastImportantChange}" TextWrapping="Wrap"/>
@@ -112,8 +112,8 @@
                         <TextBlock Text="Население:" FontWeight="SemiBold"/>
                         <TextBlock Text="{Binding Population}" Margin="0,0,0,6"/>
 
-                        <TextBlock Text="Пища:" FontWeight="SemiBold"/>
-                        <TextBlock Text="{Binding Food}" Margin="0,0,0,6"/>
+                        <TextBlock Text="Пища:" FontWeight="SemiBold" ToolTip="{Binding FoodBalanceTooltip}"/>
+                        <TextBlock Text="{Binding Food}" ToolTip="{Binding FoodBalanceTooltip}" Margin="0,0,0,6"/>
 
                         <TextBlock Text="Безопасность:" FontWeight="SemiBold"/>
                         <TextBlock Text="{Binding Security}" Margin="0,0,0,6"/>

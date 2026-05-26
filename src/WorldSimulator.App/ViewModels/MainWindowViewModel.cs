@@ -217,6 +217,40 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
 
     public string DailyFoodTotalDeltaDisplay => FormatSigned(DailyFoodTotalDelta);
 
+    public string FoodBalanceTooltip =>
+        _dailyFoodFlowResult is null
+            ? "Пищевой баланс ещё не рассчитан."
+            : $"Пища сейчас: {Food:0.##}{Environment.NewLine}{Environment.NewLine}" +
+              $"Прогноз на день:{Environment.NewLine}" +
+              $"Начальная пища: {DailyFoodStartingFood:0.##}{Environment.NewLine}" +
+              $"Потребление населения: {DailyFoodPopulationConsumptionDisplay}{Environment.NewLine}" +
+              $"Рыбалка: {DailyFoodFishingIncomeDisplay}{Environment.NewLine}" +
+              $"Охота: {DailyFoodHuntingIncomeDisplay}{Environment.NewLine}" +
+              $"Поставки с материка: {DailyFoodMainlandSupplyIncomeDisplay}{Environment.NewLine}" +
+              $"События: {DailyFoodEventDeltaDisplay}{Environment.NewLine}{Environment.NewLine}" +
+              $"Дневной баланс: {DailyFoodTotalDeltaDisplay}{Environment.NewLine}" +
+              $"Ожидаемая пища после дня: {DailyFoodEndingFood:0.##}";
+
+    public string FishingProductionTooltip
+    {
+        get
+        {
+            var result = _fishingProductionCalculator.Calculate(_city, _eventManager.ActiveEvents);
+
+            return $"Рыбалка:{Environment.NewLine}" +
+                   $"Природный потенциал: {result.NaturalPotential:0.##}{Environment.NewLine}" +
+                   $"Инфраструктура: уровень {result.InfrastructureLevel}, модификатор ×{result.InfrastructureModifier:0.##}{Environment.NewLine}" +
+                   $"Мощность инфраструктуры: {result.InfrastructureCapacity:0.##}{Environment.NewLine}" +
+                   $"Рабочие: {result.AssignedWorkers} / {result.RequiredWorkers}{Environment.NewLine}" +
+                   $"Заполнение рабочих: {result.WorkerCoverage:P0}{Environment.NewLine}" +
+                   $"Сверхштатные рабочие: {result.ExtraWorkers}{Environment.NewLine}" +
+                   $"Бонус сверхштата: {result.OverstaffBonus:+0.##;-0.##;0}{Environment.NewLine}" +
+                   $"Шторм: ×{result.StormModifier:0.##}{Environment.NewLine}" +
+                   $"Состояние города: ×{result.StateModifier:0.##}{Environment.NewLine}{Environment.NewLine}" +
+                   $"Итог рыбалки: {result.FinalOutput:+0.##;-0.##;0} пищи/день";
+        }
+    }
+
     public ObservableCollection<string> TechnicalLogEntries { get; } = new();
 
     public bool HasTechnicalLogEntries => TechnicalLogEntries.Count > 0;
@@ -467,6 +501,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         var populationEnd = _city.Population;
         var cityStateEnd = _city.CityState;
         OnPropertyChanged(nameof(Food));
+        OnPropertyChanged(nameof(FoodBalanceTooltip));
+        OnPropertyChanged(nameof(FishingProductionTooltip));
         RefreshEventEntries();
         RefreshDailyFoodFlowPreview();
         RefreshSimulationSummary();
@@ -490,6 +526,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
 
         OnPropertyChanged(nameof(Population));
         OnPropertyChanged(nameof(DailyFoodConsumption));
+        OnPropertyChanged(nameof(FoodBalanceTooltip));
+        OnPropertyChanged(nameof(FishingProductionTooltip));
         RefreshDailyFoodFlowPreview();
     }
 
@@ -509,6 +547,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         }
 
         RefreshEventEntries();
+        OnPropertyChanged(nameof(FoodBalanceTooltip));
+        OnPropertyChanged(nameof(FishingProductionTooltip));
     }
 
 
@@ -644,6 +684,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(CityStateDisplay));
         OnPropertyChanged(nameof(Population));
         OnPropertyChanged(nameof(Food));
+        OnPropertyChanged(nameof(FoodBalanceTooltip));
+        OnPropertyChanged(nameof(FishingProductionTooltip));
         OnPropertyChanged(nameof(Wealth));
         OnPropertyChanged(nameof(Mood));
         OnPropertyChanged(nameof(Security));
@@ -671,6 +713,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(DailyFoodMainlandSupplyIncomeDisplay));
         OnPropertyChanged(nameof(DailyFoodEventDeltaDisplay));
         OnPropertyChanged(nameof(DailyFoodTotalDeltaDisplay));
+        OnPropertyChanged(nameof(FoodBalanceTooltip));
+        OnPropertyChanged(nameof(FishingProductionTooltip));
         OnPropertyChanged(nameof(SimulationSummaryFoodBalance));
     }
 
@@ -780,6 +824,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
 
         OnPropertyChanged(nameof(CityState));
         OnPropertyChanged(nameof(CityStateDisplay));
+        OnPropertyChanged(nameof(FishingProductionTooltip));
         OnPropertyChanged(nameof(SimulationSummaryCityState));
     }
 
