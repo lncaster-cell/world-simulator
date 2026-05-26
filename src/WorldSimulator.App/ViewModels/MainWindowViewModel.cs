@@ -400,6 +400,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
 
     public string SelectedCityName => _city.Name;
 
+    public string SelectedRegionName => _world.SelectedRegion.DisplayName;
+
     public IReadOnlyList<SettlementMapMarkerViewModel> SettlementMapMarkers => BuildSettlementMapMarkers();
 
     public bool IsMapCalibrationModeEnabled
@@ -477,6 +479,13 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
 
         _world.SelectedCityId = selectedCity.Id;
         _city = _world.SelectedCity;
+
+        var selectedLocation = _world.FindSettlementMapLocation(selectedCity.Id);
+        if (selectedLocation is not null)
+        {
+            _world.SelectedRegionId = selectedLocation.RegionId;
+        }
+
         SelectedJournalCityId = _city.Id;
 
         RefreshAllCityProperties();
@@ -993,6 +1002,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     private void RefreshSelectedCityProperties()
     {
         OnPropertyChanged(nameof(SelectedCityName));
+        OnPropertyChanged(nameof(SelectedRegionName));
         OnPropertyChanged(nameof(SelectedCityProfile));
         OnPropertyChanged(nameof(CityStateDisplay));
         OnPropertyChanged(nameof(SettlementMapMarkers));
@@ -1059,7 +1069,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         var citiesById = _world.Cities.ToDictionary(c => c.Id, StringComparer.Ordinal);
 
         return _world.SettlementMapLocations
-            .Where(location => citiesById.ContainsKey(location.SettlementId))
+            .Where(location =>
+                location.RegionId == _world.SelectedRegionId &&
+                citiesById.ContainsKey(location.SettlementId))
             .Select(location =>
             {
                 var city = citiesById[location.SettlementId];

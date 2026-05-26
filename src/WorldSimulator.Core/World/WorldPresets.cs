@@ -21,17 +21,21 @@ public static class WorldPresets
                 CityPresets.CreateWodenz(),
                 CityPresets.CreateThokurRus()
             ],
+            Regions =
+            [
+                RegionPresets.CreateRiviaRegion()
+            ],
             SettlementMapLocations =
             [
-                new SettlementMapLocation { SettlementId = "gotha", X = 0.6664m, Y = 0.2322m },
-                new SettlementMapLocation { SettlementId = "rivenstal", X = 0.4824m, Y = 0.4500m },
-                new SettlementMapLocation { SettlementId = "gavern", X = 0.5066m, Y = 0.5963m },
-                new SettlementMapLocation { SettlementId = "mlynek", X = 0.2833m, Y = 0.2487m },
-                new SettlementMapLocation { SettlementId = "brno", X = 0.4527m, Y = 0.7448m },
-                new SettlementMapLocation { SettlementId = "wodenz", X = 0.8036m, Y = 0.9604m },
-                new SettlementMapLocation { SettlementId = "wardmark", X = 0.0380m, Y = 0.4027m },
-                new SettlementMapLocation { SettlementId = "highrock", X = 0.1579m, Y = 0.2179m },
-                new SettlementMapLocation { SettlementId = "thokur_rus", X = 0.8652m, Y = 0.4753m }
+                new SettlementMapLocation { SettlementId = "gotha", RegionId = RegionPresets.RiviaRegionId, X = 0.6664m, Y = 0.2322m },
+                new SettlementMapLocation { SettlementId = "rivenstal", RegionId = RegionPresets.RiviaRegionId, X = 0.4824m, Y = 0.4500m },
+                new SettlementMapLocation { SettlementId = "gavern", RegionId = RegionPresets.RiviaRegionId, X = 0.5066m, Y = 0.5963m },
+                new SettlementMapLocation { SettlementId = "mlynek", RegionId = RegionPresets.RiviaRegionId, X = 0.2833m, Y = 0.2487m },
+                new SettlementMapLocation { SettlementId = "brno", RegionId = RegionPresets.RiviaRegionId, X = 0.4527m, Y = 0.7448m },
+                new SettlementMapLocation { SettlementId = "wodenz", RegionId = RegionPresets.RiviaRegionId, X = 0.8036m, Y = 0.9604m },
+                new SettlementMapLocation { SettlementId = "wardmark", RegionId = RegionPresets.RiviaRegionId, X = 0.0380m, Y = 0.4027m },
+                new SettlementMapLocation { SettlementId = "highrock", RegionId = RegionPresets.RiviaRegionId, X = 0.1579m, Y = 0.2179m },
+                new SettlementMapLocation { SettlementId = "thokur_rus", RegionId = RegionPresets.RiviaRegionId, X = 0.8652m, Y = 0.4753m }
             ],
             SettlementEconomyProfiles =
             [
@@ -63,7 +67,8 @@ public static class WorldPresets
                 new Caravan { Id = "wodenz_land_1", OwnerSettlementId = "wodenz", Type = CaravanType.Land, Capacity = 50m, RequiredWorkers = 5, IsAvailable = true },
                 new Caravan { Id = "thokur_rus_sea_1", OwnerSettlementId = "thokur_rus", Type = CaravanType.Sea, Capacity = 80m, RequiredWorkers = 8, IsAvailable = true }
             ],
-            SelectedCityId = "gotha"
+            SelectedCityId = "gotha",
+            SelectedRegionId = RegionPresets.RiviaRegionId
         };
     }
 }

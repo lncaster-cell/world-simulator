@@ -5,6 +5,69 @@ namespace WorldSimulator.Core.Tests;
 
 public sealed class SimulationWorldTests
 {
+
+    [Fact]
+    public void DefaultWorld_HasRiviaRegion()
+    {
+        var world = WorldPresets.CreateDefaultWorld();
+
+        world.Regions.Count.Should().BeGreaterThanOrEqualTo(1);
+        world.Regions.Should().Contain(x => x.Id == RegionPresets.RiviaRegionId);
+    }
+
+    [Fact]
+    public void DefaultWorld_SelectedRegionIsRiviaRegion()
+    {
+        var world = WorldPresets.CreateDefaultWorld();
+
+        world.SelectedRegionId.Should().Be(RegionPresets.RiviaRegionId);
+        world.SelectedRegion.DisplayName.Should().Be("Ривия");
+        world.SelectedRegion.MapAssetId.Should().Be("rivia_region_map");
+    }
+
+    [Fact]
+    public void DefaultWorld_AllMapLocationsHaveRegion()
+    {
+        var world = WorldPresets.CreateDefaultWorld();
+
+        world.SettlementMapLocations.Should().OnlyContain(x => !string.IsNullOrWhiteSpace(x.RegionId));
+    }
+
+    [Fact]
+    public void DefaultWorld_MapLocationRegionsExist()
+    {
+        var world = WorldPresets.CreateDefaultWorld();
+
+        world.SettlementMapLocations.Should().OnlyContain(x => world.FindRegion(x.RegionId) is not null);
+    }
+
+    [Fact]
+    public void DefaultWorld_RiviaRegionContainsCurrentSettlements()
+    {
+        var world = WorldPresets.CreateDefaultWorld();
+
+        world.SettlementMapLocations.Should().OnlyContain(x => x.RegionId == RegionPresets.RiviaRegionId);
+    }
+
+    [Fact]
+    public void DefaultWorld_MapLocationsStillNormalized()
+    {
+        var world = WorldPresets.CreateDefaultWorld();
+
+        world.SettlementMapLocations.Should().OnlyContain(x => x.X >= 0m && x.X <= 1m && x.Y >= 0m && x.Y <= 1m);
+    }
+
+    [Fact]
+    public void DefaultWorld_AllCurrentSettlementsBelongToRivia()
+    {
+        var world = WorldPresets.CreateDefaultWorld();
+        var ids = new[] { "gotha", "highrock", "mlynek", "wardmark", "rivenstal", "gavern", "brno", "wodenz", "thokur_rus" };
+
+        foreach (var id in ids)
+        {
+            world.FindSettlementMapLocation(id, RegionPresets.RiviaRegionId).Should().NotBeNull();
+        }
+    }
     [Fact]
     public void DefaultWorld_ContainsAllRegistrySettlements()
     {
