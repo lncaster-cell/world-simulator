@@ -1236,6 +1236,11 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
 
         var deltaSeconds = (now - _lastTradeMarkerAnimationTickUtc).TotalSeconds;
         _lastTradeMarkerAnimationTickUtc = now;
+        if (!_clock.IsRunning)
+        {
+            return;
+        }
+
         var progressDelta = deltaSeconds * 0.08d;
 
         foreach (var marker in ActiveCaravanMovementMarkers)
