@@ -1309,7 +1309,18 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
 
             var loaded = await _saveService.LoadAsync(SaveFilePath);
             _world = loaded.World;
-            _city = _world.SelectedCity;
+            if (_world.EnsureValidSelection(out var selectionReason) && selectionReason is not null)
+            {
+                AddTechnicalLogEntry($"Выбор города/региона в сохранении был исправлен: {selectionReason}");
+            }
+
+            if (!_world.TryGetSelectedCity(out var selectedCity))
+            {
+                AddTechnicalLogEntry("Ошибка загрузки: в мире отсутствуют города для выбора.");
+                return;
+            }
+
+            _city = selectedCity;
             _clock.RestoreState(
                 loaded.Clock.Day,
                 loaded.Clock.Hour,
