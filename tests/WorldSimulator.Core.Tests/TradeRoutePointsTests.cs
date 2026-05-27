@@ -160,8 +160,15 @@ public sealed class TradeRoutePointsTests
 
             result.Success.Should().BeTrue();
             result.AppliedRouteCount.Should().Be(0);
-            routes.Should().OnlyContain(r => r.HasLoadedPath == false);
-            routes.Should().OnlyContain(r => r.Points.Select(p => (p.X, p.Y)).SequenceEqual(before[r.Id]));
+
+            foreach (var route in routes)
+            {
+                route.HasLoadedPath.Should().BeFalse();
+                route.Points
+                    .Select(p => (p.X, p.Y))
+                    .Should()
+                    .Equal(before[route.Id]);
+            }
         }
         finally
         {
