@@ -252,6 +252,66 @@ public sealed class JsonWorldSaveServiceTests
         }
         finally { Cleanup(filePath); }
     }
+
+    [Fact]
+    public async Task SaveLoad_Smoke_Roundtrip_Preserves_All_Sections()
+    {
+        var service = new JsonWorldSaveService();
+        var world = WorldPresets.CreateDefaultWorld();
+        var clock = new SimulationClock(new SimulationTimeSettings { RealTimePerGameHour = TimeSpan.FromSeconds(3) });
+        clock.RestoreState(9, 18, true, TimeSpan.FromSeconds(11), TimeSpan.FromSeconds(3));
+
+        world.SelectedCityId = world.Cities[0].Id;
+        world.SelectedRegionId = world.Regions[0].Id;
+        world.Regions[0].DisplayName = "Test Region";
+        world.SettlementMapLocations[0].X = 0.42m;
+        world.SettlementEconomyProfiles[0].IsCapital = true;
+        world.Caravans[0].Status = CaravanStatus.Broken;
+
+        world.TradeShipments.Add(new TradeShipment
+        {
+            Id = "smoke-shipment",
+            CaravanId = world.Caravans[0].Id,
+            RouteId = world.TradeRoutes[0].Id,
+            FromSettlementId = world.TradeRoutes[0].FromSettlementId,
+            ToSettlementId = world.TradeRoutes[0].ToSettlementId,
+            GoodType = TradeGoodType.Resources,
+            Amount = 25m,
+            DepartureDay = 9,
+            ArrivalDay = 12,
+            ReturnDay = 14,
+            ExporterWealthDelta = 0.3m,
+            ImporterWealthDelta = -0.3m,
+            Status = TradeShipmentStatus.InTransitToDestination
+        });
+
+        var eventState = CreateEventStateWithEvents();
+        var filePath = TempFile();
+
+        try
+        {
+            await service.SaveAsync(filePath, world, clock, eventState);
+            var loaded = await service.LoadAsync(filePath);
+
+            Assert.Equal(9, loaded.Clock.Day);
+            Assert.Equal(18, loaded.Clock.Hour);
+            Assert.Equal(world.SelectedCityId, loaded.World.SelectedCityId);
+            Assert.Equal(world.SelectedRegionId, loaded.World.SelectedRegionId);
+            Assert.Equal("Test Region", loaded.World.Regions[0].DisplayName);
+            Assert.Equal(0.42m, loaded.World.SettlementMapLocations[0].X);
+            Assert.True(loaded.World.SettlementEconomyProfiles[0].IsCapital);
+            Assert.Equal(CaravanStatus.Broken, loaded.World.Caravans[0].Status);
+            Assert.Equal(world.TradeRoutes[0].Id, loaded.World.TradeRoutes[0].Id);
+            Assert.Single(loaded.World.TradeShipments);
+            Assert.Equal("smoke-shipment", loaded.World.TradeShipments[0].Id);
+
+            var selectedManager = loaded.EventState.GetManagerOrEmpty(loaded.World.SelectedCityId);
+            Assert.Single(selectedManager.ActiveEvents);
+            Assert.Single(selectedManager.CompletedEvents);
+        }
+        finally { Cleanup(filePath); }
+    }
+
     private static WorldEventState CreateEventStateWithEvents()
     {
         var manager = new CityEventManager();
