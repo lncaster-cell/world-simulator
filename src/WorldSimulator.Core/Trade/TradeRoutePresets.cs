@@ -45,7 +45,8 @@ public static class TradeRoutePresets
         {
             if (pointsByRouteId.TryGetValue(route.Id, out var points))
             {
-                route.Points = points;
+                route.Points.Clear();
+                route.Points.AddRange(points);
             }
         }
     }
