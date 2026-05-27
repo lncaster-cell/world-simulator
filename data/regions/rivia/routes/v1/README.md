@@ -10,6 +10,8 @@ The route durations are fixed constants, not distances calculated from map geome
 - `route_edges.csv` — confirmed bidirectional routes with fixed durations.
 - `route_todo.csv` — known exits/stubs where duration or exact endpoint is not fixed yet.
 - `rivia_routes.json` — same data as JSON for the external simulator.
+- `world_map_routes_mask.png` — authoring-time route mask (magenta roads, cyan sea, transparent background).
+- `route_paths.json` — generated runtime path data consumed by the app.
 
 ## Core rules
 
@@ -20,6 +22,21 @@ The route durations are fixed constants, not distances calculated from map geome
 - `Gavern` is a cargo dock / transshipment point.
 - `Rivenstal` is a minor receiving pier; ship visits are rare.
 - `Tokrus` is a remote eastern island pier.
+
+## Route path authoring workflow
+
+1. Draw or update `world_map_routes_mask.png` in GIMP.
+   - Land routes: magenta-like pixels.
+   - Sea routes: cyan-like pixels.
+   - Background: transparent.
+2. Run extractor:
+
+```bash
+dotnet run --project tools/WorldSimulator.RoutePathExtractor/WorldSimulator.RoutePathExtractor.csproj
+```
+
+3. Verify generated `route_paths.json`.
+4. Start the application (runtime only reads ready `route_paths.json`; PNG is not read in runtime).
 
 ## Confirmed land routes
 
@@ -50,9 +67,3 @@ The route durations are fixed constants, not distances calculated from map geome
 - Wardmark ↔ West Region Exit duration.
 - Wodenz ↔ South Region Exit duration.
 - Sea exits north/west/south/east: exact source nodes and durations.
-
-## Generate route paths from mask
-
-```bash
-dotnet run --project tools/WorldSimulator.RoutePathExtractor/WorldSimulator.RoutePathExtractor.csproj
-```

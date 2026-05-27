@@ -22,5 +22,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\WorldSimulator.Core\WorldSimulator.Core.csproj" />
+    <ProjectReference Include="..\..\tools\WorldSimulator.RoutePathExtractor\WorldSimulator.RoutePathExtractor.csproj" />
   </ItemGroup>
 </Project>
