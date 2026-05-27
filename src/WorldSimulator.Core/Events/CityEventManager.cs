@@ -73,8 +73,8 @@ public sealed class CityEventManager
 
     public void Restore(IEnumerable<CityEvent>? activeEvents, IEnumerable<CityEvent>? completedEvents)
     {
-        var activeSnapshot = activeEvents?.ToList() ?? new List<CityEvent>();
-        var completedSnapshot = completedEvents?.ToList() ?? new List<CityEvent>();
+        var activeSnapshot = activeEvents?.Select(cityEvent => cityEvent.CreateSnapshot()).ToList() ?? new List<CityEvent>();
+        var completedSnapshot = completedEvents?.Select(cityEvent => cityEvent.CreateSnapshot()).ToList() ?? new List<CityEvent>();
 
         _activeEvents.Clear();
         _completedEvents.Clear();
@@ -91,6 +91,13 @@ public sealed class CityEventManager
 
         _completedEvents.AddRange(completedSnapshot);
         TrimCompletedEvents();
+    }
+
+    public CityEventManager CreateSnapshot()
+    {
+        var snapshot = new CityEventManager(_maxCompletedEvents);
+        snapshot.Restore(_activeEvents, _completedEvents);
+        return snapshot;
     }
 
     private void TrimCompletedEvents()

@@ -142,7 +142,7 @@ public sealed class WorldSimulationService
 
     public WorldEventState ExportEventState()
     {
-        return _eventState;
+        return _eventState.CreateSnapshot();
     }
 
     public void ImportEventState(WorldEventState eventState, string selectedCityId)

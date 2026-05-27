@@ -91,6 +91,23 @@ public sealed class WorldSimulationServiceTests
     }
 
 
+
+    [Fact]
+    public void ExportEventState_ReturnsSnapshotThatDoesNotMutateInternalState()
+    {
+        var service = CreateService();
+        var world = WorldPresets.CreateDefaultWorld();
+        var selectedCityId = world.Cities[0].Id;
+
+        service.AdvanceDay(world, selectedCityId, day: 1, randomEventsEnabled: false);
+
+        var snapshot = service.ExportEventState();
+        snapshot.GetOrCreateManager(selectedCityId).AddEvent(CityEventPresets.CreateFire(10));
+
+        var internalState = service.ExportEventState();
+        internalState.GetManagerOrEmpty(selectedCityId).ActiveEvents.Should().BeEmpty();
+    }
+
     [Fact]
     public void AdvanceDay_SelectedCityIdDoesNotAffectWeeklyTradeExecution()
     {

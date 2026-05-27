@@ -13,6 +13,11 @@ public sealed class JsonWorldSaveService
 
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
 
+    private static readonly Lazy<Dictionary<string, decimal>> DefaultRouteDistanceDaysCache = new(() =>
+        TradeRoutePresets.CreateDefaultRoutes()
+            .GroupBy(route => route.Id, StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.First().DistanceDays, StringComparer.Ordinal));
+
     public async Task SaveAsync(string filePath, SimulationWorld world, SimulationClock clock, WorldEventState eventState, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
@@ -28,10 +33,11 @@ public sealed class JsonWorldSaveService
             World = new SimulationWorldSaveData
             {
                 Cities = world.Cities.Select(city => ToSaveData(city)).ToList(),
-                Regions = world.Regions.Select(r => new RegionSaveData { Id = r.Id, DisplayName = r.DisplayName, MapAssetId = r.MapAssetId }).ToList(),
-                SettlementMapLocations = world.SettlementMapLocations.Select(x => new SettlementMapLocationSaveData { SettlementId = x.SettlementId, RegionId = x.RegionId, X = x.X, Y = x.Y }).ToList(),
-                SettlementEconomyProfiles = world.SettlementEconomyProfiles.Select(x => new SettlementEconomyProfileSaveData { SettlementId = x.SettlementId, AgriculturePotential = x.AgriculturePotential, FishingMultiplier = x.FishingMultiplier, HuntingMultiplier = x.HuntingMultiplier, MainlandSupplyMultiplier = x.MainlandSupplyMultiplier, ResourceGatheringMultiplier = x.ResourceGatheringMultiplier, GoodsCraftingMultiplier = x.GoodsCraftingMultiplier, IsPort = x.IsPort, IsFortress = x.IsFortress, IsCapital = x.IsCapital }).ToList(),
-                Caravans = world.Caravans.Select(x => new CaravanSaveData { Id = x.Id, OwnerSettlementId = x.OwnerSettlementId, Type = x.Type.ToString(), Capacity = x.Capacity, RequiredWorkers = x.RequiredWorkers, IsAvailable = x.IsAvailable, PurchaseCost = x.PurchaseCost, UpkeepPerWeek = x.UpkeepPerWeek, Status = x.Status.ToString() }).ToList(),
+                CitiesById = world.Cities.ToDictionary(city => city.Id, ToSaveData, StringComparer.Ordinal),
+                Regions = world.Regions.Select(ToSaveData).ToList(),
+                SettlementMapLocations = world.SettlementMapLocations.Select(ToSaveData).ToList(),
+                SettlementEconomyProfiles = world.SettlementEconomyProfiles.Select(ToSaveData).ToList(),
+                Caravans = world.Caravans.Select(ToSaveData).ToList(),
                 TradeRoutes = world.TradeRoutes.Select(route => ToSaveData(route)).ToList(),
                 SelectedCityId = world.SelectedCityId,
                 SelectedRegionId = world.SelectedRegionId
@@ -135,15 +141,15 @@ public sealed class JsonWorldSaveService
         var defaultWorld = WorldPresets.CreateDefaultWorld();
 
         var regions = saveData.World.Regions.Any()
-            ? saveData.World.Regions.Select(x => new Region { Id = x.Id, DisplayName = x.DisplayName, MapAssetId = x.MapAssetId }).ToList()
+            ? saveData.World.Regions.Select(ToCoreRegion).ToList()
             : defaultWorld.Regions;
 
         var settlementMapLocations = saveData.World.SettlementMapLocations.Any()
-            ? saveData.World.SettlementMapLocations.Select(x => new SettlementMapLocation { SettlementId = x.SettlementId, RegionId = x.RegionId, X = x.X, Y = x.Y }).ToList()
+            ? saveData.World.SettlementMapLocations.Select(ToCoreSettlementMapLocation).ToList()
             : defaultWorld.SettlementMapLocations;
 
         var settlementEconomyProfiles = saveData.World.SettlementEconomyProfiles.Any()
-            ? saveData.World.SettlementEconomyProfiles.Select(x => new SettlementEconomyProfile { SettlementId = x.SettlementId, AgriculturePotential = x.AgriculturePotential, FishingMultiplier = x.FishingMultiplier, HuntingMultiplier = x.HuntingMultiplier, MainlandSupplyMultiplier = x.MainlandSupplyMultiplier, ResourceGatheringMultiplier = x.ResourceGatheringMultiplier, GoodsCraftingMultiplier = x.GoodsCraftingMultiplier, IsPort = x.IsPort, IsFortress = x.IsFortress, IsCapital = x.IsCapital }).ToList()
+            ? saveData.World.SettlementEconomyProfiles.Select(ToCoreSettlementEconomyProfile).ToList()
             : defaultWorld.SettlementEconomyProfiles;
 
         var caravans = saveData.World.Caravans.Any()
@@ -151,21 +157,39 @@ public sealed class JsonWorldSaveService
             : defaultWorld.Caravans;
 
         var tradeRoutes = saveData.World.TradeRoutes.Any()
-            ? saveData.World.TradeRoutes.Select(ToCoreTradeRoute).ToList()
+            ? saveData.World.TradeRoutes.Select(routeData => ToCoreTradeRoute(routeData, DefaultRouteDistanceDaysCache.Value)).ToList()
             : defaultWorld.TradeRoutes;
+
+        var loadedCities = ResolveCities(saveData.World, filePath);
+        var selectedCityId = loadedCities.Any(c => c.Id == saveData.World.SelectedCityId)
+            ? saveData.World.SelectedCityId
+            : loadedCities.First().Id;
+        var selectedRegionId = regions.Any(r => r.Id == saveData.World.SelectedRegionId)
+            ? saveData.World.SelectedRegionId
+            : regions.First().Id;
 
         return new SimulationWorld
         {
-            Cities = saveData.World.Cities.Select(x => ToCoreCity(x, filePath)).ToList(),
+            Cities = loadedCities,
             Regions = regions,
             SettlementMapLocations = settlementMapLocations,
             SettlementEconomyProfiles = settlementEconomyProfiles,
             Caravans = caravans,
             TradeRoutes = tradeRoutes,
             TradeShipments = saveData.World.TradeShipments.Select(ToCoreTradeShipment).ToList(),
-            SelectedCityId = saveData.World.SelectedCityId,
-            SelectedRegionId = saveData.World.SelectedRegionId
+            SelectedCityId = selectedCityId,
+            SelectedRegionId = selectedRegionId
         };
+    }
+
+    private static List<City> ResolveCities(SimulationWorldSaveData worldData, string filePath)
+    {
+        if (worldData.CitiesById.Count > 0)
+        {
+            return worldData.CitiesById.Values.Select(x => ToCoreCity(x, filePath)).ToList();
+        }
+
+        return worldData.Cities.Select(x => ToCoreCity(x, filePath)).ToList();
     }
 
     private static SimulationWorld BuildWorldFromVersion1(WorldSaveData saveData, string filePath)
@@ -184,8 +208,10 @@ public sealed class JsonWorldSaveService
 
     private static void ValidateWorld(SimulationWorld world, string filePath)
     {
-        if (!world.Cities.Any(c => c.Id == world.SelectedCityId)) throw new InvalidDataException($"Save file '{filePath}' selected city id '{world.SelectedCityId}' does not exist in loaded cities.");
-        if (!world.Regions.Any(r => r.Id == world.SelectedRegionId)) throw new InvalidDataException($"Save file '{filePath}' selected region id '{world.SelectedRegionId}' does not exist in loaded regions.");
+        if (!world.EnsureValidSelection(out _))
+            throw new InvalidDataException(
+                $"Save file '{filePath}' has invalid world selection and fallback could not be applied. " +
+                $"Cities: {world.Cities.Count}, Regions: {world.Regions.Count}, SelectedCityId: '{world.SelectedCityId}', SelectedRegionId: '{world.SelectedRegionId}'.");
 
         var caravanIds = world.Caravans.Select(x => x.Id).ToHashSet(StringComparer.Ordinal);
         var routeIds = world.TradeRoutes.Select(x => x.Id).ToHashSet(StringComparer.Ordinal);
@@ -206,6 +232,49 @@ public sealed class JsonWorldSaveService
         Id = city.Id, Name = city.Name, Population = city.Population, Food = city.Food, Wealth = city.Wealth, Mood = city.Mood, Security = city.Security, Crime = city.Crime, Resources = city.Resources, Goods = city.Goods, CityState = city.CityState.ToString()
     };
 
+
+    private static RegionSaveData ToSaveData(Region region) => new()
+    {
+        Id = region.Id,
+        DisplayName = region.DisplayName,
+        MapAssetId = region.MapAssetId
+    };
+
+    private static SettlementMapLocationSaveData ToSaveData(SettlementMapLocation location) => new()
+    {
+        SettlementId = location.SettlementId,
+        RegionId = location.RegionId,
+        X = location.X,
+        Y = location.Y
+    };
+
+    private static SettlementEconomyProfileSaveData ToSaveData(SettlementEconomyProfile profile) => new()
+    {
+        SettlementId = profile.SettlementId,
+        AgriculturePotential = profile.AgriculturePotential,
+        FishingMultiplier = profile.FishingMultiplier,
+        HuntingMultiplier = profile.HuntingMultiplier,
+        MainlandSupplyMultiplier = profile.MainlandSupplyMultiplier,
+        ResourceGatheringMultiplier = profile.ResourceGatheringMultiplier,
+        GoodsCraftingMultiplier = profile.GoodsCraftingMultiplier,
+        IsPort = profile.IsPort,
+        IsFortress = profile.IsFortress,
+        IsCapital = profile.IsCapital
+    };
+
+    private static CaravanSaveData ToSaveData(Caravan caravan) => new()
+    {
+        Id = caravan.Id,
+        OwnerSettlementId = caravan.OwnerSettlementId,
+        Type = caravan.Type.ToString(),
+        Capacity = caravan.Capacity,
+        RequiredWorkers = caravan.RequiredWorkers,
+        IsAvailable = caravan.IsAvailable,
+        PurchaseCost = caravan.PurchaseCost,
+        UpkeepPerWeek = caravan.UpkeepPerWeek,
+        Status = caravan.Status.ToString()
+    };
+
     private static City ToCoreCity(CitySaveData cityData, string filePath)
     {
         if (!Enum.TryParse<CityState>(cityData.CityState, true, out var parsedCityState))
@@ -214,12 +283,43 @@ public sealed class JsonWorldSaveService
         return new City(cityData.Id, cityData.Name, cityData.Population, cityData.Food, cityData.Wealth, cityData.Mood, cityData.Security, cityData.Crime, cityData.Resources, cityData.Goods, parsedCityState);
     }
 
+
+    private static Region ToCoreRegion(RegionSaveData regionData) => new()
+    {
+        Id = regionData.Id,
+        DisplayName = regionData.DisplayName,
+        MapAssetId = regionData.MapAssetId
+    };
+
+    private static SettlementMapLocation ToCoreSettlementMapLocation(SettlementMapLocationSaveData locationData) => new()
+    {
+        SettlementId = locationData.SettlementId,
+        RegionId = locationData.RegionId,
+        X = locationData.X,
+        Y = locationData.Y
+    };
+
+    private static SettlementEconomyProfile ToCoreSettlementEconomyProfile(SettlementEconomyProfileSaveData profileData) => new()
+    {
+        SettlementId = profileData.SettlementId,
+        AgriculturePotential = profileData.AgriculturePotential,
+        FishingMultiplier = profileData.FishingMultiplier,
+        HuntingMultiplier = profileData.HuntingMultiplier,
+        MainlandSupplyMultiplier = profileData.MainlandSupplyMultiplier,
+        ResourceGatheringMultiplier = profileData.ResourceGatheringMultiplier,
+        GoodsCraftingMultiplier = profileData.GoodsCraftingMultiplier,
+        IsPort = profileData.IsPort,
+        IsFortress = profileData.IsFortress,
+        IsCapital = profileData.IsCapital
+    };
+
     private static Caravan ToCoreCaravan(CaravanSaveData caravanData)
     {
         if (!Enum.TryParse<CaravanType>(caravanData.Type, true, out var caravanType))
             throw new InvalidDataException($"Unknown caravan type '{caravanData.Type}'.");
+        if (!Enum.TryParse<CaravanStatus>(caravanData.Status, true, out var caravanStatus))
+            throw new InvalidDataException($"Unknown caravan status '{caravanData.Status}'.");
 
-        Enum.TryParse<CaravanStatus>(caravanData.Status, true, out var caravanStatus);
         return new Caravan { Id = caravanData.Id, OwnerSettlementId = caravanData.OwnerSettlementId, Type = caravanType, Capacity = caravanData.Capacity, RequiredWorkers = caravanData.RequiredWorkers, IsAvailable = caravanData.IsAvailable, PurchaseCost = caravanData.PurchaseCost, UpkeepPerWeek = caravanData.UpkeepPerWeek, Status = caravanStatus };
     }
 
@@ -237,14 +337,14 @@ public sealed class JsonWorldSaveService
         Points = route.Points.Select(point => new RoutePointSaveData { X = point.X, Y = point.Y }).ToList()
     };
 
-    private static TradeRoute ToCoreTradeRoute(TradeRouteSaveData routeData)
+    private static TradeRoute ToCoreTradeRoute(TradeRouteSaveData routeData, IReadOnlyDictionary<string, decimal> defaultDistanceDaysByRouteId)
     {
         if (!Enum.TryParse<CaravanType>(routeData.Type, true, out var caravanType))
             throw new InvalidDataException($"Unknown trade route caravan type '{routeData.Type}'.");
 
-        var defaultDistanceDays = TradeRoutePresets.CreateDefaultRoutes()
-            .FirstOrDefault(x => string.Equals(x.Id, routeData.Id, StringComparison.Ordinal))
-            ?.DistanceDays ?? 1m;
+        var defaultDistanceDays = defaultDistanceDaysByRouteId.TryGetValue(routeData.Id, out var cachedDistanceDays)
+            ? cachedDistanceDays
+            : 1m;
 
         return new TradeRoute
         {
