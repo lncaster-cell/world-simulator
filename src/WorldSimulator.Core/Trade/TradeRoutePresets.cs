@@ -31,13 +31,19 @@ public static class TradeRoutePresets
         var path = Path.Combine(AppContext.BaseDirectory, "data", "regions", "rivia", "routes", "v1", "route_paths.json");
         if (!File.Exists(path))
         {
+            var generatedFallbackCount = 0;
             foreach (var route in routes)
             {
                 route.Points.Clear();
                 route.HasLoadedPath = false;
+                if (TryBuildFallbackPoints(route, out var fallbackPoints))
+                {
+                    route.Points.AddRange(fallbackPoints);
+                    generatedFallbackCount++;
+                }
             }
 
-            LastRoutePathLoadDiagnostics = "Route paths missing: caravan movement markers disabled.";
+            LastRoutePathLoadDiagnostics = $"Route paths missing: generated fallback polylines for {generatedFallbackCount}/{routes.Count} routes.";
             return;
         }
 
@@ -80,6 +86,25 @@ public static class TradeRoutePresets
 
         var withoutPoints = routes.Count - appliedCount;
         LastRoutePathLoadDiagnostics = $"Route paths loaded: {pointsByRouteId.Count} paths, applied to {appliedCount} trade routes. Routes without points: {withoutPoints}.";
+    }
+
+
+    private static bool TryBuildFallbackPoints(TradeRoute route, out List<RoutePoint> points)
+    {
+        points = [];
+        if (!SettlementCoordinates.TryGetValue(route.FromSettlementId, out var start))
+        {
+            return false;
+        }
+
+        if (!SettlementCoordinates.TryGetValue(route.ToSettlementId, out var end))
+        {
+            return false;
+        }
+
+        points.Add(new RoutePoint { X = start.X, Y = start.Y });
+        points.Add(new RoutePoint { X = end.X, Y = end.Y });
+        return true;
     }
 
 
