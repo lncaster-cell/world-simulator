@@ -196,6 +196,57 @@ public sealed class JsonWorldSaveServiceTests
         finally { Cleanup(filePath); }
     }
 
+    [Fact]
+    public async Task LoadAsync_Invalid_CaravanStatus_Throws_InvalidDataException()
+    {
+        var service = new JsonWorldSaveService();
+        var filePath = TempFile();
+
+        var badSave = new
+        {
+            Version = 2,
+            SavedAtUtc = DateTime.UtcNow,
+            Clock = new { Day = 1, Hour = 0, IsRunning = false, AccumulatedRealTime = "00:00:00", RealTimePerGameHour = "00:05:00" },
+            World = new
+            {
+                Cities = new[]
+                {
+                    new { Id = "gotha", Name = "Gotha", Population = 1, Food = 1, Wealth = 1, Mood = 1, Security = 1, Crime = 1, Resources = 1, Goods = 1, CityState = "Stagnation" },
+                    new { Id = "highrock", Name = "Highrock", Population = 1, Food = 1, Wealth = 1, Mood = 1, Security = 1, Crime = 1, Resources = 1, Goods = 1, CityState = "Stagnation" }
+                },
+                Regions = new[] { new { Id = "rivia", DisplayName = "Rivia", MapAssetId = "x" } },
+                SettlementMapLocations = Array.Empty<object>(),
+                SettlementEconomyProfiles = Array.Empty<object>(),
+                Caravans = new[]
+                {
+                    new
+                    {
+                        Id = "caravan-1",
+                        OwnerSettlementId = "gotha",
+                        Type = "Cart",
+                        Capacity = 100m,
+                        RequiredWorkers = 2,
+                        IsAvailable = true,
+                        PurchaseCost = 1000m,
+                        UpkeepPerWeek = 50m,
+                        Status = "BrokenStatus"
+                    }
+                },
+                TradeRoutes = Array.Empty<object>(),
+                TradeShipments = Array.Empty<object>(),
+                SelectedCityId = "gotha",
+                SelectedRegionId = "rivia"
+            }
+        };
+
+        try
+        {
+            await File.WriteAllTextAsync(filePath, JsonSerializer.Serialize(badSave));
+            await Assert.ThrowsAsync<InvalidDataException>(() => service.LoadAsync(filePath));
+        }
+        finally { Cleanup(filePath); }
+    }
+
 
 
     [Fact]

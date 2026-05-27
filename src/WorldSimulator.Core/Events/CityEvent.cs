@@ -62,6 +62,12 @@ public sealed class CityEvent
 
     public bool IsCompleted => RemainingDays == 0;
 
+
+    public CityEvent CreateSnapshot()
+    {
+        return new CityEvent(Id, Name, Description, StartedDay, DurationDays, RemainingDays);
+    }
+
     public void AdvanceDay()
     {
         if (RemainingDays == 0)

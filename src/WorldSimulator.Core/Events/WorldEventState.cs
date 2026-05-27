@@ -29,7 +29,14 @@ public sealed class WorldEventState
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(cityId);
         ArgumentNullException.ThrowIfNull(manager);
-        _eventManagersByCity[cityId] = manager;
+        _eventManagersByCity[cityId] = manager.CreateSnapshot();
+    }
+
+    public WorldEventState CreateSnapshot()
+    {
+        var snapshot = new WorldEventState();
+        snapshot.ReplaceWith(_eventManagersByCity);
+        return snapshot;
     }
 
     public void ReplaceWith(IReadOnlyDictionary<string, CityEventManager> managersByCity)
@@ -38,7 +45,10 @@ public sealed class WorldEventState
         _eventManagersByCity.Clear();
         foreach (var pair in managersByCity)
         {
-            _eventManagersByCity[pair.Key] = pair.Value;
+            var sourceManager = pair.Value;
+            var managerCopy = new CityEventManager();
+            managerCopy.Restore(sourceManager.ActiveEvents.ToArray(), sourceManager.CompletedEvents.ToArray());
+            _eventManagersByCity[pair.Key] = managerCopy;
         }
     }
 }
