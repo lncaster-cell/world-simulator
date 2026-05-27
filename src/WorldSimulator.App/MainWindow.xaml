@@ -87,6 +87,11 @@
                            Source="/Assets/Maps/world_map.png"
                            Stretch="Uniform"
                            SizeChanged="MapImage_SizeChanged"/>
+                    <Image Source="/Assets/Maps/world_map_routes.png"
+                           Stretch="Uniform"
+                           IsHitTestVisible="False"
+                           Opacity="0.85"
+                           Visibility="{Binding TradeRoutesOverlayVisibility}"/>
 
                     <Image x:Name="RoutesMapImage"
                            Source="/Assets/Maps/world_map_routes.png"
