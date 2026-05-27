@@ -13,6 +13,11 @@ public sealed class JsonWorldSaveService
 
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
 
+    private static readonly Lazy<Dictionary<string, decimal>> DefaultRouteDistanceDaysCache = new(() =>
+        TradeRoutePresets.CreateDefaultRoutes()
+            .GroupBy(route => route.Id, StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.First().DistanceDays, StringComparer.Ordinal));
+
     public async Task SaveAsync(string filePath, SimulationWorld world, SimulationClock clock, WorldEventState eventState, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
@@ -152,7 +157,7 @@ public sealed class JsonWorldSaveService
             : defaultWorld.Caravans;
 
         var tradeRoutes = saveData.World.TradeRoutes.Any()
-            ? saveData.World.TradeRoutes.Select(ToCoreTradeRoute).ToList()
+            ? saveData.World.TradeRoutes.Select(routeData => ToCoreTradeRoute(routeData, DefaultRouteDistanceDaysCache.Value)).ToList()
             : defaultWorld.TradeRoutes;
 
         var loadedCities = ResolveCities(saveData.World, filePath);
@@ -256,14 +261,14 @@ public sealed class JsonWorldSaveService
         Points = route.Points.Select(point => new RoutePointSaveData { X = point.X, Y = point.Y }).ToList()
     };
 
-    private static TradeRoute ToCoreTradeRoute(TradeRouteSaveData routeData)
+    private static TradeRoute ToCoreTradeRoute(TradeRouteSaveData routeData, IReadOnlyDictionary<string, decimal> defaultDistanceDaysByRouteId)
     {
         if (!Enum.TryParse<CaravanType>(routeData.Type, true, out var caravanType))
             throw new InvalidDataException($"Unknown trade route caravan type '{routeData.Type}'.");
 
-        var defaultDistanceDays = TradeRoutePresets.CreateDefaultRoutes()
-            .FirstOrDefault(x => string.Equals(x.Id, routeData.Id, StringComparison.Ordinal))
-            ?.DistanceDays ?? 1m;
+        var defaultDistanceDays = defaultDistanceDaysByRouteId.TryGetValue(routeData.Id, out var cachedDistanceDays)
+            ? cachedDistanceDays
+            : 1m;
 
         return new TradeRoute
         {
