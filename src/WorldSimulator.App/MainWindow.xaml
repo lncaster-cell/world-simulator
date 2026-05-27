@@ -102,7 +102,7 @@
                     <Canvas x:Name="MapOverlay"
                             Background="Transparent"
                             IsHitTestVisible="True">
-                        <ItemsControl ItemsSource="{Binding TradeRouteVisuals}">
+                        <ItemsControl ItemsSource="{Binding TradeRouteVisuals}" Visibility="Collapsed">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <Grid IsHitTestVisible="False">
@@ -155,7 +155,7 @@
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
 
-                        <Path Stroke="#FF00B7FF" StrokeThickness="2.5" StrokeDashArray="2,2" IsHitTestVisible="False">
+                        <Path Stroke="#FF00B7FF" StrokeThickness="2.5" StrokeDashArray="2,2" IsHitTestVisible="False" Visibility="{Binding IsTradeRouteAuthoringModeEnabled, Converter={StaticResource BooleanToVisibilityConverter}}">
                             <Path.Data>
                                 <MultiBinding Converter="{StaticResource TradeRoutePointsToSmoothPathGeometryConverter}">
                                     <Binding Path="EditedTradeRoutePolylinePoints"/>
@@ -166,7 +166,7 @@
                                 </MultiBinding>
                             </Path.Data>
                         </Path>
-                        <Polyline Stroke="#8800B7FF" StrokeThickness="1.5" StrokeDashArray="2,2" IsHitTestVisible="False">
+                        <Polyline Stroke="#8800B7FF" StrokeThickness="1.5" StrokeDashArray="2,2" IsHitTestVisible="False" Visibility="{Binding IsTradeRouteAuthoringModeEnabled, Converter={StaticResource BooleanToVisibilityConverter}}">
                             <Polyline.Points>
                                 <MultiBinding Converter="{StaticResource TradeRoutePointsToPointCollectionConverter}">
                                     <Binding Path="EditedTradeRoutePolylinePoints"/>
@@ -178,7 +178,7 @@
                             </Polyline.Points>
                         </Polyline>
 
-                        <ItemsControl ItemsSource="{Binding EditedTradeRoutePoints}">
+                        <ItemsControl ItemsSource="{Binding EditedTradeRoutePoints}" Visibility="{Binding IsTradeRouteAuthoringModeEnabled, Converter={StaticResource BooleanToVisibilityConverter}}">
                             <ItemsControl.ItemsPanel><ItemsPanelTemplate><Canvas/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                             <ItemsControl.ItemContainerStyle>
                                 <Style TargetType="ContentPresenter">
