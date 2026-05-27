@@ -38,7 +38,10 @@ public sealed class WorldEventState
         _eventManagersByCity.Clear();
         foreach (var pair in managersByCity)
         {
-            _eventManagersByCity[pair.Key] = pair.Value;
+            var sourceManager = pair.Value;
+            var managerCopy = new CityEventManager();
+            managerCopy.Restore(sourceManager.ActiveEvents.ToArray(), sourceManager.CompletedEvents.ToArray());
+            _eventManagersByCity[pair.Key] = managerCopy;
         }
     }
 }
