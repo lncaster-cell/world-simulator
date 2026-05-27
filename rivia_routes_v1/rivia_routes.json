@@ -1,0 +1,420 @@
+{
+  "schema_version": "rivia_routes_v1",
+  "region_id": "RIVIA",
+  "units": {
+    "travel_days": "fixed route duration in world days",
+    "travel_hours": "travel_days * 24"
+  },
+  "nodes": [
+    {
+      "node_id": "N_HIGHROCK",
+      "name": "Highrock",
+      "name_ru": "Хайрок",
+      "node_type": "settlement",
+      "region_id": "RIVIA",
+      "land_access": true,
+      "sea_access": false,
+      "harbor_type": "none",
+      "is_stub": false,
+      "comment": "Северо-западное поселение; сухопутная дорога к Mlynek и Wardmark."
+    },
+    {
+      "node_id": "N_MLYNEK",
+      "name": "Mlynek",
+      "name_ru": "Млынник",
+      "node_type": "settlement",
+      "region_id": "RIVIA",
+      "land_access": true,
+      "sea_access": false,
+      "harbor_type": "none",
+      "is_stub": false,
+      "comment": "Поселение на дороге Highrock ↔ Wardmark."
+    },
+    {
+      "node_id": "N_WARDMARK",
+      "name": "Wardmark",
+      "name_ru": "Вардмарк",
+      "node_type": "settlement",
+      "region_id": "RIVIA",
+      "land_access": true,
+      "sea_access": false,
+      "harbor_type": "none",
+      "is_stub": false,
+      "comment": "Западный сухопутный узел; есть будущий выход в западный регион."
+    },
+    {
+      "node_id": "N_RIVENSTAL",
+      "name": "Rivenstal",
+      "name_ru": "Ривенсталь",
+      "node_type": "settlement",
+      "region_id": "RIVIA",
+      "land_access": true,
+      "sea_access": true,
+      "harbor_type": "pier",
+      "is_stub": false,
+      "comment": "Сухопутный тупик; малый принимающий причал, корабли заходят редко."
+    },
+    {
+      "node_id": "N_GAVERN",
+      "name": "Gavern",
+      "name_ru": "Гаверн",
+      "node_type": "settlement",
+      "region_id": "RIVIA",
+      "land_access": true,
+      "sea_access": true,
+      "harbor_type": "cargo_dock",
+      "is_stub": false,
+      "comment": "Перевалочный пункт с доками для разгрузки/погрузки; не полноценный порт."
+    },
+    {
+      "node_id": "N_BRNO",
+      "name": "Brno",
+      "name_ru": "Брно",
+      "node_type": "settlement",
+      "region_id": "RIVIA",
+      "land_access": true,
+      "sea_access": false,
+      "harbor_type": "none",
+      "is_stub": false,
+      "comment": "Сухопутный тупик; морского доступа нет."
+    },
+    {
+      "node_id": "N_WODENZ",
+      "name": "Wodenz",
+      "name_ru": "Воденц",
+      "node_type": "settlement",
+      "region_id": "RIVIA",
+      "land_access": true,
+      "sea_access": false,
+      "harbor_type": "none",
+      "is_stub": false,
+      "comment": "Юго-восточный сухопутный узел; есть будущий выход в южный регион."
+    },
+    {
+      "node_id": "N_GOTHA",
+      "name": "Gotha",
+      "name_ru": "Гота",
+      "node_type": "settlement",
+      "region_id": "RIVIA",
+      "land_access": false,
+      "sea_access": true,
+      "harbor_type": "port",
+      "is_stub": false,
+      "comment": "Единственный полноценный порт региона; главный морской хаб."
+    },
+    {
+      "node_id": "N_TOKRUS",
+      "name": "Tokrus",
+      "name_ru": "Токрус",
+      "node_type": "island_settlement",
+      "region_id": "RIVIA",
+      "land_access": false,
+      "sea_access": true,
+      "harbor_type": "pier",
+      "is_stub": false,
+      "comment": "Отдалённый островной причал на востоке; прямой маршрут только с Gotha."
+    },
+    {
+      "node_id": "N_WEST_REGION_EXIT",
+      "name": "West Region Exit",
+      "name_ru": "Западный регион",
+      "node_type": "region_exit",
+      "region_id": "RIVIA",
+      "land_access": true,
+      "sea_access": false,
+      "harbor_type": "none",
+      "is_stub": true,
+      "comment": "Сухопутный выход на запад; регион ещё не готов."
+    },
+    {
+      "node_id": "N_SOUTH_REGION_EXIT",
+      "name": "South Region Exit",
+      "name_ru": "Южный регион",
+      "node_type": "region_exit",
+      "region_id": "RIVIA",
+      "land_access": true,
+      "sea_access": false,
+      "harbor_type": "none",
+      "is_stub": true,
+      "comment": "Сухопутный выход на юг от Wodenz; регион ещё не готов."
+    },
+    {
+      "node_id": "N_SEA_NORTH_EXIT",
+      "name": "North Sea Exit",
+      "name_ru": "Северный морской выход",
+      "node_type": "sea_exit",
+      "region_id": "RIVIA",
+      "land_access": false,
+      "sea_access": true,
+      "harbor_type": "sea_exit",
+      "is_stub": true,
+      "comment": "Будущий морской выход за пределы Ривии на север; длительность не закреплена."
+    },
+    {
+      "node_id": "N_SEA_WEST_EXIT",
+      "name": "West Sea Exit",
+      "name_ru": "Западный морской выход",
+      "node_type": "sea_exit",
+      "region_id": "RIVIA",
+      "land_access": false,
+      "sea_access": true,
+      "harbor_type": "sea_exit",
+      "is_stub": true,
+      "comment": "Будущий морской выход за пределы Ривии на запад; длительность не закреплена."
+    },
+    {
+      "node_id": "N_SEA_SOUTH_EXIT",
+      "name": "South Sea Exit",
+      "name_ru": "Южный морской выход",
+      "node_type": "sea_exit",
+      "region_id": "RIVIA",
+      "land_access": false,
+      "sea_access": true,
+      "harbor_type": "sea_exit",
+      "is_stub": true,
+      "comment": "Будущий морской выход за пределы Ривии на юг; длительность не закреплена."
+    },
+    {
+      "node_id": "N_SEA_EAST_EXIT",
+      "name": "East Sea Exit",
+      "name_ru": "Восточный морской выход",
+      "node_type": "sea_exit",
+      "region_id": "RIVIA",
+      "land_access": false,
+      "sea_access": true,
+      "harbor_type": "sea_exit",
+      "is_stub": true,
+      "comment": "Будущий морской выход за пределы Ривии на восток; длительность не закреплена."
+    }
+  ],
+  "edges": [
+    {
+      "route_id": "R_HIGHROCK_MLYNEK",
+      "from_node": "N_HIGHROCK",
+      "to_node": "N_MLYNEK",
+      "route_type": "road",
+      "travel_days": 1.0,
+      "travel_hours": 24,
+      "is_bidirectional": true,
+      "route_frequency": "common",
+      "is_stub": false,
+      "comment": "Хайрок ↔ Млынник = 1 день."
+    },
+    {
+      "route_id": "R_MLYNEK_WARDMARK",
+      "from_node": "N_MLYNEK",
+      "to_node": "N_WARDMARK",
+      "route_type": "road",
+      "travel_days": 2.0,
+      "travel_hours": 48,
+      "is_bidirectional": true,
+      "route_frequency": "common",
+      "is_stub": false,
+      "comment": "Млынник ↔ Вардмарк = 2 дня."
+    },
+    {
+      "route_id": "R_HIGHROCK_WARDMARK",
+      "from_node": "N_HIGHROCK",
+      "to_node": "N_WARDMARK",
+      "route_type": "road",
+      "travel_days": 3.0,
+      "travel_hours": 72,
+      "is_bidirectional": true,
+      "route_frequency": "common",
+      "is_stub": false,
+      "comment": "Полный переход Хайрок ↔ Вардмарк = 3 дня; равен пути через Млынник."
+    },
+    {
+      "route_id": "R_WARDMARK_RIVENSTAL",
+      "from_node": "N_WARDMARK",
+      "to_node": "N_RIVENSTAL",
+      "route_type": "road",
+      "travel_days": 4.0,
+      "travel_hours": 96,
+      "is_bidirectional": true,
+      "route_frequency": "common",
+      "is_stub": false,
+      "comment": "Вардмарк ↔ Ривенсталь = 4 дня."
+    },
+    {
+      "route_id": "R_WARDMARK_GAVERN",
+      "from_node": "N_WARDMARK",
+      "to_node": "N_GAVERN",
+      "route_type": "road",
+      "travel_days": 6.0,
+      "travel_hours": 144,
+      "is_bidirectional": true,
+      "route_frequency": "common",
+      "is_stub": false,
+      "comment": "Вардмарк ↔ Гаверн = 6 дней."
+    },
+    {
+      "route_id": "R_WARDMARK_BRNO",
+      "from_node": "N_WARDMARK",
+      "to_node": "N_BRNO",
+      "route_type": "road",
+      "travel_days": 6.5,
+      "travel_hours": 156,
+      "is_bidirectional": true,
+      "route_frequency": "common",
+      "is_stub": false,
+      "comment": "Вардмарк ↔ Брно = 6.5 дней."
+    },
+    {
+      "route_id": "R_RIVENSTAL_GAVERN",
+      "from_node": "N_RIVENSTAL",
+      "to_node": "N_GAVERN",
+      "route_type": "road",
+      "travel_days": 2.5,
+      "travel_hours": 60,
+      "is_bidirectional": true,
+      "route_frequency": "common",
+      "is_stub": false,
+      "comment": "Ривенсталь ↔ Гаверн = 2.5 дня; подтверждено как подходящий расчёт."
+    },
+    {
+      "route_id": "R_BRNO_GAVERN",
+      "from_node": "N_BRNO",
+      "to_node": "N_GAVERN",
+      "route_type": "road",
+      "travel_days": 1.0,
+      "travel_hours": 24,
+      "is_bidirectional": true,
+      "route_frequency": "common",
+      "is_stub": false,
+      "comment": "Брно ↔ Гаверн = 1 день; подтверждено как подходящий расчёт."
+    },
+    {
+      "route_id": "R_BRNO_RIVENSTAL",
+      "from_node": "N_BRNO",
+      "to_node": "N_RIVENSTAL",
+      "route_type": "road",
+      "travel_days": 3.0,
+      "travel_hours": 72,
+      "is_bidirectional": true,
+      "route_frequency": "common",
+      "is_stub": false,
+      "comment": "Брно ↔ Ривенсталь = 3 дня; подтверждено как подходящий расчёт."
+    },
+    {
+      "route_id": "R_GAVERN_WODENZ",
+      "from_node": "N_GAVERN",
+      "to_node": "N_WODENZ",
+      "route_type": "road",
+      "travel_days": 5.0,
+      "travel_hours": 120,
+      "is_bidirectional": true,
+      "route_frequency": "common",
+      "is_stub": false,
+      "comment": "Гаверн ↔ Воденц = 5 дней."
+    },
+    {
+      "route_id": "R_SEA_RIVENSTAL_GOTHA",
+      "from_node": "N_RIVENSTAL",
+      "to_node": "N_GOTHA",
+      "route_type": "sea",
+      "travel_days": 3.0,
+      "travel_hours": 72,
+      "is_bidirectional": true,
+      "route_frequency": "rare",
+      "is_stub": false,
+      "comment": "Ривенсталь ↔ Гота = 3 дня; Ривенсталь — малый принимающий причал."
+    },
+    {
+      "route_id": "R_SEA_GAVERN_GOTHA",
+      "from_node": "N_GAVERN",
+      "to_node": "N_GOTHA",
+      "route_type": "sea",
+      "travel_days": 7.0,
+      "travel_hours": 168,
+      "is_bidirectional": true,
+      "route_frequency": "common",
+      "is_stub": false,
+      "comment": "Гаверн ↔ Гота = 7 дней; грузовой маршрут cargo dock ↔ port."
+    },
+    {
+      "route_id": "R_SEA_GOTHA_TOKRUS",
+      "from_node": "N_GOTHA",
+      "to_node": "N_TOKRUS",
+      "route_type": "sea",
+      "travel_days": 5.5,
+      "travel_hours": 132,
+      "is_bidirectional": true,
+      "route_frequency": "common",
+      "is_stub": false,
+      "comment": "Гота ↔ Токрус = 5.5 дней; маршрут к отдалённому острову."
+    },
+    {
+      "route_id": "R_SEA_RIVENSTAL_GAVERN",
+      "from_node": "N_RIVENSTAL",
+      "to_node": "N_GAVERN",
+      "route_type": "sea",
+      "travel_days": 3.0,
+      "travel_hours": 72,
+      "is_bidirectional": true,
+      "route_frequency": "rare",
+      "is_stub": false,
+      "comment": "Ривенсталь ↔ Гаверн = 3 дня; редкий прямой морской маршрут."
+    }
+  ],
+  "todo": [
+    {
+      "todo_id": "TODO_LAND_WARDMARK_WEST_REGION",
+      "from_node": "N_WARDMARK",
+      "to_node": "N_WEST_REGION_EXIT",
+      "route_type": "road",
+      "status": "stub_duration_missing",
+      "comment": "Есть сухопутный выход из Wardmark на запад в будущий регион; длительность ещё не закреплена."
+    },
+    {
+      "todo_id": "TODO_LAND_WODENZ_SOUTH_REGION",
+      "from_node": "N_WODENZ",
+      "to_node": "N_SOUTH_REGION_EXIT",
+      "route_type": "road",
+      "status": "stub_duration_missing",
+      "comment": "Есть сухопутный выход из Wodenz в южный регион; длительность ещё не закреплена."
+    },
+    {
+      "todo_id": "TODO_SEA_NORTH_EXIT",
+      "from_node": "",
+      "to_node": "N_SEA_NORTH_EXIT",
+      "route_type": "sea",
+      "status": "stub_duration_missing",
+      "comment": "Морская сеть выходит за пределы Ривии на север; конкретный узел/длительность не закреплены."
+    },
+    {
+      "todo_id": "TODO_SEA_WEST_EXIT",
+      "from_node": "",
+      "to_node": "N_SEA_WEST_EXIT",
+      "route_type": "sea",
+      "status": "stub_duration_missing",
+      "comment": "Морская сеть выходит за пределы Ривии на запад; конкретный узел/длительность не закреплены."
+    },
+    {
+      "todo_id": "TODO_SEA_SOUTH_EXIT",
+      "from_node": "",
+      "to_node": "N_SEA_SOUTH_EXIT",
+      "route_type": "sea",
+      "status": "stub_duration_missing",
+      "comment": "Морская сеть выходит за пределы Ривии на юг; конкретный узел/длительность не закреплены."
+    },
+    {
+      "todo_id": "TODO_SEA_EAST_EXIT",
+      "from_node": "",
+      "to_node": "N_SEA_EAST_EXIT",
+      "route_type": "sea",
+      "status": "stub_duration_missing",
+      "comment": "Морская сеть выходит за пределы Ривии на восток; конкретный узел/длительность не закреплены."
+    }
+  ],
+  "notes": [
+    "Durations are constants, not geometric distances.",
+    "All confirmed routes are bidirectional with symmetric duration.",
+    "Gotha is the only full port.",
+    "Gavern is a cargo dock / transshipment point, not a full port.",
+    "Rivenstal is a minor receiving pier with rare ship visits.",
+    "Tokrus is a remote eastern island pier.",
+    "There is no confirmed direct route Gavern ↔ Tokrus.",
+    "There is no confirmed direct route Rivenstal ↔ Tokrus."
+  ]
+}

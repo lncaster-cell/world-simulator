@@ -1,0 +1,7 @@
+todo_id,from_node,to_node,route_type,status,comment
+TODO_LAND_WARDMARK_WEST_REGION,N_WARDMARK,N_WEST_REGION_EXIT,road,stub_duration_missing,Есть сухопутный выход из Wardmark на запад в будущий регион; длительность ещё не закреплена.
+TODO_LAND_WODENZ_SOUTH_REGION,N_WODENZ,N_SOUTH_REGION_EXIT,road,stub_duration_missing,Есть сухопутный выход из Wodenz в южный регион; длительность ещё не закреплена.
+TODO_SEA_NORTH_EXIT,,N_SEA_NORTH_EXIT,sea,stub_duration_missing,Морская сеть выходит за пределы Ривии на север; конкретный узел/длительность не закреплены.
+TODO_SEA_WEST_EXIT,,N_SEA_WEST_EXIT,sea,stub_duration_missing,Морская сеть выходит за пределы Ривии на запад; конкретный узел/длительность не закреплены.
+TODO_SEA_SOUTH_EXIT,,N_SEA_SOUTH_EXIT,sea,stub_duration_missing,Морская сеть выходит за пределы Ривии на юг; конкретный узел/длительность не закреплены.
+TODO_SEA_EAST_EXIT,,N_SEA_EAST_EXIT,sea,stub_duration_missing,Морская сеть выходит за пределы Ривии на восток; конкретный узел/длительность не закреплены.

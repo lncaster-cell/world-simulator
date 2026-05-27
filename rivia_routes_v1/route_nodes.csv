@@ -1,0 +1,16 @@
+node_id,name,name_ru,node_type,region_id,land_access,sea_access,harbor_type,is_stub,comment
+N_HIGHROCK,Highrock,Хайрок,settlement,RIVIA,True,False,none,False,Северо-западное поселение; сухопутная дорога к Mlynek и Wardmark.
+N_MLYNEK,Mlynek,Млынник,settlement,RIVIA,True,False,none,False,Поселение на дороге Highrock ↔ Wardmark.
+N_WARDMARK,Wardmark,Вардмарк,settlement,RIVIA,True,False,none,False,Западный сухопутный узел; есть будущий выход в западный регион.
+N_RIVENSTAL,Rivenstal,Ривенсталь,settlement,RIVIA,True,True,pier,False,"Сухопутный тупик; малый принимающий причал, корабли заходят редко."
+N_GAVERN,Gavern,Гаверн,settlement,RIVIA,True,True,cargo_dock,False,Перевалочный пункт с доками для разгрузки/погрузки; не полноценный порт.
+N_BRNO,Brno,Брно,settlement,RIVIA,True,False,none,False,Сухопутный тупик; морского доступа нет.
+N_WODENZ,Wodenz,Воденц,settlement,RIVIA,True,False,none,False,Юго-восточный сухопутный узел; есть будущий выход в южный регион.
+N_GOTHA,Gotha,Гота,settlement,RIVIA,False,True,port,False,Единственный полноценный порт региона; главный морской хаб.
+N_TOKRUS,Tokrus,Токрус,island_settlement,RIVIA,False,True,pier,False,Отдалённый островной причал на востоке; прямой маршрут только с Gotha.
+N_WEST_REGION_EXIT,West Region Exit,Западный регион,region_exit,RIVIA,True,False,none,True,Сухопутный выход на запад; регион ещё не готов.
+N_SOUTH_REGION_EXIT,South Region Exit,Южный регион,region_exit,RIVIA,True,False,none,True,Сухопутный выход на юг от Wodenz; регион ещё не готов.
+N_SEA_NORTH_EXIT,North Sea Exit,Северный морской выход,sea_exit,RIVIA,False,True,sea_exit,True,Будущий морской выход за пределы Ривии на север; длительность не закреплена.
+N_SEA_WEST_EXIT,West Sea Exit,Западный морской выход,sea_exit,RIVIA,False,True,sea_exit,True,Будущий морской выход за пределы Ривии на запад; длительность не закреплена.
+N_SEA_SOUTH_EXIT,South Sea Exit,Южный морской выход,sea_exit,RIVIA,False,True,sea_exit,True,Будущий морской выход за пределы Ривии на юг; длительность не закреплена.
+N_SEA_EAST_EXIT,East Sea Exit,Восточный морской выход,sea_exit,RIVIA,False,True,sea_exit,True,Будущий морской выход за пределы Ривии на восток; длительность не закреплена.

@@ -1,0 +1,15 @@
+route_id,from_node,to_node,route_type,travel_days,travel_hours,is_bidirectional,route_frequency,is_stub,comment
+R_HIGHROCK_MLYNEK,N_HIGHROCK,N_MLYNEK,road,1.0,24,True,common,False,Хайрок ↔ Млынник = 1 день.
+R_MLYNEK_WARDMARK,N_MLYNEK,N_WARDMARK,road,2.0,48,True,common,False,Млынник ↔ Вардмарк = 2 дня.
+R_HIGHROCK_WARDMARK,N_HIGHROCK,N_WARDMARK,road,3.0,72,True,common,False,Полный переход Хайрок ↔ Вардмарк = 3 дня; равен пути через Млынник.
+R_WARDMARK_RIVENSTAL,N_WARDMARK,N_RIVENSTAL,road,4.0,96,True,common,False,Вардмарк ↔ Ривенсталь = 4 дня.
+R_WARDMARK_GAVERN,N_WARDMARK,N_GAVERN,road,6.0,144,True,common,False,Вардмарк ↔ Гаверн = 6 дней.
+R_WARDMARK_BRNO,N_WARDMARK,N_BRNO,road,6.5,156,True,common,False,Вардмарк ↔ Брно = 6.5 дней.
+R_RIVENSTAL_GAVERN,N_RIVENSTAL,N_GAVERN,road,2.5,60,True,common,False,Ривенсталь ↔ Гаверн = 2.5 дня; подтверждено как подходящий расчёт.
+R_BRNO_GAVERN,N_BRNO,N_GAVERN,road,1.0,24,True,common,False,Брно ↔ Гаверн = 1 день; подтверждено как подходящий расчёт.
+R_BRNO_RIVENSTAL,N_BRNO,N_RIVENSTAL,road,3.0,72,True,common,False,Брно ↔ Ривенсталь = 3 дня; подтверждено как подходящий расчёт.
+R_GAVERN_WODENZ,N_GAVERN,N_WODENZ,road,5.0,120,True,common,False,Гаверн ↔ Воденц = 5 дней.
+R_SEA_RIVENSTAL_GOTHA,N_RIVENSTAL,N_GOTHA,sea,3.0,72,True,rare,False,Ривенсталь ↔ Гота = 3 дня; Ривенсталь — малый принимающий причал.
+R_SEA_GAVERN_GOTHA,N_GAVERN,N_GOTHA,sea,7.0,168,True,common,False,Гаверн ↔ Гота = 7 дней; грузовой маршрут cargo dock ↔ port.
+R_SEA_GOTHA_TOKRUS,N_GOTHA,N_TOKRUS,sea,5.5,132,True,common,False,Гота ↔ Токрус = 5.5 дней; маршрут к отдалённому острову.
+R_SEA_RIVENSTAL_GAVERN,N_RIVENSTAL,N_GAVERN,sea,3.0,72,True,rare,False,Ривенсталь ↔ Гаверн = 3 дня; редкий прямой морской маршрут.
