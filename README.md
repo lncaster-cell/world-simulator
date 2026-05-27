@@ -29,6 +29,19 @@
 3. Нужный раздел в `docs/world-sim/` по задаче
 4. Соответствующие тесты (как источник фактического поведения)
 
+## Как использовать загруженную карту маршрутов (`rivia_routes_v1`)
+
+В корне уже лежит канонический граф маршрутов: `rivia_routes_v1/route_nodes.csv`, `rivia_routes_v1/route_edges.csv`, `rivia_routes_v1/route_todo.csv`, `rivia_routes_v1/rivia_routes.json`.
+
+Сейчас симулятор читает маршруты из кодовых пресетов `src/WorldSimulator.Core/Trade/TradeRoutePresets.cs`, поэтому рабочий поток такой:
+1. Считать `route_edges.csv` как source of truth по `travel_days`.
+2. Обновить `TravelDays` и `DistanceDays` в `TradeRoutePresets` под канонические значения.
+3. Для новых направлений добавить `TradeRoute` с `FromSettlementId/ToSettlementId` и `Points` в нормализованных координатах карты (0..1).
+4. Неподтверждённые линии из `route_todo.csv` не включать в `IsEnabled = true`, пока не зафиксирована длительность.
+5. После изменений обязательно прогнать `WorldSimulator.Core.Tests`, особенно тесты на торговые маршруты/караваны.
+
+Это позволяет использовать новую карту уже сейчас без изменения формата сохранений или UI-контрактов.
+
 ## Структура решения
 
 ```text

@@ -201,7 +201,7 @@
                             </ItemsControl.ItemContainerStyle>
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Ellipse Width="10" Height="10" Fill="#FFB22222" Stroke="#FFFCECC9" StrokeThickness="1" ToolTip="{Binding DisplayName}"/>
+                                    <Image Width="18" Height="18" Source="/Assets/Maps/caravan_icon_clean_transparent.png" ToolTip="{Binding DisplayName}"/>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
