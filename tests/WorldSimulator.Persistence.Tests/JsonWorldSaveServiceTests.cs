@@ -85,8 +85,8 @@ public sealed class JsonWorldSaveServiceTests
             city.Goods = 90 + (i * 9);
         }
 
-        world.Cities[0].CityState = CityState.Prosperity;
-        world.Cities[1].CityState = CityState.Decline;
+        world.Cities[0].CityState = CityState.Prosperous;
+        world.Cities[1].CityState = CityState.EconomicDecline;
         world.Cities[2].CityState = CityState.Stagnation;
         world.SelectedCityId = world.Cities[2].Id;
 
@@ -314,10 +314,33 @@ public sealed class JsonWorldSaveServiceTests
 
         world.SelectedCityId = world.Cities[0].Id;
         world.SelectedRegionId = world.Regions[0].Id;
-        world.Regions[0].DisplayName = "Test Region";
-        world.SettlementMapLocations[0].X = 0.42m;
-        world.SettlementEconomyProfiles[0].IsCapital = true;
-        world.Caravans[0].Status = CaravanStatus.Broken;
+        world.Regions[0] = new Region
+        {
+            Id = world.Regions[0].Id,
+            DisplayName = "Test Region",
+            MapAssetId = world.Regions[0].MapAssetId
+        };
+        world.SettlementMapLocations[0] = new SettlementMapLocation
+        {
+            SettlementId = world.SettlementMapLocations[0].SettlementId,
+            RegionId = world.SettlementMapLocations[0].RegionId,
+            X = 0.42m,
+            Y = world.SettlementMapLocations[0].Y
+        };
+        world.SettlementEconomyProfiles[0] = new SettlementEconomyProfile
+        {
+            SettlementId = world.SettlementEconomyProfiles[0].SettlementId,
+            AgriculturePotential = world.SettlementEconomyProfiles[0].AgriculturePotential,
+            FishingMultiplier = world.SettlementEconomyProfiles[0].FishingMultiplier,
+            HuntingMultiplier = world.SettlementEconomyProfiles[0].HuntingMultiplier,
+            MainlandSupplyMultiplier = world.SettlementEconomyProfiles[0].MainlandSupplyMultiplier,
+            ResourceGatheringMultiplier = world.SettlementEconomyProfiles[0].ResourceGatheringMultiplier,
+            GoodsCraftingMultiplier = world.SettlementEconomyProfiles[0].GoodsCraftingMultiplier,
+            IsPort = world.SettlementEconomyProfiles[0].IsPort,
+            IsFortress = world.SettlementEconomyProfiles[0].IsFortress,
+            IsCapital = true
+        };
+        world.Caravans[0].Status = CaravanStatus.Destroyed;
 
         world.TradeShipments.Add(new TradeShipment
         {
@@ -351,7 +374,7 @@ public sealed class JsonWorldSaveServiceTests
             Assert.Equal("Test Region", loaded.World.Regions[0].DisplayName);
             Assert.Equal(0.42m, loaded.World.SettlementMapLocations[0].X);
             Assert.True(loaded.World.SettlementEconomyProfiles[0].IsCapital);
-            Assert.Equal(CaravanStatus.Broken, loaded.World.Caravans[0].Status);
+            Assert.Equal(CaravanStatus.Destroyed, loaded.World.Caravans[0].Status);
             Assert.Equal(world.TradeRoutes[0].Id, loaded.World.TradeRoutes[0].Id);
             Assert.Single(loaded.World.TradeShipments);
             Assert.Equal("smoke-shipment", loaded.World.TradeShipments[0].Id);
