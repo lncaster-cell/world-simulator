@@ -80,8 +80,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     public MainWindowViewModel()
     {
         _world = WorldPresets.CreateDefaultWorld();
+        LoadRoutePathsForWorld();
         _city = _world.SelectedCity;
-        AddTechnicalLogEntry(TradeRoutePresets.LastRoutePathLoadDiagnostics);
         _clock = new SimulationClock();
         _dailyFoodFlowCalculator = new DailyFoodFlowCalculator();
         _weeklyCrimeFlowCalculator = new WeeklyCrimeFlowCalculator();
