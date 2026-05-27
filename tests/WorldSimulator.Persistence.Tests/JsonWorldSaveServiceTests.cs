@@ -252,6 +252,55 @@ public sealed class JsonWorldSaveServiceTests
         }
         finally { Cleanup(filePath); }
     }
+
+    [Fact]
+    public async Task LoadAsync_TradeRoutesWithoutDistanceDays_UsePresetFallbackForEachRoute()
+    {
+        var service = new JsonWorldSaveService();
+        var filePath = TempFile();
+        var presetRoutes = TradeRoutePresets.CreateDefaultRoutes().Take(2).ToArray();
+
+        var save = new
+        {
+            Version = 2,
+            SavedAtUtc = DateTime.UtcNow,
+            Clock = new { Day = 1, Hour = 0, IsRunning = false, AccumulatedRealTime = "00:00:00", RealTimePerGameHour = "00:05:00" },
+            World = new
+            {
+                Cities = new[]
+                {
+                    new { Id = "gotha", Name = "Gotha", Population = 1, Food = 1, Wealth = 1, Mood = 1, Security = 1, Crime = 1, Resources = 1, Goods = 1, CityState = "Stagnation" },
+                    new { Id = "highrock", Name = "Highrock", Population = 1, Food = 1, Wealth = 1, Mood = 1, Security = 1, Crime = 1, Resources = 1, Goods = 1, CityState = "Stagnation" },
+                    new { Id = "mlynek", Name = "Mlynek", Population = 1, Food = 1, Wealth = 1, Mood = 1, Security = 1, Crime = 1, Resources = 1, Goods = 1, CityState = "Stagnation" }
+                },
+                Regions = new[] { new { Id = "rivia", DisplayName = "Rivia", MapAssetId = "x" } },
+                SettlementMapLocations = Array.Empty<object>(),
+                SettlementEconomyProfiles = Array.Empty<object>(),
+                Caravans = Array.Empty<object>(),
+                TradeRoutes = new[]
+                {
+                    new { Id = presetRoutes[0].Id, presetRoutes[0].FromSettlementId, presetRoutes[0].ToSettlementId, Type = presetRoutes[0].Type.ToString(), Distance = presetRoutes[0].Distance, TravelDays = presetRoutes[0].TravelDays, IsEnabled = true, DifficultyMultiplier = 1m, Points = new[] { new { X = 0.1m, Y = 0.1m }, new { X = 0.2m, Y = 0.2m } } },
+                    new { Id = presetRoutes[1].Id, presetRoutes[1].FromSettlementId, presetRoutes[1].ToSettlementId, Type = presetRoutes[1].Type.ToString(), Distance = presetRoutes[1].Distance, TravelDays = presetRoutes[1].TravelDays, IsEnabled = true, DifficultyMultiplier = 1m, Points = new[] { new { X = 0.3m, Y = 0.3m }, new { X = 0.4m, Y = 0.4m } } },
+                    new { Id = "unknown-route", FromSettlementId = "gotha", ToSettlementId = "highrock", Type = CaravanType.Land.ToString(), Distance = 10m, TravelDays = 2, IsEnabled = true, DifficultyMultiplier = 1m, Points = new[] { new { X = 0.5m, Y = 0.5m }, new { X = 0.6m, Y = 0.6m } } }
+                },
+                TradeShipments = Array.Empty<object>(),
+                SelectedCityId = "gotha",
+                SelectedRegionId = "rivia"
+            }
+        };
+
+        try
+        {
+            await File.WriteAllTextAsync(filePath, JsonSerializer.Serialize(save));
+            var loaded = await service.LoadAsync(filePath);
+            var routesById = loaded.World.TradeRoutes.ToDictionary(route => route.Id, StringComparer.Ordinal);
+
+            Assert.Equal(presetRoutes[0].DistanceDays, routesById[presetRoutes[0].Id].DistanceDays);
+            Assert.Equal(presetRoutes[1].DistanceDays, routesById[presetRoutes[1].Id].DistanceDays);
+            Assert.Equal(1m, routesById["unknown-route"].DistanceDays);
+        }
+        finally { Cleanup(filePath); }
+    }
     private static WorldEventState CreateEventStateWithEvents()
     {
         var manager = new CityEventManager();
