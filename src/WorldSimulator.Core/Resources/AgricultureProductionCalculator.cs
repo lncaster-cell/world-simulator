@@ -17,9 +17,9 @@ public sealed class AgricultureProductionCalculator
             ? 0m
             : Math.Min((decimal)assignedWorkers / requiredWorkers, 1m);
 
-        var moodModifier = GetMoodModifier(city.Mood);
-        var securityModifier = GetSecurityModifier(city.Security);
-        var stateModifier = GetStateModifier(city.CityState);
+        var moodModifier = ProductionBalancePolicy.GetMoodModifier(city.Mood, ProductionDomain.Agriculture);
+        var securityModifier = ProductionBalancePolicy.GetSecurityModifier(city.Security, ProductionDomain.Agriculture);
+        var stateModifier = ProductionBalancePolicy.GetStateModifier(city.CityState, ProductionDomain.Agriculture);
 
         var finalOutput = city.Population <= 0 || city.CityState == CityState.Abandoned
             ? 0m
@@ -37,36 +37,4 @@ public sealed class AgricultureProductionCalculator
             FinalOutput = finalOutput
         };
     }
-
-    private static decimal GetMoodModifier(int mood) => mood switch
-    {
-        >= 70 => 1.05m,
-        >= 40 => 1.00m,
-        >= 20 => 0.80m,
-        _ => 0.55m
-    };
-
-    private static decimal GetSecurityModifier(int security) => security switch
-    {
-        >= 70 => 1.05m,
-        >= 40 => 1.00m,
-        >= 20 => 0.80m,
-        _ => 0.55m
-    };
-
-    private static decimal GetStateModifier(CityState state) => state switch
-    {
-        CityState.Abandoned => 0.00m,
-        CityState.Collapse => 0.20m,
-        CityState.Famine => 0.70m,
-        CityState.FoodShortage => 0.85m,
-        CityState.Unrest => 0.65m,
-        CityState.CrimeProblem => 0.80m,
-        CityState.EconomicDecline => 0.85m,
-        CityState.Stagnation => 0.90m,
-        CityState.Stable => 1.00m,
-        CityState.Prosperous => 1.10m,
-        CityState.Recovery => 0.90m,
-        _ => throw new ArgumentOutOfRangeException(nameof(state), state, "Unsupported city state.")
-    };
 }

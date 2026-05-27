@@ -29,7 +29,14 @@ public sealed class WorldEventState
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(cityId);
         ArgumentNullException.ThrowIfNull(manager);
-        _eventManagersByCity[cityId] = manager;
+        _eventManagersByCity[cityId] = manager.CreateSnapshot();
+    }
+
+    public WorldEventState CreateSnapshot()
+    {
+        var snapshot = new WorldEventState();
+        snapshot.ReplaceWith(_eventManagersByCity);
+        return snapshot;
     }
 
     public void ReplaceWith(IReadOnlyDictionary<string, CityEventManager> managersByCity)
