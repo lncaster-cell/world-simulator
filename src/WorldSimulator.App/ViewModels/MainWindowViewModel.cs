@@ -1110,8 +1110,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
 
         _activeCaravanMovementMarkers.Clear();
         foreach (var routeVisual in _tradeRouteVisuals
-                     .Where(x => x.IsActive && x.TotalWeeklyVolume > 0m)
-                     .OrderByDescending(x => x.TotalWeeklyVolume)
+                     .Where(x => x.Points.Count >= 2)
+                     .OrderByDescending(x => x.IsActive)
+                     .ThenByDescending(x => x.TotalWeeklyVolume)
                      .Take(MaxVisibleCaravanMovementMarkers))
         {
             _activeCaravanMovementMarkers.Add(new CaravanMovementMarkerViewModel
@@ -1119,10 +1120,11 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
                 RouteId = routeVisual.RouteId,
                 DisplayName = routeVisual.DisplayName,
                 Points = routeVisual.Points,
-                Progress = 0d,
+                Progress = CalculateInitialCaravanProgress(routeVisual.RouteId),
                 FoodMoved = routeVisual.WeeklyFoodMoved,
                 ResourcesMoved = routeVisual.WeeklyResourcesMoved,
-                GoodsMoved = routeVisual.WeeklyGoodsMoved
+                GoodsMoved = routeVisual.WeeklyGoodsMoved,
+                HasActiveFlow = routeVisual.IsActive && routeVisual.TotalWeeklyVolume > 0m
             });
         }
 
@@ -1233,11 +1235,27 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
                 Progress = nextProgress,
                 FoodMoved = marker.FoodMoved,
                 ResourcesMoved = marker.ResourcesMoved,
-                GoodsMoved = marker.GoodsMoved
+                GoodsMoved = marker.GoodsMoved,
+                HasActiveFlow = marker.HasActiveFlow
             };
         }
 
         OnPropertyChanged(nameof(ActiveCaravanMovementMarkers));
+    }
+
+    private static double CalculateInitialCaravanProgress(string routeId)
+    {
+        unchecked
+        {
+            var hash = 17;
+            foreach (var ch in routeId)
+            {
+                hash = (hash * 31) + ch;
+            }
+
+            var normalized = Math.Abs(hash % 1000);
+            return normalized / 1000d;
+        }
     }
 
     public static MapPointViewModel CalculatePointOnPolyline(IReadOnlyList<MapPointViewModel> points, double progress)
