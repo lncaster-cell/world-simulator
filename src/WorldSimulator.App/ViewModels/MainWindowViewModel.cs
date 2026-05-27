@@ -73,6 +73,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     private string? _currentDraftDestinationId;
     private readonly Dictionary<string, List<MapPointViewModel>> _routeAuthoringDraftPointsByDestinationId = [];
     private bool _isTradeRouteAuthoringModeEnabled;
+    private bool _isTradeRoutesOverlayVisible = true;
     private decimal _selectedTradeRouteDistanceDays = 1m;
     private string _selectedTradeRouteDistanceDaysInput = "1.0";
 
@@ -511,6 +512,25 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
             OnPropertyChanged();
         }
     }
+
+    public bool IsTradeRoutesOverlayVisible
+    {
+        get => _isTradeRoutesOverlayVisible;
+        set
+        {
+            if (_isTradeRoutesOverlayVisible == value)
+            {
+                return;
+            }
+
+            _isTradeRoutesOverlayVisible = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(TradeRoutesOverlayVisibility));
+        }
+    }
+
+    public Visibility TradeRoutesOverlayVisibility =>
+        IsTradeRoutesOverlayVisible ? Visibility.Visible : Visibility.Collapsed;
 
     public City? RouteAuthoringOriginSettlement
     {

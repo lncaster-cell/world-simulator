@@ -39,6 +39,7 @@ public sealed class JsonWorldSaveService
                 SettlementEconomyProfiles = world.SettlementEconomyProfiles.Select(ToSaveData).ToList(),
                 Caravans = world.Caravans.Select(ToSaveData).ToList(),
                 TradeRoutes = world.TradeRoutes.Select(route => ToSaveData(route)).ToList(),
+                TradeShipments = world.TradeShipments.Select(ToSaveData).ToList(),
                 SelectedCityId = world.SelectedCityId,
                 SelectedRegionId = world.SelectedRegionId
             },
@@ -360,6 +361,23 @@ public sealed class JsonWorldSaveService
             Points = routeData.Points?.Select(point => new RoutePoint { X = point.X, Y = point.Y }).ToList() ?? []
         };
     }
+
+    private static TradeShipmentSaveData ToSaveData(TradeShipment shipment) => new()
+    {
+        Id = shipment.Id,
+        CaravanId = shipment.CaravanId,
+        RouteId = shipment.RouteId,
+        FromSettlementId = shipment.FromSettlementId,
+        ToSettlementId = shipment.ToSettlementId,
+        GoodType = shipment.GoodType.ToString(),
+        Amount = shipment.Amount,
+        DepartureDay = shipment.DepartureDay,
+        ArrivalDay = shipment.ArrivalDay,
+        ReturnDay = shipment.ReturnDay,
+        ExporterWealthDelta = shipment.ExporterWealthDelta,
+        ImporterWealthDelta = shipment.ImporterWealthDelta,
+        Status = shipment.Status.ToString()
+    };
 
     private static TradeShipment ToCoreTradeShipment(TradeShipmentSaveData shipmentData)
     {
