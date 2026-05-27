@@ -8,6 +8,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Resource Include="Assets\Maps\world_map.png" />
+    <Resource Include="Assets\Maps\world_map_routes.png" />
     <Resource Include="Assets\Maps\caravan_icon_clean_transparent.png" />
     <Resource Include="Assets\Maps\caravan_icon_64.png" />
   </ItemGroup>
