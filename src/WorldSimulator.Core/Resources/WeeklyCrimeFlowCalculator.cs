@@ -4,6 +4,8 @@ namespace WorldSimulator.Core.Resources;
 
 public sealed class WeeklyCrimeFlowCalculator
 {
+    private readonly FoodStressPolicy _foodStressPolicy = new();
+
     public WeeklyCrimeFlowResult Calculate(
         City city,
         DailyFoodFlowResult foodFlow,
@@ -33,17 +35,15 @@ public sealed class WeeklyCrimeFlowCalculator
             };
         }
 
-        var foodDays = foodFlow.PopulationConsumption <= 0m
-            ? 999m
-            : foodFlow.EndingFood / foodFlow.PopulationConsumption;
+        var foodStress = _foodStressPolicy.Evaluate(foodFlow.EndingFood, foodFlow.PopulationConsumption);
 
-        var foodPressure = foodFlow.EndingFood <= 0m
-            ? 6
-            : foodDays < 2m
-                ? 4
-                : foodDays < 5m
-                    ? 2
-                    : 0;
+        var foodPressure = foodStress.RiskLevel switch
+        {
+            FoodRiskLevel.High when foodFlow.EndingFood <= 0m => 6,
+            FoodRiskLevel.High => 4,
+            FoodRiskLevel.Medium => 2,
+            _ => 0
+        };
 
         var goodsShortagePressure = householdConsumption.GoodsShortage <= 0m
             ? 0
