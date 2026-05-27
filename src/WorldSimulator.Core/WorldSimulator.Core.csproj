@@ -4,4 +4,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="..\..\rivia_routes_v1\rivia_routes.json" Link="Data\rivia_routes.json" />
+  </ItemGroup>
 </Project>
