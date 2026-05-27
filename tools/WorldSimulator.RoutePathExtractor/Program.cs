@@ -38,7 +38,9 @@ foreach (var edge in edges.Where(e => !e.IsStub))
 }
 
 var payload = new { schema_version = "rivia_route_paths_v1", region_id = "RIVIA", paths };
-await File.WriteAllTextAsync(outputPath, JsonSerializer.Serialize(payload, new JsonSerializerOptions { WriteIndented = true }));
+var tempOutputPath = outputPath + ".tmp";
+await File.WriteAllTextAsync(tempOutputPath, JsonSerializer.Serialize(payload, new JsonSerializerOptions { WriteIndented = true }));
+File.Move(tempOutputPath, outputPath, overwrite: true);
 Console.WriteLine($"Generated {paths.Count} paths -> {outputPath}");
 
 static string FindRepoRoot(string start)
