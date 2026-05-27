@@ -1,12 +1,54 @@
 using System.Reflection;
 using System.Text.Json;
+using System.IO;
 
 namespace WorldSimulator.Core.Trade;
 
 public static class TradeRoutePresets
 {
-    public static List<TradeRoute> CreateDefaultRoutes() => LoadRoutesFromEmbeddedJson();
+    public static List<TradeRoute> CreateDefaultRoutes()
+    {
+        var routes = LoadRoutesFromEmbeddedJson();
+        ApplyRoutePathsFromJsonIfExists(routes);
+        return routes;
+    }
 
+
+
+    private static void ApplyRoutePathsFromJsonIfExists(List<TradeRoute> routes)
+    {
+        var path = Path.Combine(AppContext.BaseDirectory, "data", "regions", "rivia", "routes", "v1", "route_paths.json");
+        if (!File.Exists(path)) return;
+
+        using var doc = JsonDocument.Parse(File.ReadAllText(path));
+        if (!doc.RootElement.TryGetProperty("paths", out var pathsElement) || pathsElement.ValueKind != JsonValueKind.Array) return;
+
+        var pointsByRouteId = new Dictionary<string, List<RoutePoint>>(StringComparer.OrdinalIgnoreCase);
+        foreach (var item in pathsElement.EnumerateArray())
+        {
+            var tradeRouteId = item.TryGetProperty("trade_route_id", out var tradeRouteIdElement) ? tradeRouteIdElement.GetString() : null;
+            if (string.IsNullOrWhiteSpace(tradeRouteId)) continue;
+            if (!item.TryGetProperty("points", out var pointsElement) || pointsElement.ValueKind != JsonValueKind.Array) continue;
+
+            var points = new List<RoutePoint>();
+            foreach (var point in pointsElement.EnumerateArray())
+            {
+                var x = point.GetProperty("x").GetDecimal();
+                var y = point.GetProperty("y").GetDecimal();
+                points.Add(new RoutePoint { X = decimal.Clamp(x, 0m, 1m), Y = decimal.Clamp(y, 0m, 1m) });
+            }
+
+            if (points.Count >= 2) pointsByRouteId[tradeRouteId] = points;
+        }
+
+        foreach (var route in routes)
+        {
+            if (pointsByRouteId.TryGetValue(route.Id, out var points))
+            {
+                route.Points = points;
+            }
+        }
+    }
     private static List<TradeRoute> LoadRoutesFromEmbeddedJson()
     {
         using var stream = Assembly.GetExecutingAssembly()
