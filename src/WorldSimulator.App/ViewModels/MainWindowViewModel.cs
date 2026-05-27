@@ -1168,9 +1168,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         AddTechnicalLogEntry($"route_paths.json найден: {path}");
         var loader = new RoutePathLoader();
         var result = loader.TryLoadAndApply(path, _world.TradeRoutes);
-        if (result.Status != RoutePathLoadStatus.Found)
+        if (!result.Success)
         {
-            AddTechnicalLogEntry($"route_paths.json не загружен: {result.ErrorMessage ?? result.Status.ToString()}. движение караванов по карте отключено.");
+            AddTechnicalLogEntry($"route_paths.json not applied: {result.ErrorMessage ?? "unknown error"}.");
+            AddTechnicalLogEntry("route_paths.json not applied: caravan movement markers disabled.");
             return;
         }
 
@@ -1179,8 +1180,12 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
             _loadedCaravanPathRouteIds.Add(routeId);
         }
 
-        var unmatched = Math.Max(0, result.LoadedPathCount - result.AppliedRouteCount);
-        AddTechnicalLogEntry($"route_paths.json загружен: paths={result.LoadedPathCount}, применено={result.AppliedRouteCount}, не сопоставлено={unmatched}.");
+        var unmatched = Math.Max(0, result.ParsedPathCount - result.AppliedRouteCount);
+        AddTechnicalLogEntry($"route_paths.json parsed paths count: {result.ParsedPathCount}; applied route count: {result.AppliedRouteCount}; unmatched: {unmatched}.");
+        if (result.AppliedRouteCount == 0)
+        {
+            AddTechnicalLogEntry("route_paths.json not applied: caravan movement markers disabled.");
+        }
     }
 
     private static string? TryFindRoutePathsJsonPath()

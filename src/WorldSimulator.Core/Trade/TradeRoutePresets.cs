@@ -1,5 +1,4 @@
 using System.Reflection;
-using System.Text.Json;
 
 namespace WorldSimulator.Core.Trade;
 
@@ -17,77 +16,25 @@ public static class TradeRoutePresets
         ["N_GOTHA"] = "gotha",
         ["N_TOKRUS"] = "thokur_rus"
     };
-    public static string LastRoutePathLoadDiagnostics { get; private set; } = "Route paths: not attempted.";
-
     public static List<TradeRoute> CreateDefaultRoutes()
     {
         var routes = LoadRoutesFromEmbeddedJson();
-        ApplyRoutePathsFromJsonIfExists(routes);
-        return routes;
-    }
-
-    private static void ApplyRoutePathsFromJsonIfExists(List<TradeRoute> routes)
-    {
-        var path = Path.Combine(AppContext.BaseDirectory, "data", "regions", "rivia", "routes", "v1", "route_paths.json");
-        if (!File.Exists(path))
-        {
-            var generatedFallbackCount = 0;
-            foreach (var route in routes)
-            {
-                route.Points.Clear();
-                route.HasLoadedPath = false;
-                if (TryBuildFallbackPoints(route, out var fallbackPoints))
-                {
-                    route.Points.AddRange(fallbackPoints);
-                    generatedFallbackCount++;
-                }
-            }
-
-            LastRoutePathLoadDiagnostics = $"Route paths missing: generated fallback polylines for {generatedFallbackCount}/{routes.Count} routes.";
-            return;
-        }
-
-        using var doc = JsonDocument.Parse(File.ReadAllText(path));
-        if (!doc.RootElement.TryGetProperty("paths", out var pathsElement) || pathsElement.ValueKind != JsonValueKind.Array) return;
-
-        var pointsByRouteId = new Dictionary<string, List<RoutePoint>>(StringComparer.OrdinalIgnoreCase);
-        foreach (var item in pathsElement.EnumerateArray())
-        {
-            var tradeRouteId = item.TryGetProperty("trade_route_id", out var tradeRouteIdElement) ? tradeRouteIdElement.GetString() : null;
-            if (string.IsNullOrWhiteSpace(tradeRouteId)) continue;
-            if (!item.TryGetProperty("points", out var pointsElement) || pointsElement.ValueKind != JsonValueKind.Array) continue;
-
-            var points = new List<RoutePoint>();
-            foreach (var point in pointsElement.EnumerateArray())
-            {
-                var x = point.GetProperty("x").GetDecimal();
-                var y = point.GetProperty("y").GetDecimal();
-                points.Add(new RoutePoint { X = decimal.Clamp(x, 0m, 1m), Y = decimal.Clamp(y, 0m, 1m) });
-            }
-
-            if (points.Count >= 2) pointsByRouteId[tradeRouteId] = points;
-        }
-
-        var appliedCount = 0;
         foreach (var route in routes)
         {
-            route.Points.Clear();
             route.HasLoadedPath = false;
-            if (TryResolveRoutePoints(pointsByRouteId, route, out var points))
+            if (route.Points.Count >= 2)
             {
-                route.Points.AddRange(points);
-                route.HasLoadedPath = route.Points.Count >= 2;
-                if (route.HasLoadedPath)
-                {
-                    appliedCount++;
-                }
+                continue;
+            }
+
+            if (TryBuildFallbackPoints(route, out var fallbackPoints))
+            {
+                route.Points = fallbackPoints;
             }
         }
 
-        var withoutPoints = routes.Count - appliedCount;
-        LastRoutePathLoadDiagnostics = $"Route paths loaded: {pointsByRouteId.Count} paths, applied to {appliedCount} trade routes. Routes without points: {withoutPoints}.";
+        return routes;
     }
-
 
     private static bool TryBuildFallbackPoints(TradeRoute route, out List<RoutePoint> points)
     {
@@ -106,25 +53,6 @@ public static class TradeRoutePresets
         points.Add(new RoutePoint { X = end.X, Y = end.Y });
         return true;
     }
-
-
-    private static bool TryResolveRoutePoints(IReadOnlyDictionary<string, List<RoutePoint>> pointsByRouteId, TradeRoute route, out List<RoutePoint> points)
-    {
-        if (pointsByRouteId.TryGetValue(route.Id, out points!))
-        {
-            return true;
-        }
-
-        var direct = $"{route.FromSettlementId}_{route.ToSettlementId}";
-        if (pointsByRouteId.TryGetValue(direct, out points!))
-        {
-            return true;
-        }
-
-        var reverse = $"{route.ToSettlementId}_{route.FromSettlementId}";
-        return pointsByRouteId.TryGetValue(reverse, out points!);
-    }
-
     private static List<TradeRoute> LoadRoutesFromEmbeddedJson()
     {
         using var stream = Assembly.GetExecutingAssembly()
