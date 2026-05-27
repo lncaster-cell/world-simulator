@@ -38,7 +38,9 @@ foreach (var edge in edges.Where(e => !e.IsStub))
 }
 
 var payload = new { schema_version = "rivia_route_paths_v1", region_id = "RIVIA", paths };
-await File.WriteAllTextAsync(outputPath, JsonSerializer.Serialize(payload, new JsonSerializerOptions { WriteIndented = true }));
+var tempOutputPath = outputPath + ".tmp";
+await File.WriteAllTextAsync(tempOutputPath, JsonSerializer.Serialize(payload, new JsonSerializerOptions { WriteIndented = true }));
+File.Move(tempOutputPath, outputPath, overwrite: true);
 Console.WriteLine($"Generated {paths.Count} paths -> {outputPath}");
 
 static string FindRepoRoot(string start)
@@ -91,7 +93,7 @@ static IEnumerable<string[]> ReadCsv(string path){foreach(var line in File.ReadL
 static List<string> SplitCsv(string line){var r=new List<string>(); var cur=""; bool q=false; foreach(var ch in line){if(ch=='"'){q=!q; continue;} if(ch==','&&!q){r.Add(cur); cur="";} else cur+=ch;} r.Add(cur); return r;}
 static string NormalizeName(string name)=>name.ToLowerInvariant().Replace('ö','o').Replace('-', '_').Replace(' ', '_') switch {"tokrus"=>"thokur_rus", var n=>n};
 static readonly Dictionary<string,string> NodeMap = new(StringComparer.OrdinalIgnoreCase){["N_HIGHROCK"]="highrock",["N_MLYNEK"]="mlynek",["N_WARDMARK"]="wardmark",["N_RIVENSTAL"]="rivenstal",["N_GAVERN"]="gavern",["N_BRNO"]="brno",["N_WODENZ"]="wodenz",["N_GOTHA"]="gotha",["N_TOKRUS"]="thokur_rus"};
-static string BuildTradeRouteId(string from,string to,string type)=>$"{MapNodeOrName(from)}_{MapNodeOrName(to)}";
+static string BuildTradeRouteId(string from,string to,string type)=>$"{MapNodeOrName(from)}_{MapNodeOrName(to)}_{(type.Equals("sea", StringComparison.OrdinalIgnoreCase) ? "sea" : "land")}";
 static string MapNodeOrName(string value)=>NodeMap.GetValueOrDefault(value, NormalizeName(value));
 static Dictionary<string,(double X,double Y)> BuildSettlementCoordinates()=>new(StringComparer.OrdinalIgnoreCase)
 {
