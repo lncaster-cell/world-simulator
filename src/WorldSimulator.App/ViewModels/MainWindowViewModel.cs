@@ -71,6 +71,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     private string _routeAuthoringRouteIdDisplay = "RouteId: —";
     private string? _currentDraftDestinationId;
     private readonly Dictionary<string, List<MapPointViewModel>> _routeAuthoringDraftPointsByDestinationId = [];
+    private readonly HashSet<string> _loadedCaravanPathRouteIds = new(StringComparer.OrdinalIgnoreCase);
     private bool _isTradeRouteAuthoringModeEnabled;
     private decimal _selectedTradeRouteDistanceDays = 1m;
     private string _selectedTradeRouteDistanceDaysInput = "1.0";
@@ -80,10 +81,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     {
         _world = WorldPresets.CreateDefaultWorld();
         _city = _world.SelectedCity;
-        if (!File.Exists(Path.Combine(AppContext.BaseDirectory, "data", "regions", "rivia", "routes", "v1", "route_paths.json")))
-        {
-            AddTechnicalLogEntry("route_paths.json не найден: караваны используют существующие TradeRoute.Points или не отображаются.");
-        }
+        LoadRoutePathsForWorld();
         _clock = new SimulationClock();
         _dailyFoodFlowCalculator = new DailyFoodFlowCalculator();
         _weeklyCrimeFlowCalculator = new WeeklyCrimeFlowCalculator();
@@ -1134,7 +1132,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
 
         ActiveCaravanMovementMarkers.Clear();
         foreach (var routeVisual in _tradeRouteVisuals
-                     .Where(x => x.Points.Count >= 2)
+                      .Where(x => _loadedCaravanPathRouteIds.Contains(x.RouteId) && x.Points.Count >= 2)
                      .OrderByDescending(x => x.IsActive)
                      .ThenByDescending(x => x.TotalWeeklyVolume)
                      .Take(MaxVisibleCaravanMovementMarkers))
@@ -1154,6 +1152,59 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
 
         OnPropertyChanged(nameof(TradeRouteVisuals));
         OnPropertyChanged(nameof(ActiveCaravanMovementMarkers));
+    }
+
+
+    private void LoadRoutePathsForWorld()
+    {
+        _loadedCaravanPathRouteIds.Clear();
+        var path = TryFindRoutePathsJsonPath();
+        if (path is null)
+        {
+            AddTechnicalLogEntry("route_paths.json не загружен: движение караванов по карте отключено.");
+            return;
+        }
+
+        AddTechnicalLogEntry($"route_paths.json найден: {path}");
+        var loader = new RoutePathLoader();
+        var result = loader.TryLoadAndApply(path, _world.TradeRoutes);
+        if (result.Status != RoutePathLoadStatus.Found)
+        {
+            AddTechnicalLogEntry($"route_paths.json не загружен: {result.ErrorMessage ?? result.Status.ToString()}. движение караванов по карте отключено.");
+            return;
+        }
+
+        foreach (var routeId in result.AppliedRouteIds)
+        {
+            _loadedCaravanPathRouteIds.Add(routeId);
+        }
+
+        var unmatched = Math.Max(0, result.LoadedPathCount - result.AppliedRouteCount);
+        AddTechnicalLogEntry($"route_paths.json загружен: paths={result.LoadedPathCount}, применено={result.AppliedRouteCount}, не сопоставлено={unmatched}.");
+    }
+
+    private static string? TryFindRoutePathsJsonPath()
+    {
+        var relativePath = Path.Combine("data", "regions", "rivia", "routes", "v1", "route_paths.json");
+        var directPath = Path.Combine(AppContext.BaseDirectory, relativePath);
+        if (File.Exists(directPath))
+        {
+            return directPath;
+        }
+
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir is not null)
+        {
+            var candidate = Path.Combine(dir.FullName, relativePath);
+            if (File.Exists(candidate))
+            {
+                return candidate;
+            }
+
+            dir = dir.Parent;
+        }
+
+        return null;
     }
 
     private static MapPointViewModel ToMapPoint(RoutePoint point) => new() { X = (double)point.X, Y = (double)point.Y };
