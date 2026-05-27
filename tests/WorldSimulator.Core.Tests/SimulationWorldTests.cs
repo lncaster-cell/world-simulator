@@ -314,13 +314,13 @@ public sealed class SimulationWorldTests
     }
 
     [Fact]
-    public void DefaultWorld_Has_RivenstalBrno_TradeRoute_WithNormalizedPolyline()
+    public void DefaultWorld_Has_BrnoRivenstal_TradeRoute_WithNormalizedPolyline()
     {
         var world = WorldPresets.CreateDefaultWorld();
-        var route = world.TradeRoutes.SingleOrDefault(x => x.Id == "rivenstal_brno");
+        var route = world.TradeRoutes.SingleOrDefault(x => x.Id == "brno_rivenstal_land");
         route.Should().NotBeNull();
-        route!.FromSettlementId.Should().Be("rivenstal");
-        route.ToSettlementId.Should().Be("brno");
+        route!.FromSettlementId.Should().Be("brno");
+        route.ToSettlementId.Should().Be("rivenstal");
         route.Points.Should().HaveCountGreaterOrEqualTo(2);
         route.Points.Should().OnlyContain(p => p.X >= 0m && p.X <= 1m && p.Y >= 0m && p.Y <= 1m);
     }
