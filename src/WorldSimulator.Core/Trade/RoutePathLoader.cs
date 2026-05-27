@@ -2,19 +2,14 @@ using System.Text.Json;
 
 namespace WorldSimulator.Core.Trade;
 
-public enum RoutePathLoadStatus
-{
-    Found,
-    Missing,
-    Failed
-}
-
 public sealed class RoutePathLoadResult
 {
-    public RoutePathLoadStatus Status { get; init; }
-    public int LoadedPathCount { get; init; }
+    public bool FileFound { get; init; }
+    public bool Success { get; init; }
+    public int ParsedPathCount { get; init; }
     public int AppliedRouteCount { get; init; }
     public IReadOnlyList<string> AppliedRouteIds { get; init; } = [];
+    public IReadOnlyList<string> Diagnostics { get; init; } = [];
     public string? ErrorMessage { get; init; }
 }
 
@@ -22,36 +17,46 @@ public sealed class RoutePathLoader
 {
     public RoutePathLoadResult TryLoadAndApply(string path, IList<TradeRoute> routes)
     {
+        var diagnostics = new List<string>();
         if (!File.Exists(path))
         {
-            return new RoutePathLoadResult { Status = RoutePathLoadStatus.Missing };
+            return new RoutePathLoadResult { FileFound = false, Success = false, Diagnostics = ["route_paths.json missing"] };
         }
 
         try
         {
             using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
             using var doc = JsonDocument.Parse(stream);
+
             if (!doc.RootElement.TryGetProperty("paths", out var pathsElement) || pathsElement.ValueKind != JsonValueKind.Array)
             {
-                return new RoutePathLoadResult { Status = RoutePathLoadStatus.Found };
+                return new RoutePathLoadResult { FileFound = true, Success = true, Diagnostics = ["paths array missing"] };
             }
 
             var pointsById = new Dictionary<string, List<RoutePoint>>(StringComparer.OrdinalIgnoreCase);
             foreach (var item in pathsElement.EnumerateArray())
             {
                 var routeId = item.TryGetProperty("trade_route_id", out var routeIdElement) ? routeIdElement.GetString() : null;
-                if (string.IsNullOrWhiteSpace(routeId)) continue;
-                if (!item.TryGetProperty("points", out var pointsElement) || pointsElement.ValueKind != JsonValueKind.Array) continue;
+                if (string.IsNullOrWhiteSpace(routeId))
+                {
+                    continue;
+                }
+
+                if (!item.TryGetProperty("points", out var pointsElement) || pointsElement.ValueKind != JsonValueKind.Array)
+                {
+                    diagnostics.Add($"ignored {routeId}: points missing");
+                    continue;
+                }
 
                 var points = new List<RoutePoint>();
                 foreach (var point in pointsElement.EnumerateArray())
                 {
-                    if (!point.TryGetProperty("x", out var xElement) || !point.TryGetProperty("y", out var yElement)) continue;
-                    points.Add(new RoutePoint
+                    if (!point.TryGetProperty("x", out var xElement) || !point.TryGetProperty("y", out var yElement))
                     {
-                        X = decimal.Clamp(xElement.GetDecimal(), 0m, 1m),
-                        Y = decimal.Clamp(yElement.GetDecimal(), 0m, 1m)
-                    });
+                        continue;
+                    }
+
+                    points.Add(new RoutePoint { X = decimal.Clamp(xElement.GetDecimal(), 0m, 1m), Y = decimal.Clamp(yElement.GetDecimal(), 0m, 1m) });
                 }
 
                 if (points.Count >= 2)
@@ -63,31 +68,37 @@ public sealed class RoutePathLoader
             var appliedRouteIds = new List<string>();
             foreach (var route in routes)
             {
-                if (!TryResolveRoutePoints(pointsById, route, out var points))
+                route.HasLoadedPath = false;
+                if (!TryResolveRoutePoints(pointsById, route, out var loadedPoints) || loadedPoints.Count < 2)
                 {
                     continue;
                 }
 
-                route.Points = points.Select(p => new RoutePoint { X = p.X, Y = p.Y }).ToList();
+                route.Points.Clear();
+                route.Points.AddRange(loadedPoints.Select(p => new RoutePoint { X = p.X, Y = p.Y }));
                 route.HasLoadedPath = true;
                 appliedRouteIds.Add(route.Id);
             }
 
             return new RoutePathLoadResult
             {
-                Status = RoutePathLoadStatus.Found,
-                LoadedPathCount = pointsById.Count,
+                FileFound = true,
+                Success = true,
+                ParsedPathCount = pointsById.Count,
                 AppliedRouteCount = appliedRouteIds.Count,
-                AppliedRouteIds = appliedRouteIds
+                AppliedRouteIds = appliedRouteIds,
+                Diagnostics = diagnostics
             };
         }
-        catch (IOException ex)
+        catch (Exception ex) when (ex is IOException or JsonException or UnauthorizedAccessException)
         {
-            return new RoutePathLoadResult { Status = RoutePathLoadStatus.Failed, ErrorMessage = ex.Message };
-        }
-        catch (JsonException ex)
-        {
-            return new RoutePathLoadResult { Status = RoutePathLoadStatus.Failed, ErrorMessage = ex.Message };
+            return new RoutePathLoadResult
+            {
+                FileFound = true,
+                Success = false,
+                ErrorMessage = ex.Message,
+                Diagnostics = ["route_paths.json read/parse failed"]
+            };
         }
     }
 
