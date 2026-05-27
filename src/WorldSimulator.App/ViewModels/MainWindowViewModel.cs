@@ -61,7 +61,6 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     private double? _lastMapCalibrationX;
     private double? _lastMapCalibrationY;
     private string _selectedJournalCityId = GothaCityId;
-    private readonly List<CaravanMovementMarkerViewModel> _activeCaravanMovementMarkers = [];
     private readonly List<TradeRouteVisualViewModel> _tradeRouteVisuals = [];
     private readonly DispatcherTimer _tradeMarkerAnimationTimer;
     private DateTimeOffset _lastTradeMarkerAnimationTickUtc;
@@ -231,7 +230,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         : "Включить случайные события";
 
     public string SimulationSummaryTitle => "Сводка симуляции";
-    public IReadOnlyList<CaravanMovementMarkerViewModel> ActiveCaravanMovementMarkers => _activeCaravanMovementMarkers;
+    public ObservableCollection<CaravanMovementMarkerViewModel> ActiveCaravanMovementMarkers { get; } = [];
     public IReadOnlyList<TradeRouteVisualViewModel> TradeRouteVisuals => _tradeRouteVisuals;
     public IReadOnlyList<TradeRoute> TradeRoutes => _world.TradeRoutes;
     public IReadOnlyList<City> RouteAuthoringSettlements => _world.Cities;
@@ -1129,14 +1128,14 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
             });
         }
 
-        _activeCaravanMovementMarkers.Clear();
+        ActiveCaravanMovementMarkers.Clear();
         foreach (var routeVisual in _tradeRouteVisuals
                      .Where(x => x.Points.Count >= 2)
                      .OrderByDescending(x => x.IsActive)
                      .ThenByDescending(x => x.TotalWeeklyVolume)
                      .Take(MaxVisibleCaravanMovementMarkers))
         {
-            _activeCaravanMovementMarkers.Add(new CaravanMovementMarkerViewModel
+            ActiveCaravanMovementMarkers.Add(new CaravanMovementMarkerViewModel
             {
                 RouteId = routeVisual.RouteId,
                 DisplayName = routeVisual.DisplayName,
@@ -1223,7 +1222,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
 
     private void OnTradeMarkerAnimationTick(object? sender, EventArgs e)
     {
-        if (_activeCaravanMovementMarkers.Count == 0)
+        if (ActiveCaravanMovementMarkers.Count == 0)
         {
             _lastTradeMarkerAnimationTickUtc = DateTimeOffset.UtcNow;
             return;
@@ -1239,29 +1238,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         _lastTradeMarkerAnimationTickUtc = now;
         var progressDelta = deltaSeconds * 0.08d;
 
-        for (var i = 0; i < _activeCaravanMovementMarkers.Count; i++)
+        foreach (var marker in ActiveCaravanMovementMarkers)
         {
-            var marker = _activeCaravanMovementMarkers[i];
-            var nextProgress = marker.Progress + progressDelta;
-            while (nextProgress > 1d)
-            {
-                nextProgress -= 1d;
-            }
-
-            _activeCaravanMovementMarkers[i] = new CaravanMovementMarkerViewModel
-            {
-                RouteId = marker.RouteId,
-                DisplayName = marker.DisplayName,
-                Points = marker.Points,
-                Progress = nextProgress,
-                FoodMoved = marker.FoodMoved,
-                ResourcesMoved = marker.ResourcesMoved,
-                GoodsMoved = marker.GoodsMoved,
-                HasActiveFlow = marker.HasActiveFlow
-            };
+            marker.Progress += progressDelta;
         }
-
-        OnPropertyChanged(nameof(ActiveCaravanMovementMarkers));
     }
 
     private static double CalculateInitialCaravanProgress(string routeId)
