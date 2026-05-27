@@ -22,13 +22,11 @@ public sealed class ResourceGatheringProductionCalculator
         var assignedWorkers = Math.Max(0, city.Population / 15);
         var workerCoverage = RequiredWorkers > 0 ? Math.Min((decimal)assignedWorkers / RequiredWorkers, 1m) : 0m;
         var extraWorkers = Math.Max(assignedWorkers - RequiredWorkers, 0);
-        var overstaffBonus = 0m;
-
-        if (extraWorkers > 0 && RequiredWorkers > 0)
-        {
-            var overstaffRatio = (decimal)extraWorkers / RequiredWorkers;
-            overstaffBonus = NaturalPotential * OverstaffBonusCap * (1m - (1m / (1m + overstaffRatio)));
-        }
+        var overstaffBonus = WorkforceBonusCalculator.CalculateOverstaffBonus(
+            NaturalPotential,
+            OverstaffBonusCap,
+            extraWorkers,
+            RequiredWorkers);
 
         var finalOutput = decimal.Round(Math.Max(0m, (NaturalPotential * workerCoverage + overstaffBonus) * securityModifier * stateModifier), 2);
 
