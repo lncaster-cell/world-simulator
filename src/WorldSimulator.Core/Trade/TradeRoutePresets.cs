@@ -6,6 +6,18 @@ namespace WorldSimulator.Core.Trade;
 
 public static class TradeRoutePresets
 {
+    private static readonly Dictionary<string, string> NodeToSettlementIdMap = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["N_HIGHROCK"] = "highrock",
+        ["N_MLYNEK"] = "mlynek",
+        ["N_WARDMARK"] = "wardmark",
+        ["N_RIVENSTAL"] = "rivenstal",
+        ["N_GAVERN"] = "gavern",
+        ["N_BRNO"] = "brno",
+        ["N_WODENZ"] = "wodenz",
+        ["N_GOTHA"] = "gotha",
+        ["N_TOKRUS"] = "thokur_rus"
+    };
     public static List<TradeRoute> CreateDefaultRoutes()
     {
         var routes = LoadRoutesFromEmbeddedJson();
@@ -43,13 +55,32 @@ public static class TradeRoutePresets
 
         foreach (var route in routes)
         {
-            if (pointsByRouteId.TryGetValue(route.Id, out var points))
+            route.Points.Clear();
+            if (TryResolveRoutePoints(pointsByRouteId, route, out var points))
             {
-                route.Points.Clear();
                 route.Points.AddRange(points);
             }
         }
     }
+
+
+    private static bool TryResolveRoutePoints(IReadOnlyDictionary<string, List<RoutePoint>> pointsByRouteId, TradeRoute route, out List<RoutePoint> points)
+    {
+        if (pointsByRouteId.TryGetValue(route.Id, out points!))
+        {
+            return true;
+        }
+
+        var direct = $"{route.FromSettlementId}_{route.ToSettlementId}";
+        if (pointsByRouteId.TryGetValue(direct, out points!))
+        {
+            return true;
+        }
+
+        var reverse = $"{route.ToSettlementId}_{route.FromSettlementId}";
+        return pointsByRouteId.TryGetValue(reverse, out points!);
+    }
+
     private static List<TradeRoute> LoadRoutesFromEmbeddedJson()
     {
         using var stream = Assembly.GetExecutingAssembly()
@@ -71,6 +102,12 @@ public static class TradeRoutePresets
             var name = node.GetProperty("name").GetString();
             if (string.IsNullOrWhiteSpace(nodeId) || string.IsNullOrWhiteSpace(name))
             {
+                continue;
+            }
+
+            if (NodeToSettlementIdMap.TryGetValue(nodeId, out var mapped))
+            {
+                nodeToSettlementId[nodeId] = mapped;
                 continue;
             }
 

@@ -80,6 +80,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     {
         _world = WorldPresets.CreateDefaultWorld();
         _city = _world.SelectedCity;
+        if (!File.Exists(Path.Combine(AppContext.BaseDirectory, "data", "regions", "rivia", "routes", "v1", "route_paths.json")))
+        {
+            AddTechnicalLogEntry("route_paths.json не найден: караваны используют существующие TradeRoute.Points или не отображаются.");
+        }
         _clock = new SimulationClock();
         _dailyFoodFlowCalculator = new DailyFoodFlowCalculator();
         _weeklyCrimeFlowCalculator = new WeeklyCrimeFlowCalculator();

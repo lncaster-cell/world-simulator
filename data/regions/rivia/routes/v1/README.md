@@ -50,3 +50,9 @@ The route durations are fixed constants, not distances calculated from map geome
 - Wardmark ↔ West Region Exit duration.
 - Wodenz ↔ South Region Exit duration.
 - Sea exits north/west/south/east: exact source nodes and durations.
+
+## Generate route paths from mask
+
+```bash
+dotnet run --project tools/WorldSimulator.RoutePathExtractor/WorldSimulator.RoutePathExtractor.csproj
+```

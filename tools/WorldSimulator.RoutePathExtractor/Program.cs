@@ -24,14 +24,14 @@ foreach (var edge in edges.Where(e => !e.IsStub))
     var mask = edge.RouteType.Equals("sea", StringComparison.OrdinalIgnoreCase) ? seaMask : landMask;
     var start = FindNearestMaskPixel(mask, image.Width, image.Height, from);
     var end = FindNearestMaskPixel(mask, image.Width, image.Height, to);
-    if (start is null || end is null) continue;
+    if (start is null || end is null) throw new InvalidOperationException($"Mask anchor not found for route {edge.RouteId}.");
     var pixelPath = FindPath(mask, image.Width, image.Height, start.Value, end.Value);
-    if (pixelPath.Count < 2) continue;
+    if (pixelPath.Count < 2) throw new InvalidOperationException($"Path not found in mask for route {edge.RouteId}.");
     var simplified = Simplify(pixelPath, 2.0);
     paths.Add(new
     {
         source_route_id = edge.RouteId,
-        trade_route_id = BuildTradeRouteId(fromNode.Name, toNode.Name, edge.RouteType),
+        trade_route_id = BuildTradeRouteId(edge.FromNode, edge.ToNode, edge.RouteType),
         route_type = edge.RouteType.Equals("sea", StringComparison.OrdinalIgnoreCase) ? "sea" : "road",
         points = simplified.Select(p => new { x = Math.Clamp((double)p.X / (image.Width - 1), 0d, 1d), y = Math.Clamp((double)p.Y / (image.Height - 1), 0d, 1d) })
     });
@@ -56,8 +56,8 @@ static bool[] BuildMask(Image<Rgba32> image, Func<Rgba32, bool> pred)
         mask[(y * image.Width) + x] = pred(image[x, y]);
     return mask;
 }
-static bool IsRoad(Rgba32 p) => p.A >= 128 && p.R >= 180 && p.B >= 180 && p.G <= 100;
-static bool IsSea(Rgba32 p) => p.A >= 128 && p.G >= 180 && p.B >= 180 && p.R <= 100;
+static bool IsRoad(Rgba32 p) => p.A >= 128 && p.R >= 180 && p.B >= 180 && p.G <= 120;
+static bool IsSea(Rgba32 p) => p.A >= 128 && p.G >= 180 && p.B >= 180 && p.R <= 120;
 
 static (int X,int Y)? FindNearestMaskPixel(bool[] mask,int width,int height,(double X,double Y) pt)
 {
@@ -90,7 +90,9 @@ static List<Edge> LoadEdges(string path)=>ReadCsv(path).Skip(1).Select(c=>new Ed
 static IEnumerable<string[]> ReadCsv(string path){foreach(var line in File.ReadLines(path)){yield return SplitCsv(line).ToArray();}}
 static List<string> SplitCsv(string line){var r=new List<string>(); var cur=""; bool q=false; foreach(var ch in line){if(ch=='"'){q=!q; continue;} if(ch==','&&!q){r.Add(cur); cur="";} else cur+=ch;} r.Add(cur); return r;}
 static string NormalizeName(string name)=>name.ToLowerInvariant().Replace('ö','o').Replace('-', '_').Replace(' ', '_') switch {"tokrus"=>"thokur_rus", var n=>n};
-static string BuildTradeRouteId(string from,string to,string type)=>$"{NormalizeName(from)}_{NormalizeName(to)}_{(type.Equals("sea",StringComparison.OrdinalIgnoreCase)?"sea":"land")}";
+static readonly Dictionary<string,string> NodeMap = new(StringComparer.OrdinalIgnoreCase){["N_HIGHROCK"]="highrock",["N_MLYNEK"]="mlynek",["N_WARDMARK"]="wardmark",["N_RIVENSTAL"]="rivenstal",["N_GAVERN"]="gavern",["N_BRNO"]="brno",["N_WODENZ"]="wodenz",["N_GOTHA"]="gotha",["N_TOKRUS"]="thokur_rus"};
+static string BuildTradeRouteId(string from,string to,string type)=>$"{MapNodeOrName(from)}_{MapNodeOrName(to)}";
+static string MapNodeOrName(string value)=>NodeMap.GetValueOrDefault(value, NormalizeName(value));
 static Dictionary<string,(double X,double Y)> BuildSettlementCoordinates()=>new(StringComparer.OrdinalIgnoreCase)
 {
     ["gotha"]=(0.6664,0.2322),["rivenstal"]=(0.4824,0.45),["gavern"]=(0.5066,0.5963),["mlynek"]=(0.2833,0.2487),["brno"]=(0.4527,0.7448),["wodenz"]=(0.8036,0.9604),["wardmark"]=(0.0380,0.4027),["highrock"]=(0.1579,0.2179),["thokur_rus"]=(0.8652,0.4753)
