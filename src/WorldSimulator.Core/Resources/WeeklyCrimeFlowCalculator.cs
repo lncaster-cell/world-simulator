@@ -9,6 +9,10 @@ public sealed class WeeklyCrimeFlowCalculator
         DailyFoodFlowResult foodFlow,
         HouseholdConsumptionResult householdConsumption)
     {
+        ArgumentNullException.ThrowIfNull(city);
+        ArgumentNullException.ThrowIfNull(foodFlow);
+        ArgumentNullException.ThrowIfNull(householdConsumption);
+
         var startingCrime = city.Crime;
 
         if (city.Population <= 0 || city.CityState == CityState.Abandoned)
