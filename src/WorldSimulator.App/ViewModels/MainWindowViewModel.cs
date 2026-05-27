@@ -73,7 +73,6 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     private string? _currentDraftDestinationId;
     private readonly Dictionary<string, List<MapPointViewModel>> _routeAuthoringDraftPointsByDestinationId = [];
     private bool _isTradeRouteAuthoringModeEnabled;
-    private bool _isTradeRoutesOverlayVisible = true;
     private decimal _selectedTradeRouteDistanceDays = 1m;
     private string _selectedTradeRouteDistanceDaysInput = "1.0";
     private bool _isTradeRoutesOverlayVisible = true;
@@ -169,21 +168,6 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     public ICommand StartCommand { get; }
 
     public ICommand PauseCommand { get; }
-
-    public bool IsTradeRoutesOverlayVisible
-    {
-        get => _isTradeRoutesOverlayVisible;
-        set
-        {
-            if (_isTradeRoutesOverlayVisible == value)
-            {
-                return;
-            }
-
-            _isTradeRoutesOverlayVisible = value;
-            OnPropertyChanged();
-        }
-    }
 
     public ICommand SetNormalSpeedCommand { get; }
     public ICommand SetFastSpeedCommand { get; }
