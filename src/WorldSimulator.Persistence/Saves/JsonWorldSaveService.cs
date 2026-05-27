@@ -28,6 +28,7 @@ public sealed class JsonWorldSaveService
             World = new SimulationWorldSaveData
             {
                 Cities = world.Cities.Select(city => ToSaveData(city)).ToList(),
+                CitiesById = world.Cities.ToDictionary(city => city.Id, ToSaveData, StringComparer.Ordinal),
                 Regions = world.Regions.Select(r => new RegionSaveData { Id = r.Id, DisplayName = r.DisplayName, MapAssetId = r.MapAssetId }).ToList(),
                 SettlementMapLocations = world.SettlementMapLocations.Select(x => new SettlementMapLocationSaveData { SettlementId = x.SettlementId, RegionId = x.RegionId, X = x.X, Y = x.Y }).ToList(),
                 SettlementEconomyProfiles = world.SettlementEconomyProfiles.Select(x => new SettlementEconomyProfileSaveData { SettlementId = x.SettlementId, AgriculturePotential = x.AgriculturePotential, FishingMultiplier = x.FishingMultiplier, HuntingMultiplier = x.HuntingMultiplier, MainlandSupplyMultiplier = x.MainlandSupplyMultiplier, ResourceGatheringMultiplier = x.ResourceGatheringMultiplier, GoodsCraftingMultiplier = x.GoodsCraftingMultiplier, IsPort = x.IsPort, IsFortress = x.IsFortress, IsCapital = x.IsCapital }).ToList(),
@@ -154,18 +155,36 @@ public sealed class JsonWorldSaveService
             ? saveData.World.TradeRoutes.Select(ToCoreTradeRoute).ToList()
             : defaultWorld.TradeRoutes;
 
+        var loadedCities = ResolveCities(saveData.World, filePath);
+        var selectedCityId = loadedCities.Any(c => c.Id == saveData.World.SelectedCityId)
+            ? saveData.World.SelectedCityId
+            : loadedCities.First().Id;
+        var selectedRegionId = regions.Any(r => r.Id == saveData.World.SelectedRegionId)
+            ? saveData.World.SelectedRegionId
+            : regions.First().Id;
+
         return new SimulationWorld
         {
-            Cities = saveData.World.Cities.Select(x => ToCoreCity(x, filePath)).ToList(),
+            Cities = loadedCities,
             Regions = regions,
             SettlementMapLocations = settlementMapLocations,
             SettlementEconomyProfiles = settlementEconomyProfiles,
             Caravans = caravans,
             TradeRoutes = tradeRoutes,
             TradeShipments = saveData.World.TradeShipments.Select(ToCoreTradeShipment).ToList(),
-            SelectedCityId = saveData.World.SelectedCityId,
-            SelectedRegionId = saveData.World.SelectedRegionId
+            SelectedCityId = selectedCityId,
+            SelectedRegionId = selectedRegionId
         };
+    }
+
+    private static List<City> ResolveCities(SimulationWorldSaveData worldData, string filePath)
+    {
+        if (worldData.CitiesById.Count > 0)
+        {
+            return worldData.CitiesById.Values.Select(x => ToCoreCity(x, filePath)).ToList();
+        }
+
+        return worldData.Cities.Select(x => ToCoreCity(x, filePath)).ToList();
     }
 
     private static SimulationWorld BuildWorldFromVersion1(WorldSaveData saveData, string filePath)

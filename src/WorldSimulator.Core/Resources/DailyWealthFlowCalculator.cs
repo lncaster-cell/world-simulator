@@ -4,8 +4,15 @@ namespace WorldSimulator.Core.Resources;
 
 public sealed class DailyWealthFlowCalculator
 {
+    private readonly FoodStressPolicy _foodStressPolicy = new();
+
     public DailyWealthFlowResult Calculate(City city, DailyFoodFlowResult foodFlow, GoodsCraftingProductionResult goodsCrafting, HouseholdConsumptionResult householdConsumption)
     {
+        ArgumentNullException.ThrowIfNull(city);
+        ArgumentNullException.ThrowIfNull(foodFlow);
+        ArgumentNullException.ThrowIfNull(goodsCrafting);
+        ArgumentNullException.ThrowIfNull(householdConsumption);
+
         if (city.Population <= 0 || city.CityState == CityState.Abandoned)
         {
             return BuildRounded(city.Wealth, 0m, 0m, 0m, 0m, 0m, 0m, 0m, 0m, 0m);
@@ -15,14 +22,14 @@ public sealed class DailyWealthFlowCalculator
         var goodsProductionBonus = Math.Min(goodsCrafting.GoodsProduced * 0.12m, 2m);
         var consumptionCoverageBonus = householdConsumption.HasAnyShortage ? 0m : 0.5m;
 
-        var foodDays = foodFlow.PopulationConsumption <= 0m ? 999m : foodFlow.EndingFood / foodFlow.PopulationConsumption;
-        var foodShortagePenalty = foodFlow.EndingFood <= 0m
-            ? -5m
-            : foodDays < 2m
-                ? -3m
-                : foodDays < 5m
-                    ? -1m
-                    : 0m;
+        var foodStress = _foodStressPolicy.Evaluate(foodFlow.EndingFood, foodFlow.PopulationConsumption);
+        var foodShortagePenalty = foodStress.RiskLevel switch
+        {
+            FoodRiskLevel.High when foodFlow.EndingFood <= 0m => -5m,
+            FoodRiskLevel.High => -3m,
+            FoodRiskLevel.Medium => -1m,
+            _ => 0m
+        };
 
         var goodsShortagePenalty = Math.Max(householdConsumption.GoodsShortage * -0.20m, -5m);
         var resourcesShortagePenalty = Math.Max(householdConsumption.ResourcesShortage * -0.25m, -3m);

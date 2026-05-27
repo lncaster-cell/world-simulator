@@ -1284,8 +1284,6 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     {
         try
         {
-            // TODO: Текущий save/load сохраняет выбранный город и не сериализует полное состояние SimulationWorld.Cities.
-            // TODO: В отдельном PR сохранить/восстанавливать все города мира.
             await _saveService.SaveAsync(SaveFilePath, _world, _clock, _worldSimulationService.ExportEventState());
             AddTechnicalLogEntry($"Состояние сохранено: {SaveFilePath}");
             SetLastImportantChange("состояние сохранено.");
@@ -1337,6 +1335,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
             AddTechnicalLogEntry($"Состояние загружено: {SaveFilePath}");
             SetLastImportantChange("состояние загружено.");
 
+            RefreshWorldCollectionsAfterLoad();
             RefreshAllCityProperties();
             RefreshClockProperties();
             RefreshSelectedCityProperties();
@@ -1348,6 +1347,18 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         {
             AddTechnicalLogEntry($"Ошибка загрузки: {ex.Message}");
         }
+    }
+
+    private void RefreshWorldCollectionsAfterLoad()
+    {
+        OnPropertyChanged(nameof(Cities));
+        OnPropertyChanged(nameof(SettlementCountText));
+        OnPropertyChanged(nameof(TradeRoutes));
+        OnPropertyChanged(nameof(RouteAuthoringSettlements));
+        OnPropertyChanged(nameof(AvailableRouteAuthoringDestinations));
+        SelectedTradeRouteForAuthoring = _world.TradeRoutes.FirstOrDefault();
+        RefreshTradeRouteVisuals(null);
+        RefreshSimulationJournalFilter();
     }
 
     private void RefreshClockProperties()

@@ -18,6 +18,7 @@ public sealed class WorldSaveData
 public sealed class SimulationWorldSaveData
 {
     public List<CitySaveData> Cities { get; set; } = new();
+    public Dictionary<string, CitySaveData> CitiesById { get; set; } = new(StringComparer.Ordinal);
     public List<RegionSaveData> Regions { get; set; } = new();
     public List<SettlementMapLocationSaveData> SettlementMapLocations { get; set; } = new();
     public List<SettlementEconomyProfileSaveData> SettlementEconomyProfiles { get; set; } = new();
