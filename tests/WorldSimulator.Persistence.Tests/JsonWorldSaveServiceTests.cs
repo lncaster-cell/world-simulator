@@ -65,6 +65,61 @@ public sealed class JsonWorldSaveServiceTests
     }
 
     [Fact]
+    public async Task SaveLoad_Preserves_All_Cities_With_Different_State()
+    {
+        var service = new JsonWorldSaveService();
+        var world = WorldPresets.CreateDefaultWorld();
+        var clock = new SimulationClock();
+        var eventState = new WorldEventState();
+
+        for (var i = 0; i < world.Cities.Count; i++)
+        {
+            var city = world.Cities[i];
+            city.Population = 1000 + (i * 111);
+            city.Food = 50 + (i * 7);
+            city.Wealth = 120 + (i * 13);
+            city.Mood = 30 + (i * 5);
+            city.Security = 70 - i;
+            city.Crime = 10 + (i * 2);
+            city.Resources = 200 + (i * 17);
+            city.Goods = 90 + (i * 9);
+        }
+
+        world.Cities[0].CityState = CityState.Prosperity;
+        world.Cities[1].CityState = CityState.Decline;
+        world.Cities[2].CityState = CityState.Stagnation;
+        world.SelectedCityId = world.Cities[2].Id;
+
+        var filePath = TempFile();
+        try
+        {
+            await service.SaveAsync(filePath, world, clock, eventState);
+            var loaded = await service.LoadAsync(filePath);
+
+            Assert.Equal(world.Cities.Count, loaded.World.Cities.Count);
+            var loadedById = loaded.World.Cities.ToDictionary(x => x.Id, StringComparer.Ordinal);
+            foreach (var expected in world.Cities)
+            {
+                var actual = loadedById[expected.Id];
+                Assert.Equal(expected.Name, actual.Name);
+                Assert.Equal(expected.Population, actual.Population);
+                Assert.Equal(expected.Food, actual.Food);
+                Assert.Equal(expected.Wealth, actual.Wealth);
+                Assert.Equal(expected.Mood, actual.Mood);
+                Assert.Equal(expected.Security, actual.Security);
+                Assert.Equal(expected.Crime, actual.Crime);
+                Assert.Equal(expected.Resources, actual.Resources);
+                Assert.Equal(expected.Goods, actual.Goods);
+                Assert.Equal(expected.CityState, actual.CityState);
+            }
+
+            Assert.Equal(world.SelectedCityId, loaded.World.SelectedCityId);
+            Assert.Equal(world.SelectedCityId, loaded.World.SelectedCity.Id);
+        }
+        finally { Cleanup(filePath); }
+    }
+
+    [Fact]
     public async Task SaveLoad_Preserves_Clock_State()
     {
         var service = new JsonWorldSaveService();
