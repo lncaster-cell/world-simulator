@@ -203,8 +203,10 @@ public sealed class JsonWorldSaveService
 
     private static void ValidateWorld(SimulationWorld world, string filePath)
     {
-        if (!world.Cities.Any(c => c.Id == world.SelectedCityId)) throw new InvalidDataException($"Save file '{filePath}' selected city id '{world.SelectedCityId}' does not exist in loaded cities.");
-        if (!world.Regions.Any(r => r.Id == world.SelectedRegionId)) throw new InvalidDataException($"Save file '{filePath}' selected region id '{world.SelectedRegionId}' does not exist in loaded regions.");
+        if (!world.EnsureValidSelection(out _))
+            throw new InvalidDataException(
+                $"Save file '{filePath}' has invalid world selection and fallback could not be applied. " +
+                $"Cities: {world.Cities.Count}, Regions: {world.Regions.Count}, SelectedCityId: '{world.SelectedCityId}', SelectedRegionId: '{world.SelectedRegionId}'.");
 
         var caravanIds = world.Caravans.Select(x => x.Id).ToHashSet(StringComparer.Ordinal);
         var routeIds = world.TradeRoutes.Select(x => x.Id).ToHashSet(StringComparer.Ordinal);

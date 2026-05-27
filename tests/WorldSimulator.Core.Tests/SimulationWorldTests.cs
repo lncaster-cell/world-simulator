@@ -87,6 +87,21 @@ public sealed class SimulationWorldTests
     }
 
     [Fact]
+    public void EnsureValidSelection_SelectedCityMissing_FallsBackToFirstCity()
+    {
+        var world = WorldPresets.CreateDefaultWorld();
+        world.SelectedCityId = "missing-city";
+
+        var isValid = world.EnsureValidSelection(out var reason);
+
+        isValid.Should().BeTrue();
+        world.SelectedCityId.Should().Be(world.Cities[0].Id);
+        reason.Should().NotBeNullOrWhiteSpace();
+        world.TryGetSelectedCity(out var selectedCity).Should().BeTrue();
+        selectedCity.Id.Should().Be(world.Cities[0].Id);
+    }
+
+    [Fact]
     public void DefaultWorld_CityIdsAreUnique()
     {
         var world = WorldPresets.CreateDefaultWorld();
