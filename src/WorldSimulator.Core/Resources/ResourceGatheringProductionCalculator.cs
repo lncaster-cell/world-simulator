@@ -11,8 +11,8 @@ public sealed class ResourceGatheringProductionCalculator
     public ResourceGatheringProductionResult Calculate(City city)
     {
         ArgumentNullException.ThrowIfNull(city);
-        var securityModifier = GetSecurityModifier(city.Security);
-        var stateModifier = GetStateModifier(city.CityState);
+        var securityModifier = ProductionBalancePolicy.GetSecurityModifier(city.Security, ProductionDomain.Resource);
+        var stateModifier = ProductionBalancePolicy.GetStateModifier(city.CityState, ProductionDomain.Resource);
 
         if (city.Population <= 0 || city.CityState == CityState.Abandoned)
         {
@@ -34,7 +34,4 @@ public sealed class ResourceGatheringProductionCalculator
 
         return new ResourceGatheringProductionResult { NaturalPotential = NaturalPotential, RequiredWorkers = RequiredWorkers, AssignedWorkers = assignedWorkers, WorkerCoverage = workerCoverage, ExtraWorkers = extraWorkers, OverstaffBonus = overstaffBonus, SecurityModifier = securityModifier, StateModifier = stateModifier, FinalOutput = finalOutput };
     }
-
-    private static decimal GetSecurityModifier(int security) => security switch { >= 70 => 1.05m, >= 40 => 1.00m, >= 20 => 0.75m, _ => 0.50m };
-    private static decimal GetStateModifier(CityState state) => state switch { CityState.Abandoned => 0.00m, CityState.Collapse => 0.20m, CityState.Famine => 0.65m, CityState.FoodShortage => 0.80m, CityState.Unrest => 0.55m, CityState.CrimeProblem => 0.75m, CityState.EconomicDecline => 0.80m, CityState.Stagnation => 0.90m, CityState.Stable => 1.00m, CityState.Prosperous => 1.05m, CityState.Recovery => 0.90m, _ => throw new ArgumentOutOfRangeException(nameof(state), state, "Unsupported city state.") };
 }

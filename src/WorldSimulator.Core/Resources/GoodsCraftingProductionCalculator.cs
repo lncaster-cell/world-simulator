@@ -13,9 +13,9 @@ public sealed class GoodsCraftingProductionCalculator
     {
         ArgumentNullException.ThrowIfNull(city);
 
-        var moodModifier = GetMoodModifier(city.Mood);
-        var securityModifier = GetSecurityModifier(city.Security);
-        var stateModifier = GetStateModifier(city.CityState);
+        var moodModifier = ProductionBalancePolicy.GetMoodModifier(city.Mood, ProductionDomain.Goods);
+        var securityModifier = ProductionBalancePolicy.GetSecurityModifier(city.Security, ProductionDomain.Goods);
+        var stateModifier = ProductionBalancePolicy.GetStateModifier(city.CityState, ProductionDomain.Goods);
         var resourcesAvailable = Math.Max(0m, city.Resources);
 
         if (city.Population <= 0 || city.CityState == CityState.Abandoned)
@@ -95,47 +95,6 @@ public sealed class GoodsCraftingProductionCalculator
             ResourcesAvailable = resourcesAvailable,
             ResourcesConsumed = resourcesConsumed,
             GoodsProduced = goodsProduced
-        };
-    }
-
-    private static decimal GetMoodModifier(int mood)
-    {
-        return mood switch
-        {
-            >= 70 => 1.05m,
-            >= 40 => 1.00m,
-            >= 20 => 0.80m,
-            _ => 0.55m
-        };
-    }
-
-    private static decimal GetSecurityModifier(int security)
-    {
-        return security switch
-        {
-            >= 70 => 1.05m,
-            >= 40 => 1.00m,
-            >= 20 => 0.80m,
-            _ => 0.55m
-        };
-    }
-
-    private static decimal GetStateModifier(CityState state)
-    {
-        return state switch
-        {
-            CityState.Abandoned => 0.00m,
-            CityState.Collapse => 0.15m,
-            CityState.Famine => 0.45m,
-            CityState.FoodShortage => 0.65m,
-            CityState.Unrest => 0.45m,
-            CityState.CrimeProblem => 0.70m,
-            CityState.EconomicDecline => 0.75m,
-            CityState.Stagnation => 0.85m,
-            CityState.Stable => 1.00m,
-            CityState.Prosperous => 1.10m,
-            CityState.Recovery => 0.90m,
-            _ => throw new ArgumentOutOfRangeException(nameof(state), state, "Unsupported city state.")
         };
     }
 }
