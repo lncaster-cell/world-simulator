@@ -80,10 +80,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     {
         _world = WorldPresets.CreateDefaultWorld();
         _city = _world.SelectedCity;
-        if (!File.Exists(Path.Combine(AppContext.BaseDirectory, "data", "regions", "rivia", "routes", "v1", "route_paths.json")))
-        {
-            AddTechnicalLogEntry("route_paths.json не найден: караваны используют существующие TradeRoute.Points или не отображаются.");
-        }
+        AddTechnicalLogEntry(TradeRoutePresets.LastRoutePathLoadDiagnostics);
         _clock = new SimulationClock();
         _dailyFoodFlowCalculator = new DailyFoodFlowCalculator();
         _weeklyCrimeFlowCalculator = new WeeklyCrimeFlowCalculator();
@@ -1134,7 +1131,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
 
         ActiveCaravanMovementMarkers.Clear();
         foreach (var routeVisual in _tradeRouteVisuals
-                     .Where(x => x.Points.Count >= 2)
+                     .Where(x => x.Points.Count >= 2 && _world.TradeRoutes.Any(r => string.Equals(r.Id, x.RouteId, StringComparison.Ordinal) && r.HasLoadedPath))
                      .OrderByDescending(x => x.IsActive)
                      .ThenByDescending(x => x.TotalWeeklyVolume)
                      .Take(MaxVisibleCaravanMovementMarkers))
