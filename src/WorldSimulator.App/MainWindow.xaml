@@ -38,6 +38,10 @@
                 <Button Content="Пауза" Command="{Binding PauseCommand}" Width="90" Margin="0,0,16,0"/>
                 <Button Content="Сохранить" Command="{Binding SaveCommand}" Width="110" Margin="0,0,8,0"/>
                 <Button Content="Загрузить" Command="{Binding LoadCommand}" Width="110" Margin="0,0,8,0"/>
+                <CheckBox Content="Показать маршруты"
+                          IsChecked="{Binding IsTradeRoutesOverlayVisible}"
+                          Margin="12,0,0,0"
+                          VerticalAlignment="Center"/>
                 <ToggleButton Content="Редактор маршрутов" IsChecked="{Binding IsTradeRouteAuthoringModeEnabled}" Width="160"/>
             </StackPanel>
         </Border>
@@ -83,6 +87,12 @@
                            Source="/Assets/Maps/world_map.png"
                            Stretch="Uniform"
                            SizeChanged="MapImage_SizeChanged"/>
+
+                    <Image x:Name="RoutesMapImage"
+                           Source="/Assets/Maps/world_map_routes.png"
+                           Stretch="Uniform"
+                           IsHitTestVisible="False"
+                           Visibility="{Binding IsTradeRoutesOverlayVisible, Converter={StaticResource BooleanToVisibilityConverter}}" />
 
                     <Canvas x:Name="MapOverlay"
                             Background="Transparent"
