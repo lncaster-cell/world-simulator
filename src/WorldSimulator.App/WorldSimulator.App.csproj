@@ -13,6 +13,12 @@
     <Resource Include="Assets\Maps\caravan_icon_64.png" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="..\..\data\regions\rivia\routes\v1\route_paths.json"
+             Link="data\regions\rivia\routes\v1\route_paths.json"
+             CopyToOutputDirectory="PreserveNewest"
+             Condition="Exists('..\..\data\regions\rivia\routes\v1\route_paths.json')" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\WorldSimulator.Core\WorldSimulator.Core.csproj" />
     <ProjectReference Include="..\WorldSimulator.Persistence\WorldSimulator.Persistence.csproj" />
   </ItemGroup>
