@@ -76,6 +76,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     private bool _isTradeRoutesOverlayVisible = true;
     private decimal _selectedTradeRouteDistanceDays = 1m;
     private string _selectedTradeRouteDistanceDaysInput = "1.0";
+    private bool _isTradeRoutesOverlayVisible = true;
 
     public MainWindowViewModel()
     {
@@ -168,6 +169,22 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     public ICommand StartCommand { get; }
 
     public ICommand PauseCommand { get; }
+
+    public bool IsTradeRoutesOverlayVisible
+    {
+        get => _isTradeRoutesOverlayVisible;
+        set
+        {
+            if (_isTradeRoutesOverlayVisible == value)
+            {
+                return;
+            }
+
+            _isTradeRoutesOverlayVisible = value;
+            OnPropertyChanged();
+        }
+    }
+
     public ICommand SetNormalSpeedCommand { get; }
     public ICommand SetFastSpeedCommand { get; }
     public ICommand SetVeryFastSpeedCommand { get; }
