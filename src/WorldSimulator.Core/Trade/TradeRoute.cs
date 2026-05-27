@@ -24,7 +24,7 @@ public sealed class TradeRoute
     public required decimal DistanceDays { get; set; }
     public required bool IsEnabled { get; init; }
     public decimal DifficultyMultiplier { get; init; } = 1m;
-    public required List<RoutePoint> Points { get; init; }
+    public required List<RoutePoint> Points { get; set; }
     public bool HasLoadedPath { get; set; }
 }
 

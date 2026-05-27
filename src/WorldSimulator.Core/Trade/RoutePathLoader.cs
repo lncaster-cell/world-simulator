@@ -69,6 +69,7 @@ public sealed class RoutePathLoader
                 }
 
                 route.Points = points.Select(p => new RoutePoint { X = p.X, Y = p.Y }).ToList();
+                route.HasLoadedPath = true;
                 appliedRouteIds.Add(route.Id);
             }
 
