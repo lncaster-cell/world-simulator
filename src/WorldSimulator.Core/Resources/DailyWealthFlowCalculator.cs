@@ -6,6 +6,11 @@ public sealed class DailyWealthFlowCalculator
 {
     public DailyWealthFlowResult Calculate(City city, DailyFoodFlowResult foodFlow, GoodsCraftingProductionResult goodsCrafting, HouseholdConsumptionResult householdConsumption)
     {
+        ArgumentNullException.ThrowIfNull(city);
+        ArgumentNullException.ThrowIfNull(foodFlow);
+        ArgumentNullException.ThrowIfNull(goodsCrafting);
+        ArgumentNullException.ThrowIfNull(householdConsumption);
+
         if (city.Population <= 0 || city.CityState == CityState.Abandoned)
         {
             return BuildRounded(city.Wealth, 0m, 0m, 0m, 0m, 0m, 0m, 0m, 0m, 0m);
