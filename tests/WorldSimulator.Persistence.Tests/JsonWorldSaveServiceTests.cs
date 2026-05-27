@@ -305,53 +305,64 @@ public sealed class JsonWorldSaveServiceTests
     }
 
     [Fact]
-    public async Task LoadAsync_TradeRoutesWithoutDistanceDays_UsePresetFallbackForEachRoute()
+    public async Task SaveLoad_Smoke_Roundtrip_Preserves_All_Sections()
     {
         var service = new JsonWorldSaveService();
-        var filePath = TempFile();
-        var presetRoutes = TradeRoutePresets.CreateDefaultRoutes().Take(2).ToArray();
+        var world = WorldPresets.CreateDefaultWorld();
+        var clock = new SimulationClock(new SimulationTimeSettings { RealTimePerGameHour = TimeSpan.FromSeconds(3) });
+        clock.RestoreState(9, 18, true, TimeSpan.FromSeconds(11), TimeSpan.FromSeconds(3));
 
-        var save = new
+        world.SelectedCityId = world.Cities[0].Id;
+        world.SelectedRegionId = world.Regions[0].Id;
+        world.Regions[0].DisplayName = "Test Region";
+        world.SettlementMapLocations[0].X = 0.42m;
+        world.SettlementEconomyProfiles[0].IsCapital = true;
+        world.Caravans[0].Status = CaravanStatus.Broken;
+
+        world.TradeShipments.Add(new TradeShipment
         {
-            Version = 2,
-            SavedAtUtc = DateTime.UtcNow,
-            Clock = new { Day = 1, Hour = 0, IsRunning = false, AccumulatedRealTime = "00:00:00", RealTimePerGameHour = "00:05:00" },
-            World = new
-            {
-                Cities = new[]
-                {
-                    new { Id = "gotha", Name = "Gotha", Population = 1, Food = 1, Wealth = 1, Mood = 1, Security = 1, Crime = 1, Resources = 1, Goods = 1, CityState = "Stagnation" },
-                    new { Id = "highrock", Name = "Highrock", Population = 1, Food = 1, Wealth = 1, Mood = 1, Security = 1, Crime = 1, Resources = 1, Goods = 1, CityState = "Stagnation" },
-                    new { Id = "mlynek", Name = "Mlynek", Population = 1, Food = 1, Wealth = 1, Mood = 1, Security = 1, Crime = 1, Resources = 1, Goods = 1, CityState = "Stagnation" }
-                },
-                Regions = new[] { new { Id = "rivia", DisplayName = "Rivia", MapAssetId = "x" } },
-                SettlementMapLocations = Array.Empty<object>(),
-                SettlementEconomyProfiles = Array.Empty<object>(),
-                Caravans = Array.Empty<object>(),
-                TradeRoutes = new[]
-                {
-                    new { Id = presetRoutes[0].Id, presetRoutes[0].FromSettlementId, presetRoutes[0].ToSettlementId, Type = presetRoutes[0].Type.ToString(), Distance = presetRoutes[0].Distance, TravelDays = presetRoutes[0].TravelDays, IsEnabled = true, DifficultyMultiplier = 1m, Points = new[] { new { X = 0.1m, Y = 0.1m }, new { X = 0.2m, Y = 0.2m } } },
-                    new { Id = presetRoutes[1].Id, presetRoutes[1].FromSettlementId, presetRoutes[1].ToSettlementId, Type = presetRoutes[1].Type.ToString(), Distance = presetRoutes[1].Distance, TravelDays = presetRoutes[1].TravelDays, IsEnabled = true, DifficultyMultiplier = 1m, Points = new[] { new { X = 0.3m, Y = 0.3m }, new { X = 0.4m, Y = 0.4m } } },
-                    new { Id = "unknown-route", FromSettlementId = "gotha", ToSettlementId = "highrock", Type = CaravanType.Land.ToString(), Distance = 10m, TravelDays = 2, IsEnabled = true, DifficultyMultiplier = 1m, Points = new[] { new { X = 0.5m, Y = 0.5m }, new { X = 0.6m, Y = 0.6m } } }
-                },
-                TradeShipments = Array.Empty<object>(),
-                SelectedCityId = "gotha",
-                SelectedRegionId = "rivia"
-            }
-        };
+            Id = "smoke-shipment",
+            CaravanId = world.Caravans[0].Id,
+            RouteId = world.TradeRoutes[0].Id,
+            FromSettlementId = world.TradeRoutes[0].FromSettlementId,
+            ToSettlementId = world.TradeRoutes[0].ToSettlementId,
+            GoodType = TradeGoodType.Resources,
+            Amount = 25m,
+            DepartureDay = 9,
+            ArrivalDay = 12,
+            ReturnDay = 14,
+            ExporterWealthDelta = 0.3m,
+            ImporterWealthDelta = -0.3m,
+            Status = TradeShipmentStatus.InTransitToDestination
+        });
+
+        var eventState = CreateEventStateWithEvents();
+        var filePath = TempFile();
 
         try
         {
-            await File.WriteAllTextAsync(filePath, JsonSerializer.Serialize(save));
+            await service.SaveAsync(filePath, world, clock, eventState);
             var loaded = await service.LoadAsync(filePath);
-            var routesById = loaded.World.TradeRoutes.ToDictionary(route => route.Id, StringComparer.Ordinal);
 
-            Assert.Equal(presetRoutes[0].DistanceDays, routesById[presetRoutes[0].Id].DistanceDays);
-            Assert.Equal(presetRoutes[1].DistanceDays, routesById[presetRoutes[1].Id].DistanceDays);
-            Assert.Equal(1m, routesById["unknown-route"].DistanceDays);
+            Assert.Equal(9, loaded.Clock.Day);
+            Assert.Equal(18, loaded.Clock.Hour);
+            Assert.Equal(world.SelectedCityId, loaded.World.SelectedCityId);
+            Assert.Equal(world.SelectedRegionId, loaded.World.SelectedRegionId);
+            Assert.Equal("Test Region", loaded.World.Regions[0].DisplayName);
+            Assert.Equal(0.42m, loaded.World.SettlementMapLocations[0].X);
+            Assert.True(loaded.World.SettlementEconomyProfiles[0].IsCapital);
+            Assert.Equal(CaravanStatus.Broken, loaded.World.Caravans[0].Status);
+            Assert.Equal(world.TradeRoutes[0].Id, loaded.World.TradeRoutes[0].Id);
+            Assert.Single(loaded.World.TradeShipments);
+            Assert.Equal("smoke-shipment", loaded.World.TradeShipments[0].Id);
+
+            var selectedManager = loaded.EventState.GetManagerOrEmpty(loaded.World.SelectedCityId);
+            Assert.Single(selectedManager.ActiveEvents);
+            Assert.Single(selectedManager.CompletedEvents);
         }
         finally { Cleanup(filePath); }
     }
+
     private static WorldEventState CreateEventStateWithEvents()
     {
         var manager = new CityEventManager();
