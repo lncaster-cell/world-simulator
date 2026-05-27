@@ -90,39 +90,52 @@
                         <ItemsControl ItemsSource="{Binding TradeRouteVisuals}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Polyline StrokeThickness="1.5">
-                                        <Polyline.Style>
-                                            <Style TargetType="Polyline">
-                                                <Setter Property="Stroke" Value="#668B6F47"/>
-                                                <Setter Property="StrokeThickness" Value="1.5"/>
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding IsActive}" Value="True">
-                                                        <Setter Property="Stroke" Value="#FFDAA520"/>
-                                                        <Setter Property="StrokeThickness" Value="2.8"/>
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </Polyline.Style>
-                                        <Polyline.ToolTip>
-                                            <TextBlock TextWrapping="Wrap">
-                                                <Run Text="Маршрут: "/><Run Text="{Binding DisplayName}"/><LineBreak/>
-                                                <Run Text="Объём недели:"/><LineBreak/>
-                                                <Run Text="Еда: "/><Run Text="{Binding WeeklyFoodMoved}"/><LineBreak/>
-                                                <Run Text="Ресурсы: "/><Run Text="{Binding WeeklyResourcesMoved}"/><LineBreak/>
-                                                <Run Text="Товары: "/><Run Text="{Binding WeeklyGoodsMoved}"/><LineBreak/>
-                                                <Run Text="Всего: "/><Run Text="{Binding TotalWeeklyVolume}"/>
-                                            </TextBlock>
-                                        </Polyline.ToolTip>
-                                        <Polyline.Points>
-                                            <MultiBinding Converter="{StaticResource TradeRoutePointsToPointCollectionConverter}">
-                                                <Binding Path="Points"/>
-                                                <Binding ElementName="MapContainer" Path="ActualWidth"/>
-                                                <Binding ElementName="MapImage" Path="ActualWidth"/>
-                                                <Binding ElementName="MapContainer" Path="ActualHeight"/>
-                                                <Binding ElementName="MapImage" Path="ActualHeight"/>
-                                            </MultiBinding>
-                                        </Polyline.Points>
-                                    </Polyline>
+                                    <Grid IsHitTestVisible="False">
+                                        <Polyline Stroke="#CC101010" StrokeThickness="4.6" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Opacity="0.8">
+                                            <Polyline.Points>
+                                                <MultiBinding Converter="{StaticResource TradeRoutePointsToPointCollectionConverter}">
+                                                    <Binding Path="Points"/>
+                                                    <Binding ElementName="MapContainer" Path="ActualWidth"/>
+                                                    <Binding ElementName="MapImage" Path="ActualWidth"/>
+                                                    <Binding ElementName="MapContainer" Path="ActualHeight"/>
+                                                    <Binding ElementName="MapImage" Path="ActualHeight"/>
+                                                </MultiBinding>
+                                            </Polyline.Points>
+                                        </Polyline>
+                                        <Polyline StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round">
+                                            <Polyline.Style>
+                                                <Style TargetType="Polyline">
+                                                    <Setter Property="Stroke" Value="#FFE3B45A"/>
+                                                    <Setter Property="StrokeThickness" Value="2.8"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsActive}" Value="True">
+                                                            <Setter Property="Stroke" Value="#FF38D9FF"/>
+                                                            <Setter Property="StrokeThickness" Value="3.4"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Polyline.Style>
+                                            <Polyline.ToolTip>
+                                                <TextBlock TextWrapping="Wrap">
+                                                    <Run Text="Маршрут: "/><Run Text="{Binding DisplayName}"/><LineBreak/>
+                                                    <Run Text="Объём недели:"/><LineBreak/>
+                                                    <Run Text="Еда: "/><Run Text="{Binding WeeklyFoodMoved}"/><LineBreak/>
+                                                    <Run Text="Ресурсы: "/><Run Text="{Binding WeeklyResourcesMoved}"/><LineBreak/>
+                                                    <Run Text="Товары: "/><Run Text="{Binding WeeklyGoodsMoved}"/><LineBreak/>
+                                                    <Run Text="Всего: "/><Run Text="{Binding TotalWeeklyVolume}"/>
+                                                </TextBlock>
+                                            </Polyline.ToolTip>
+                                            <Polyline.Points>
+                                                <MultiBinding Converter="{StaticResource TradeRoutePointsToPointCollectionConverter}">
+                                                    <Binding Path="Points"/>
+                                                    <Binding ElementName="MapContainer" Path="ActualWidth"/>
+                                                    <Binding ElementName="MapImage" Path="ActualWidth"/>
+                                                    <Binding ElementName="MapContainer" Path="ActualHeight"/>
+                                                    <Binding ElementName="MapImage" Path="ActualHeight"/>
+                                                </MultiBinding>
+                                            </Polyline.Points>
+                                        </Polyline>
+                                    </Grid>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
@@ -201,7 +214,18 @@
                             </ItemsControl.ItemContainerStyle>
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Image Width="18" Height="18" Source="/Assets/Maps/caravan_icon_clean_transparent.png" ToolTip="{Binding DisplayName}"/>
+                                    <Image Width="18" Height="18" Source="/Assets/Maps/caravan_icon_clean_transparent.png" ToolTip="{Binding DisplayName}">
+                                        <Image.Style>
+                                            <Style TargetType="Image">
+                                                <Setter Property="Opacity" Value="0.9"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding HasActiveFlow}" Value="True">
+                                                        <Setter Property="Opacity" Value="1"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Image.Style>
+                                    </Image>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>

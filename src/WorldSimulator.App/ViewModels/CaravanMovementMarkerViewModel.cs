@@ -9,6 +9,7 @@ public sealed class CaravanMovementMarkerViewModel
     public required decimal FoodMoved { get; init; }
     public required decimal ResourcesMoved { get; init; }
     public required decimal GoodsMoved { get; init; }
+    public required bool HasActiveFlow { get; init; }
 
     public decimal TotalVolume => FoodMoved + ResourcesMoved + GoodsMoved;
 }
