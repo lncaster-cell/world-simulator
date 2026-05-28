@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
 using SixLabors.ImageSharp;
@@ -9,8 +10,11 @@ public sealed class RoutePathExtractor
 {
     private const int AnchorSearchRadiusSoftPx = 40;
     private const int AnchorSearchRadiusHardPx = 160;
-    private const int MaxBridgeGapPx = 60;
-    private const double OffMaskPenalty = 50.0;
+    private const int BaseSearchMarginPx = 120;
+    private const int ExtendedSearchMarginPx = 220;
+    private const int MaskInflateRadiusPx = 6;
+    private const int MaxExpandedNodesPerRoute = 200_000;
+    private const int MaxRoutePathfindingSeconds = 15;
 
     public void Generate(string maskPath, string edgesPath, string nodesPath, string outputPath)
     {
@@ -20,18 +24,28 @@ public sealed class RoutePathExtractor
         using var image = Image.Load<Rgba32>(maskPath);
         var landMask = BuildMask(image, IsRoad);
         var seaMask = BuildMask(image, IsSea);
+        var inflatedLandMask = DilateMask(landMask, image.Width, image.Height, MaskInflateRadiusPx);
+        var inflatedSeaMask = DilateMask(seaMask, image.Width, image.Height, MaskInflateRadiusPx);
 
         var paths = new List<object>();
         var reportEntries = new List<RouteReportEntry>();
+        var nonStubEdges = edges.Where(e => !e.IsStub).ToList();
 
-        foreach (var edge in edges.Where(e => !e.IsStub))
+        for (var i = 0; i < nonStubEdges.Count; i++)
         {
+            var edge = nonStubEdges[i];
+            var routeType = NormalizeRouteType(edge.RouteType);
+            var logPrefix = $"[{i + 1}/{nonStubEdges.Count}] {edge.RouteId} {routeType}:";
+            Console.WriteLine($"{logPrefix} starting...");
+
             var entry = new RouteReportEntry(edge.RouteId, BuildTradeRouteId(edge.FromNode, edge.ToNode, edge.RouteType), edge.RouteType, edge.FromNode, edge.ToNode);
             reportEntries.Add(entry);
 
             if (!nodes.TryGetValue(edge.FromNode, out var fromNode) || !nodes.TryGetValue(edge.ToNode, out var toNode))
             {
                 entry.Fail("Node metadata missing.");
+                Console.WriteLine($"{logPrefix} FAILED reason={entry.FailureReason}");
+                Console.Out.Flush();
                 continue;
             }
 
@@ -41,38 +55,39 @@ public sealed class RoutePathExtractor
             if (!settlements.TryGetValue(NormalizeName(fromNode.Name), out var from) || !settlements.TryGetValue(NormalizeName(toNode.Name), out var to))
             {
                 entry.Fail("Settlement coordinate missing.");
+                Console.WriteLine($"{logPrefix} FAILED reason={entry.FailureReason}");
+                Console.Out.Flush();
                 continue;
             }
 
-            var mask = edge.RouteType.Equals("sea", StringComparison.OrdinalIgnoreCase) ? seaMask : landMask;
-            var start = FindNearestMaskPixel(mask, image.Width, image.Height, from);
-            var end = FindNearestMaskPixel(mask, image.Width, image.Height, to);
+            var isSea = edge.RouteType.Equals("sea", StringComparison.OrdinalIgnoreCase);
+            var originalMask = isSea ? seaMask : landMask;
+            var inflatedMask = isSea ? inflatedSeaMask : inflatedLandMask;
+            var start = FindNearestMaskPixel(originalMask, image.Width, image.Height, from);
+            var end = FindNearestMaskPixel(originalMask, image.Width, image.Height, to);
 
             if (start is null || end is null)
             {
                 entry.Fail("Mask anchor not found within hard radius.");
+                Console.WriteLine($"{logPrefix} FAILED reason={entry.FailureReason}");
+                Console.Out.Flush();
                 continue;
             }
 
+            Console.WriteLine($"{logPrefix} anchors: start={start.Value.Point.X},{start.Value.Point.Y} end={end.Value.Point.X},{end.Value.Point.Y}");
             entry.StartAnchorDistancePx = start.Value.Distance;
             entry.EndAnchorDistancePx = end.Value.Distance;
             if (start.Value.Distance > AnchorSearchRadiusSoftPx) entry.Warnings.Add($"Start anchor snapped at {start.Value.Distance:F1}px (> {AnchorSearchRadiusSoftPx}px).");
             if (end.Value.Distance > AnchorSearchRadiusSoftPx) entry.Warnings.Add($"End anchor snapped at {end.Value.Distance:F1}px (> {AnchorSearchRadiusSoftPx}px).");
 
-            var pathResult = FindPath(mask, image.Width, image.Height, start.Value.Point, end.Value.Point);
+            Console.WriteLine($"{logPrefix} pathfinding...");
+            var pathResult = FindPathWithFallback(originalMask, inflatedMask, image.Width, image.Height, start.Value.Point, end.Value.Point, isSea);
             if (!pathResult.Success)
             {
-                entry.OffMaskBridgeCount = pathResult.OffMaskBridgeCount;
-                entry.MaxOffMaskBridgeLengthPx = pathResult.MaxOffMaskBridgeLengthPx;
                 entry.Fail(pathResult.FailureReason ?? "Path not found.");
+                Console.WriteLine($"{logPrefix} FAILED reason={entry.FailureReason}");
+                Console.Out.Flush();
                 continue;
-            }
-
-            entry.OffMaskBridgeCount = pathResult.OffMaskBridgeCount;
-            entry.MaxOffMaskBridgeLengthPx = pathResult.MaxOffMaskBridgeLengthPx;
-            if (pathResult.MaxOffMaskBridgeLengthPx > 0)
-            {
-                entry.Warnings.Add($"Used off-mask bridging: segments={pathResult.OffMaskBridgeCount}, max={pathResult.MaxOffMaskBridgeLengthPx}px.");
             }
 
             var fullPath = BuildFullPath(from, to, image.Width, image.Height, start.Value.Point, end.Value.Point, pathResult.Path);
@@ -86,13 +101,16 @@ public sealed class RoutePathExtractor
             {
                 source_route_id = edge.RouteId,
                 trade_route_id = entry.TradeRouteId,
-                route_type = edge.RouteType.Equals("sea", StringComparison.OrdinalIgnoreCase) ? "sea" : "road",
+                route_type = routeType,
                 points = simplified.Select(p => new
                 {
                     x = Math.Clamp((double)p.X / (image.Width - 1), 0d, 1d),
                     y = Math.Clamp((double)p.Y / (image.Height - 1), 0d, 1d)
                 })
             });
+
+            Console.WriteLine($"{logPrefix} OK points={simplified.Count}");
+            Console.Out.Flush();
         }
 
         var payload = new { schema_version = "rivia_route_paths_v1", region_id = "RIVIA", paths };
@@ -102,6 +120,16 @@ public sealed class RoutePathExtractor
 
         var reportPath = Path.Combine(Path.GetDirectoryName(outputPath) ?? string.Empty, "route_paths_report.txt");
         File.WriteAllText(reportPath, BuildReport(reportEntries));
+
+        var success = reportEntries.Count(x => x.Ok);
+        var failed = reportEntries.Count - success;
+        Console.WriteLine("Route extraction complete.");
+        Console.WriteLine($"Total routes: {reportEntries.Count}");
+        Console.WriteLine($"Successful routes: {success}");
+        Console.WriteLine($"Failed routes: {failed}");
+        Console.WriteLine($"Output: {outputPath}");
+        Console.WriteLine($"Report: {reportPath}");
+        if (failed > 0) Console.WriteLine("Open route_paths_report.txt for details.");
     }
 
     static List<(int X, int Y)> BuildFullPath((double X, double Y) from, (double X, double Y) to, int width, int height, (int X, int Y) startAnchor, (int X, int Y) endAnchor, List<(int X, int Y)> pixelPath)
@@ -135,8 +163,6 @@ public sealed class RoutePathExtractor
             sb.AppendLine($"  end_anchor_distance_px={(e.EndAnchorDistancePx.HasValue ? e.EndAnchorDistancePx.Value.ToString("F1") : "n/a")}");
             sb.AppendLine($"  path_pixel_count={(e.PathPixelCount.HasValue ? e.PathPixelCount.Value.ToString() : "n/a")}");
             sb.AppendLine($"  simplified_point_count={(e.SimplifiedPointCount.HasValue ? e.SimplifiedPointCount.Value.ToString() : "n/a")}");
-            sb.AppendLine($"  off_mask_bridge_count={e.OffMaskBridgeCount}");
-            sb.AppendLine($"  max_bridge_length_px={e.MaxOffMaskBridgeLengthPx}");
             sb.AppendLine($"  warnings={(e.Warnings.Count == 0 ? "none" : string.Join(" | ", e.Warnings))}");
             sb.AppendLine($"  failure_reason={(string.IsNullOrWhiteSpace(e.FailureReason) ? "none" : e.FailureReason)}");
             sb.AppendLine();
@@ -186,24 +212,48 @@ public sealed class RoutePathExtractor
         return null;
     }
 
-    static PathResult FindPath(bool[] mask, int w, int h, (int X, int Y) s, (int X, int Y) t)
+    static PathResult FindPathWithFallback(bool[] originalMask, bool[] inflatedMask, int w, int h, (int X, int Y) s, (int X, int Y) t, bool isSea)
     {
-        var open = new PriorityQueue<State, double>();
-        var best = new Dictionary<State, double>();
-        var prev = new Dictionary<State, State>();
-        var startMask = mask[(s.Y * w) + s.X];
-        var start = new State(s.X, s.Y, startMask ? 0 : 1, 0, 0);
-        open.Enqueue(start, Heuristic(s.X, s.Y, t.X, t.Y));
-        best[start] = 0;
+        var firstMargin = CalculateMargin(s, t, isSea, false);
+        var first = FindPathInBoundingBox(originalMask, inflatedMask, w, h, s, t, firstMargin);
+        if (first.Success) return first;
+
+        var secondMargin = CalculateMargin(s, t, isSea, true);
+        return FindPathInBoundingBox(originalMask, inflatedMask, w, h, s, t, secondMargin);
+    }
+
+    static int CalculateMargin((int X, int Y) s, (int X, int Y) t, bool isSea, bool secondPass)
+    {
+        var distance = Heuristic(s.X, s.Y, t.X, t.Y);
+        if (isSea || distance > 500) return ExtendedSearchMarginPx + (secondPass ? 120 : 0);
+        return BaseSearchMarginPx + (secondPass ? 100 : 0);
+    }
+
+    static PathResult FindPathInBoundingBox(bool[] originalMask, bool[] inflatedMask, int w, int h, (int X, int Y) s, (int X, int Y) t, int margin)
+    {
+        var bounds = BuildBounds(s, t, margin, w, h);
+        var open = new PriorityQueue<(int X, int Y), double>();
+        var best = new Dictionary<(int X, int Y), double>();
+        var prev = new Dictionary<(int X, int Y), (int X, int Y)>();
+        var startedAt = Stopwatch.StartNew();
+        var expanded = 0;
         int[] d = [-1, 0, 1];
+
+        open.Enqueue(s, Heuristic(s.X, s.Y, t.X, t.Y));
+        best[s] = 0;
 
         while (open.Count > 0)
         {
+            if (startedAt.Elapsed.TotalSeconds > MaxRoutePathfindingSeconds)
+                return PathResult.Failed($"Pathfinding timeout ({MaxRoutePathfindingSeconds}s), margin={margin}.");
+
             var cur = open.Dequeue();
-            if (cur.X == t.X && cur.Y == t.Y)
-            {
+            expanded++;
+            if (expanded > MaxExpandedNodesPerRoute)
+                return PathResult.Failed($"Pathfinding node limit exceeded ({MaxExpandedNodesPerRoute}), margin={margin}.");
+
+            if (cur == t)
                 return ReconstructPath(cur, prev);
-            }
 
             var currentG = best[cur];
             foreach (var dx in d)
@@ -212,38 +262,61 @@ public sealed class RoutePathExtractor
                 if (dx == 0 && dy == 0) continue;
                 var nx = cur.X + dx;
                 var ny = cur.Y + dy;
-                if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+                if (nx < bounds.MinX || ny < bounds.MinY || nx > bounds.MaxX || ny > bounds.MaxY) continue;
 
-                var nextOnMask = mask[(ny * w) + nx];
-                var segmentLen = nextOnMask ? 0 : cur.CurrentOffMaskSegment + 1;
-                if (segmentLen > MaxBridgeGapPx) continue;
+                var idx = (ny * w) + nx;
+                if (!inflatedMask[idx] && (nx, ny) != t) continue;
+                var tentative = currentG + (originalMask[idx] ? 1.0 : 8.0);
+                var next = (nx, ny);
+                if (best.TryGetValue(next, out var known) && known <= tentative) continue;
 
-                var nextState = new State(nx, ny, segmentLen, nextOnMask ? cur.OffMaskBridgeCount : (cur.CurrentOffMaskSegment == 0 ? cur.OffMaskBridgeCount + 1 : cur.OffMaskBridgeCount), nextOnMask ? cur.MaxOffMaskBridgeLength : Math.Max(cur.MaxOffMaskBridgeLength, segmentLen));
-                var stepCost = 1.0 + (nextOnMask ? 0.0 : OffMaskPenalty);
-                var tentative = currentG + stepCost;
-                if (best.TryGetValue(nextState, out var known) && known <= tentative) continue;
-
-                best[nextState] = tentative;
-                prev[nextState] = cur;
-                open.Enqueue(nextState, tentative + Heuristic(nx, ny, t.X, t.Y));
+                best[next] = tentative;
+                prev[next] = cur;
+                open.Enqueue(next, tentative + Heuristic(nx, ny, t.X, t.Y));
             }
         }
 
-        return PathResult.Failed("Path not found within bridge constraints.");
+        return PathResult.Failed($"Path not found in bounded area (margin={margin}).");
     }
 
-    static PathResult ReconstructPath(State end, Dictionary<State, State> prev)
+    static Bounds BuildBounds((int X, int Y) s, (int X, int Y) t, int margin, int width, int height)
+        => new(Math.Max(0, Math.Min(s.X, t.X) - margin), Math.Min(width - 1, Math.Max(s.X, t.X) + margin), Math.Max(0, Math.Min(s.Y, t.Y) - margin), Math.Min(height - 1, Math.Max(s.Y, t.Y) + margin));
+
+    static bool[] DilateMask(bool[] mask, int w, int h, int radius)
+    {
+        var result = new bool[mask.Length];
+        for (var y = 0; y < h; y++)
+        for (var x = 0; x < w; x++)
+        {
+            if (!mask[(y * w) + x]) continue;
+            for (var oy = -radius; oy <= radius; oy++)
+            {
+                var ny = y + oy;
+                if (ny < 0 || ny >= h) continue;
+                for (var ox = -radius; ox <= radius; ox++)
+                {
+                    var nx = x + ox;
+                    if (nx < 0 || nx >= w) continue;
+                    if ((ox * ox) + (oy * oy) > (radius * radius)) continue;
+                    result[(ny * w) + nx] = true;
+                }
+            }
+        }
+        return result;
+    }
+
+    static PathResult ReconstructPath((int X, int Y) end, Dictionary<(int X, int Y), (int X, int Y)> prev)
     {
         var path = new List<(int X, int Y)>();
         var at = end;
         while (true)
         {
-            path.Add((at.X, at.Y));
+            path.Add(at);
             if (!prev.TryGetValue(at, out var p)) break;
             at = p;
         }
         path.Reverse();
-        return PathResult.Ok(path, end.OffMaskBridgeCount, end.MaxOffMaskBridgeLength);
+        return PathResult.Ok(path);
     }
 
     static double Heuristic(int x, int y, int tx, int ty) => Math.Sqrt(((tx - x) * (tx - x)) + ((ty - y) * (ty - y)));
@@ -279,19 +352,17 @@ public sealed class RoutePathExtractor
     record Node(string NodeId, string Name, bool IsStub);
     record Edge(string RouteId, string FromNode, string ToNode, string RouteType, bool IsStub);
     readonly record struct AnchorSearchResult((int X, int Y) Point, double Distance);
-    readonly record struct State(int X, int Y, int CurrentOffMaskSegment, int OffMaskBridgeCount, int MaxOffMaskBridgeLength);
+    readonly record struct Bounds(int MinX, int MaxX, int MinY, int MaxY);
 
     sealed class PathResult
     {
         public bool Success { get; }
         public List<(int X, int Y)> Path { get; }
-        public int OffMaskBridgeCount { get; }
-        public int MaxOffMaskBridgeLengthPx { get; }
         public string? FailureReason { get; }
-        PathResult(bool success, List<(int X, int Y)> path, int count, int max, string? failureReason)
-        { Success = success; Path = path; OffMaskBridgeCount = count; MaxOffMaskBridgeLengthPx = max; FailureReason = failureReason; }
-        public static PathResult Ok(List<(int X, int Y)> path, int count, int max) => new(true, path, count, max, null);
-        public static PathResult Failed(string reason) => new(false, [], 0, 0, reason);
+        PathResult(bool success, List<(int X, int Y)> path, string? failureReason)
+        { Success = success; Path = path; FailureReason = failureReason; }
+        public static PathResult Ok(List<(int X, int Y)> path) => new(true, path, null);
+        public static PathResult Failed(string reason) => new(false, [], reason);
     }
 
     sealed class RouteReportEntry
@@ -307,8 +378,6 @@ public sealed class RoutePathExtractor
         public double? EndAnchorDistancePx { get; set; }
         public int? PathPixelCount { get; set; }
         public int? SimplifiedPointCount { get; set; }
-        public int OffMaskBridgeCount { get; set; }
-        public int MaxOffMaskBridgeLengthPx { get; set; }
         public List<string> Warnings { get; } = [];
         public string? FailureReason { get; private set; }
         public bool Ok { get; set; }
@@ -322,6 +391,7 @@ public sealed class RoutePathExtractor
     static string NormalizeName(string name) => name.ToLowerInvariant().Replace('ö', 'o').Replace('-', '_').Replace(' ', '_') switch { "tokrus" => "thokur_rus", var n => n };
     static readonly Dictionary<string, string> NodeMap = new(StringComparer.OrdinalIgnoreCase) { ["N_HIGHROCK"] = "highrock", ["N_MLYNEK"] = "mlynek", ["N_WARDMARK"] = "wardmark", ["N_RIVENSTAL"] = "rivenstal", ["N_GAVERN"] = "gavern", ["N_BRNO"] = "brno", ["N_WODENZ"] = "wodenz", ["N_GOTHA"] = "gotha", ["N_TOKRUS"] = "thokur_rus" };
     static string BuildTradeRouteId(string from, string to, string type) { var suffix = type.Equals("sea", StringComparison.OrdinalIgnoreCase) ? "sea" : "land"; return $"{MapNodeOrName(from)}_{MapNodeOrName(to)}_{suffix}"; }
+    static string NormalizeRouteType(string routeType) => routeType.Equals("sea", StringComparison.OrdinalIgnoreCase) ? "sea" : "road";
     static string MapNodeOrName(string value) => NodeMap.GetValueOrDefault(value, NormalizeName(value));
     static Dictionary<string, (double X, double Y)> BuildSettlementCoordinates() => new(StringComparer.OrdinalIgnoreCase)
     {
