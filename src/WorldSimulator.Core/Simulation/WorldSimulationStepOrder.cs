@@ -72,13 +72,13 @@ public sealed class WorldSimulationStepOrder
             {
                 crimeSimulationStep
             },
-            Array.Empty<IWorldSimulationStep>(),
-            Array.Empty<IWorldSimulationStep>(),
-            Array.Empty<IWorldSimulationStep>(),
             new IWorldSimulationStep[]
             {
                 populationSimulationStep
             },
+            Array.Empty<IWorldSimulationStep>(),
+            Array.Empty<IWorldSimulationStep>(),
+            Array.Empty<IWorldSimulationStep>(),
             cadenceResolver);
     }
 

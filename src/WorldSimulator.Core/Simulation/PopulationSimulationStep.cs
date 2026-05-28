@@ -32,7 +32,6 @@ public sealed class PopulationSimulationStep : IWorldSimulationStep
         }
 
         state.PopulationChange = populationChange;
-        context.CaptureCityResult(city, state);
 
         next();
     }
