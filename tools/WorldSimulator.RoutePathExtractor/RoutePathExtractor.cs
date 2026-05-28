@@ -13,6 +13,8 @@ public sealed class RoutePathExtractor
     private const int BaseSearchMarginPx = 120;
     private const int ExtendedSearchMarginPx = 220;
     private const int MaskInflateRadiusPx = 6;
+    private const int ConnectorMaxDistancePx = 120;
+    private const int ConnectorSoftWarningPx = 40;
     private const int MaxExpandedNodesPerRoute = 200_000;
     private const int MaxRoutePathfindingSeconds = 15;
 
@@ -84,13 +86,32 @@ public sealed class RoutePathExtractor
             var pathResult = FindPathWithFallback(originalMask, inflatedMask, image.Width, image.Height, start.Value.Point, end.Value.Point, isSea);
             if (!pathResult.Success)
             {
+                Console.WriteLine($"{logPrefix} primary path failed, trying connector fallback...");
+                pathResult = TryConnectorFallback(originalMask, inflatedMask, image.Width, image.Height, from, to, start.Value.Point, end.Value.Point, isSea);
+                if (pathResult.Success)
+                {
+                    Console.WriteLine($"{logPrefix} connector fallback OK, connectors={pathResult.Connectors.Count}, max={pathResult.MaxConnectorLengthPx:F1}px");
+                }
+            }
+            if (!pathResult.Success)
+            {
                 entry.Fail(pathResult.FailureReason ?? "Path not found.");
                 Console.WriteLine($"{logPrefix} FAILED reason={entry.FailureReason}");
                 Console.Out.Flush();
                 continue;
             }
 
-            var fullPath = BuildFullPath(from, to, image.Width, image.Height, start.Value.Point, end.Value.Point, pathResult.Path);
+            entry.ConnectorCount = pathResult.Connectors.Count;
+            entry.MaxConnectorLengthPx = pathResult.MaxConnectorLengthPx;
+            entry.UsedSettlementConnector = pathResult.UsedSettlementConnector;
+            if (pathResult.MaxConnectorLengthPx > ConnectorSoftWarningPx)
+            {
+                entry.ConnectorWarning = $"Longest connector {pathResult.MaxConnectorLengthPx:F1}px (> {ConnectorSoftWarningPx}px).";
+                entry.Warnings.Add(entry.ConnectorWarning);
+            }
+            entry.Warnings.AddRange(pathResult.Warnings);
+
+            var fullPath = BuildFullPath(from, to, image.Width, image.Height, pathResult);
             entry.PathPixelCount = fullPath.Count;
 
             var simplified = Simplify(fullPath, 2.0);
@@ -132,18 +153,17 @@ public sealed class RoutePathExtractor
         if (failed > 0) Console.WriteLine("Open route_paths_report.txt for details.");
     }
 
-    static List<(int X, int Y)> BuildFullPath((double X, double Y) from, (double X, double Y) to, int width, int height, (int X, int Y) startAnchor, (int X, int Y) endAnchor, List<(int X, int Y)> pixelPath)
+    static List<(int X, int Y)> BuildFullPath((double X, double Y) from, (double X, double Y) to, int width, int height, PathResult result)
     {
         var startSettlement = ToPixel(from, width, height);
         var endSettlement = ToPixel(to, width, height);
-        var result = new List<(int X, int Y)> { startSettlement };
-        if (result[^1] != startAnchor) result.Add(startAnchor);
-        foreach (var p in pixelPath.Skip(1))
+        var points = new List<(int X, int Y)> { startSettlement };
+        foreach (var p in result.Path)
         {
-            if (result[^1] != p) result.Add(p);
+            if (points[^1] != p) points.Add(p);
         }
-        if (result[^1] != endSettlement) result.Add(endSettlement);
-        return result;
+        if (points[^1] != endSettlement) points.Add(endSettlement);
+        return points;
     }
 
     static (int X, int Y) ToPixel((double X, double Y) pt, int width, int height)
@@ -163,6 +183,10 @@ public sealed class RoutePathExtractor
             sb.AppendLine($"  end_anchor_distance_px={(e.EndAnchorDistancePx.HasValue ? e.EndAnchorDistancePx.Value.ToString("F1") : "n/a")}");
             sb.AppendLine($"  path_pixel_count={(e.PathPixelCount.HasValue ? e.PathPixelCount.Value.ToString() : "n/a")}");
             sb.AppendLine($"  simplified_point_count={(e.SimplifiedPointCount.HasValue ? e.SimplifiedPointCount.Value.ToString() : "n/a")}");
+            sb.AppendLine($"  connector_count={e.ConnectorCount}");
+            sb.AppendLine($"  max_connector_length_px={e.MaxConnectorLengthPx:F1}");
+            sb.AppendLine($"  connector_warning={(string.IsNullOrWhiteSpace(e.ConnectorWarning) ? "none" : e.ConnectorWarning)}");
+            sb.AppendLine($"  used_settlement_connector={e.UsedSettlementConnector.ToString().ToLowerInvariant()}");
             sb.AppendLine($"  warnings={(e.Warnings.Count == 0 ? "none" : string.Join(" | ", e.Warnings))}");
             sb.AppendLine($"  failure_reason={(string.IsNullOrWhiteSpace(e.FailureReason) ? "none" : e.FailureReason)}");
             sb.AppendLine();
@@ -220,6 +244,131 @@ public sealed class RoutePathExtractor
 
         var secondMargin = CalculateMargin(s, t, isSea, true);
         return FindPathInBoundingBox(originalMask, inflatedMask, w, h, s, t, secondMargin);
+    }
+
+    static PathResult TryConnectorFallback(bool[] originalMask, bool[] inflatedMask, int w, int h, (double X, double Y) from, (double X, double Y) to, (int X, int Y) startAnchor, (int X, int Y) endAnchor, bool isSea)
+    {
+        var startSettlement = ToPixel(from, w, h);
+        var endSettlement = ToPixel(to, w, h);
+        var result = FindPathWithEndpointReanchor(originalMask, inflatedMask, w, h, startAnchor, endAnchor, isSea);
+        if (!result.Success) return result;
+
+        var full = new List<(int X, int Y)> { startSettlement };
+        var connectors = new List<double>();
+        var usedSettlementConnector = false;
+
+        AppendConnector(full, result.Path[0], connectors);
+        if (Distance(startSettlement, result.Path[0]) > 0.01) usedSettlementConnector = true;
+        foreach (var p in result.Path.Skip(1))
+            if (full[^1] != p) full.Add(p);
+        AppendConnector(full, endSettlement, connectors);
+        if (Distance(endSettlement, result.Path[^1]) > 0.01) usedSettlementConnector = true;
+
+        var maxConnector = connectors.Count == 0 ? 0.0 : connectors.Max();
+        var pathResult = PathResult.Ok(full, connectors, usedSettlementConnector);
+        if (maxConnector > ConnectorMaxDistancePx)
+            return PathResult.Failed($"Connector distance too large ({maxConnector:F1}px > {ConnectorMaxDistancePx}px).");
+
+        return pathResult;
+    }
+
+    static PathResult FindPathWithEndpointReanchor(bool[] originalMask, bool[] inflatedMask, int w, int h, (int X, int Y) s, (int X, int Y) t, bool isSea)
+    {
+        var primary = FindPathWithFallback(originalMask, inflatedMask, w, h, s, t, isSea);
+        if (primary.Success) return primary;
+
+        var startCandidates = FindNearestMaskCandidates(originalMask, w, h, s, ConnectorMaxDistancePx);
+        var endCandidates = FindNearestMaskCandidates(originalMask, w, h, t, ConnectorMaxDistancePx);
+        if (startCandidates.Count == 0 || endCandidates.Count == 0)
+            return PathResult.Failed("Connector fallback failed: no nearby mask pixels around endpoint.");
+
+        var startBest = startCandidates[0];
+        var endBest = endCandidates[0];
+        var reanchored = FindPathWithFallback(originalMask, inflatedMask, w, h, startBest.Point, endBest.Point, isSea);
+        if (reanchored.Success)
+        {
+            if (startBest.Distance > ConnectorSoftWarningPx) reanchored.Warnings.Add($"Start connector length {startBest.Distance:F1}px.");
+            if (endBest.Distance > ConnectorSoftWarningPx) reanchored.Warnings.Add($"End connector length {endBest.Distance:F1}px.");
+            return reanchored;
+        }
+
+        var bridge = TryBridgeBetweenComponents(originalMask, inflatedMask, w, h, startCandidates, endCandidates, isSea);
+        return bridge.Success ? bridge : PathResult.Failed($"Connector fallback failed: {bridge.FailureReason ?? reanchored.FailureReason ?? primary.FailureReason}");
+    }
+
+    static PathResult TryBridgeBetweenComponents(bool[] originalMask, bool[] inflatedMask, int w, int h, List<AnchorSearchResult> startCandidates, List<AnchorSearchResult> endCandidates, bool isSea)
+    {
+        var bestPair = (Start: startCandidates[0], End: endCandidates[0], Distance: double.MaxValue);
+        foreach (var s in startCandidates)
+        foreach (var t in endCandidates)
+        {
+            var d = Distance(s.Point, t.Point);
+            if (d < bestPair.Distance)
+                bestPair = (s, t, d);
+        }
+
+        if (bestPair.Distance > ConnectorMaxDistancePx)
+            return PathResult.Failed($"Bridge gap too large ({bestPair.Distance:F1}px > {ConnectorMaxDistancePx}px).");
+
+        var pathS = FindPathWithFallback(originalMask, inflatedMask, w, h, startCandidates[0].Point, bestPair.Start.Point, isSea);
+        var pathT = FindPathWithFallback(originalMask, inflatedMask, w, h, bestPair.End.Point, endCandidates[0].Point, isSea);
+        if (!pathS.Success || !pathT.Success)
+            return PathResult.Failed("Unable to route to bridge endpoints.");
+
+        var bridgeLine = RasterLine(bestPair.Start.Point, bestPair.End.Point);
+        var joined = new List<(int X, int Y)>();
+        joined.AddRange(pathS.Path);
+        foreach (var p in bridgeLine.Skip(1))
+            if (joined[^1] != p) joined.Add(p);
+        foreach (var p in pathT.Path.Skip(1))
+            if (joined[^1] != p) joined.Add(p);
+
+        var outResult = PathResult.Ok(joined);
+        outResult.Warnings.Add($"Used bridge fallback, gap={bestPair.Distance:F1}px.");
+        return outResult;
+    }
+
+    static List<AnchorSearchResult> FindNearestMaskCandidates(bool[] mask, int w, int h, (int X, int Y) center, int maxDistance)
+    {
+        var candidates = new List<AnchorSearchResult>();
+        var maxSq = maxDistance * maxDistance;
+        for (var y = Math.Max(0, center.Y - maxDistance); y <= Math.Min(h - 1, center.Y + maxDistance); y++)
+        for (var x = Math.Max(0, center.X - maxDistance); x <= Math.Min(w - 1, center.X + maxDistance); x++)
+        {
+            if (!mask[(y * w) + x]) continue;
+            var dSq = ((x - center.X) * (x - center.X)) + ((y - center.Y) * (y - center.Y));
+            if (dSq > maxSq) continue;
+            candidates.Add(new AnchorSearchResult((x, y), Math.Sqrt(dSq)));
+        }
+        return candidates.OrderBy(c => c.Distance).Take(64).ToList();
+    }
+
+    static void AppendConnector(List<(int X, int Y)> points, (int X, int Y) target, List<double> connectors)
+    {
+        if (points[^1] == target) return;
+        connectors.Add(Distance(points[^1], target));
+        foreach (var p in RasterLine(points[^1], target).Skip(1))
+            if (points[^1] != p) points.Add(p);
+    }
+
+    static double Distance((int X, int Y) a, (int X, int Y) b) => Math.Sqrt(((b.X - a.X) * (b.X - a.X)) + ((b.Y - a.Y) * (b.Y - a.Y)));
+
+    static List<(int X, int Y)> RasterLine((int X, int Y) a, (int X, int Y) b)
+    {
+        var points = new List<(int X, int Y)>();
+        var x0 = a.X; var y0 = a.Y; var x1 = b.X; var y1 = b.Y;
+        var dx = Math.Abs(x1 - x0); var sx = x0 < x1 ? 1 : -1;
+        var dy = -Math.Abs(y1 - y0); var sy = y0 < y1 ? 1 : -1;
+        var err = dx + dy;
+        while (true)
+        {
+            points.Add((x0, y0));
+            if (x0 == x1 && y0 == y1) break;
+            var e2 = 2 * err;
+            if (e2 >= dy) { err += dy; x0 += sx; }
+            if (e2 <= dx) { err += dx; y0 += sy; }
+        }
+        return points;
     }
 
     static int CalculateMargin((int X, int Y) s, (int X, int Y) t, bool isSea, bool secondPass)
@@ -359,9 +508,20 @@ public sealed class RoutePathExtractor
         public bool Success { get; }
         public List<(int X, int Y)> Path { get; }
         public string? FailureReason { get; }
-        PathResult(bool success, List<(int X, int Y)> path, string? failureReason)
-        { Success = success; Path = path; FailureReason = failureReason; }
-        public static PathResult Ok(List<(int X, int Y)> path) => new(true, path, null);
+        public List<double> Connectors { get; }
+        public double MaxConnectorLengthPx { get; }
+        public bool UsedSettlementConnector { get; }
+        public List<string> Warnings { get; } = [];
+        PathResult(bool success, List<(int X, int Y)> path, string? failureReason, List<double>? connectors = null, bool usedSettlementConnector = false)
+        {
+            Success = success;
+            Path = path;
+            FailureReason = failureReason;
+            Connectors = connectors ?? [];
+            MaxConnectorLengthPx = Connectors.Count == 0 ? 0.0 : Connectors.Max();
+            UsedSettlementConnector = usedSettlementConnector;
+        }
+        public static PathResult Ok(List<(int X, int Y)> path, List<double>? connectors = null, bool usedSettlementConnector = false) => new(true, path, null, connectors, usedSettlementConnector);
         public static PathResult Failed(string reason) => new(false, [], reason);
     }
 
@@ -379,6 +539,10 @@ public sealed class RoutePathExtractor
         public int? PathPixelCount { get; set; }
         public int? SimplifiedPointCount { get; set; }
         public List<string> Warnings { get; } = [];
+        public int ConnectorCount { get; set; }
+        public double MaxConnectorLengthPx { get; set; }
+        public string? ConnectorWarning { get; set; }
+        public bool UsedSettlementConnector { get; set; }
         public string? FailureReason { get; private set; }
         public bool Ok { get; set; }
         public void Fail(string reason) { FailureReason = reason; Ok = false; }
