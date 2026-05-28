@@ -2,6 +2,7 @@ using WorldSimulator.Core.Cities;
 using WorldSimulator.Core.Events;
 using WorldSimulator.Core.Resources;
 using WorldSimulator.Core.Trade;
+using WorldSimulator.Core.Workforce;
 using WorldSimulator.Core.World;
 
 namespace WorldSimulator.Core.Simulation;
@@ -36,6 +37,7 @@ public sealed class WorldSimulationService
         _stepOrder = WorldSimulationStepOrder.CreateDefault(
             tradeSimulationStep,
             new CityEventSimulationStep(eventEffectCalculator, eventGenerator),
+            new WorkforceSimulationStep(new CityWorkforceAllocator(), new WorkforceLawProfile()),
             new FoodSimulationStep(
                 dailyFoodFlowCalculator,
                 fishingProductionCalculator,
@@ -141,4 +143,5 @@ public sealed record CityDailySimulationResult(
     ResourceGatheringProductionResult ResourceGathering,
     GoodsCraftingProductionResult GoodsCrafting,
     HouseholdConsumptionResult HouseholdConsumption,
-    DailyWealthFlowResult WealthFlow);
+    DailyWealthFlowResult WealthFlow,
+    CityWorkforceAllocation? WorkforceAllocation = null);
