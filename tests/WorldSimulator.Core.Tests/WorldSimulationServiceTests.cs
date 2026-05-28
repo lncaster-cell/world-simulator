@@ -39,6 +39,19 @@ public sealed class WorldSimulationServiceTests
     }
 
     [Fact]
+    public void AdvanceDay_DoesNotApplyWeeklyCrimeFlowOnNonWeeklyDay()
+    {
+        var world = WorldPresets.CreateDefaultWorld();
+        var selected = world.Cities[0];
+        var nonSelected = world.Cities[1];
+        var crimeBefore = nonSelected.Crime;
+
+        CreateService().AdvanceDay(world, selected.Id, day: 1, randomEventsEnabled: false);
+
+        nonSelected.Crime.Should().Be(crimeBefore);
+    }
+
+    [Fact]
     public void AdvanceDay_AppliesPopulationChangeToNonSelectedCity()
     {
         var world = WorldPresets.CreateDefaultWorld();
@@ -50,6 +63,19 @@ public sealed class WorldSimulationServiceTests
         CreateService().AdvanceDay(world, selected.Id, day: 1, randomEventsEnabled: false);
 
         nonSelected.Population.Should().BeLessThan(populationBefore);
+    }
+
+    [Fact]
+    public void AdvanceDay_SynchronizesDemographicsAfterPopulationChange()
+    {
+        var world = WorldPresets.CreateDefaultWorld();
+        var selected = world.Cities[0];
+        var nonSelected = world.Cities[1];
+        nonSelected.Food = 0m;
+
+        CreateService().AdvanceDay(world, selected.Id, day: 1, randomEventsEnabled: false);
+
+        nonSelected.Demographics.TotalPopulation.Should().Be(nonSelected.Population);
     }
 
     [Fact]
