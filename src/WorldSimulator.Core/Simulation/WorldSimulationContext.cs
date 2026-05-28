@@ -3,6 +3,7 @@ using WorldSimulator.Core.Events;
 using WorldSimulator.Core.Resources;
 using WorldSimulator.Core.Trade;
 using WorldSimulator.Core.World;
+using WorldSimulator.Core.Workforce;
 
 namespace WorldSimulator.Core.Simulation;
 
@@ -150,6 +151,7 @@ public sealed class CityStepState
     public CityEventManager EventManager { get; set; } = new();
     public CityEventEffectsResult EventEffects { get; set; } = CityEventEffectsResult.None;
     public IReadOnlyCollection<CityEvent> ActiveEvents { get; set; } = Array.Empty<CityEvent>();
+    public CityWorkforceAllocation? WorkforceAllocation { get; set; }
     public DailyFoodFlowResult? FoodFlow { get; set; }
     public AgricultureProductionResult? Agriculture { get; set; }
     public ResourceGatheringProductionResult? ResourceGathering { get; set; }
