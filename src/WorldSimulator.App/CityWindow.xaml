@@ -152,6 +152,10 @@
                 <views:CityInfrastructureView/>
             </TabItem>
 
+            <TabItem Header="Рабочая сила">
+                <views:CityWorkforceView/>
+            </TabItem>
+
             <TabItem Header="Отладка">
                 <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                     <StackPanel Margin="8">
