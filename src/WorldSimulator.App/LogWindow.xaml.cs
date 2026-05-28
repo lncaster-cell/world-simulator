@@ -18,12 +18,12 @@ public partial class LogWindow : System.Windows.Window
     {
         if (e.OldValue is MainWindowViewModel oldViewModel)
         {
-            oldViewModel.FilteredSimulationJournalEntries.CollectionChanged -= JournalEntries_CollectionChanged;
+            oldViewModel.Journal.FilteredSimulationJournalEntries.CollectionChanged -= JournalEntries_CollectionChanged;
         }
 
         if (e.NewValue is MainWindowViewModel newViewModel)
         {
-            newViewModel.FilteredSimulationJournalEntries.CollectionChanged += JournalEntries_CollectionChanged;
+            newViewModel.Journal.FilteredSimulationJournalEntries.CollectionChanged += JournalEntries_CollectionChanged;
             ScheduleScrollToLatestLogEntry();
         }
     }
@@ -76,7 +76,7 @@ public partial class LogWindow : System.Windows.Window
     {
         if (DataContext is MainWindowViewModel viewModel)
         {
-            viewModel.FilteredSimulationJournalEntries.CollectionChanged -= JournalEntries_CollectionChanged;
+            viewModel.Journal.FilteredSimulationJournalEntries.CollectionChanged -= JournalEntries_CollectionChanged;
         }
 
         base.OnClosed(e);

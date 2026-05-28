@@ -55,14 +55,14 @@ public partial class MainWindow : System.Windows.Window
         relativeX = Math.Clamp(relativeX, 0d, 1d);
         relativeY = Math.Clamp(relativeY, 0d, 1d);
 
-        if (viewModel.IsMapCalibrationModeEnabled)
+        if (viewModel.Map.IsMapCalibrationModeEnabled)
         {
-            viewModel.RegisterMapCalibrationPoint(relativeX, relativeY);
+            viewModel.Map.RegisterMapCalibrationPoint(relativeX, relativeY);
         }
 
-        if (viewModel.IsTradeRouteAuthoringModeEnabled)
+        if (viewModel.TradeAuthoring.IsTradeRouteAuthoringModeEnabled)
         {
-            viewModel.RegisterTradeRouteAuthoringPoint(relativeX, relativeY);
+            viewModel.TradeAuthoring.RegisterTradeRouteAuthoringPoint(relativeX, relativeY);
         }
     }
 

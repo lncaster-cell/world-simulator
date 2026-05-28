@@ -19,7 +19,7 @@ public sealed class CaravanMarkerCanvasCoordinateConverter : IMultiValueConverte
             return 0d;
         }
 
-        var mapPoint = MainWindowViewModel.CalculatePointOnPolyline(points, progress);
+        var mapPoint = MapViewModel.CalculatePointOnPolyline(points, progress);
         var mapLeft = (containerWidth - imageWidth) / 2d;
         var mapTop = (containerHeight - imageHeight) / 2d;
         var axis = parameter as string;

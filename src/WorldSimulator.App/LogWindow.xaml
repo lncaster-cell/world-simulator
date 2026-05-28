@@ -37,14 +37,14 @@
                   Width="220"
                   Margin="0,0,0,10"
                   DisplayMemberPath="Title"
-                  ItemsSource="{Binding SimulationJournalFilters}"
-                  SelectedItem="{Binding SelectedSimulationJournalFilter}"/>
+                  ItemsSource="{Binding Journal.SimulationJournalFilters}"
+                  SelectedItem="{Binding Journal.SelectedSimulationJournalFilter}"/>
 
         <DataGrid x:Name="SimulationJournalGrid"
                   Grid.Row="3"
                   Grid.Column="0"
-                  ItemsSource="{Binding FilteredSimulationJournalEntries}"
-                  SelectedItem="{Binding SelectedSimulationJournalEntry, Mode=TwoWay}"
+                  ItemsSource="{Binding Journal.FilteredSimulationJournalEntries}"
+                  SelectedItem="{Binding Journal.SelectedSimulationJournalEntry, Mode=TwoWay}"
                   AutoGenerateColumns="False"
                   IsReadOnly="True"
                   CanUserAddRows="False">
@@ -76,7 +76,7 @@
         </DataGrid>
 
         <Border Grid.Row="3" Grid.Column="2" BorderThickness="1" BorderBrush="#DDD" Padding="10">
-            <ContentControl Content="{Binding SelectedSimulationJournalEntry}">
+            <ContentControl Content="{Binding Journal.SelectedSimulationJournalEntry}">
                 <ContentControl.Style>
                     <Style TargetType="ContentControl">
                         <Setter Property="ContentTemplate">
