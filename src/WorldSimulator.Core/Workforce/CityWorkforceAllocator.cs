@@ -11,15 +11,22 @@ public sealed class CityWorkforceAllocator
     private const int HighCrimeThreshold = 60;
 
     private readonly WorkforceCalculator _workforceCalculator;
+    private readonly WorkforceReallocationSettings _reallocationSettings;
 
     public CityWorkforceAllocator()
-        : this(new WorkforceCalculator())
+        : this(new WorkforceCalculator(), new WorkforceReallocationSettings())
     {
     }
 
     public CityWorkforceAllocator(WorkforceCalculator workforceCalculator)
+        : this(workforceCalculator, new WorkforceReallocationSettings())
+    {
+    }
+
+    public CityWorkforceAllocator(WorkforceCalculator workforceCalculator, WorkforceReallocationSettings reallocationSettings)
     {
         _workforceCalculator = workforceCalculator;
+        _reallocationSettings = reallocationSettings;
     }
 
     public CityWorkforceAllocation Allocate(
@@ -32,18 +39,21 @@ public sealed class CityWorkforceAllocator
         ArgumentNullException.ThrowIfNull(lawProfile);
 
         var workforce = _workforceCalculator.Calculate(city.Demographics, lawProfile);
+        var desiredAssignments = BuildDesiredAssignments(city, capacityProfile, workforce);
+        var assignments = city.WorkforceAllocation is null
+            ? desiredAssignments
+            : SmoothAssignments(city.WorkforceAllocation, desiredAssignments, workforce.TotalWorkers, capacityProfile);
+
+        return BuildAllocation(workforce, assignments);
+    }
+
+    private static Dictionary<WorkforceSector, int> BuildDesiredAssignments(
+        City city,
+        SettlementSectorCapacityProfile capacityProfile,
+        WorkforceCalculationResult workforce)
+    {
         var remainingWorkers = workforce.TotalWorkers;
-        var assignments = new Dictionary<WorkforceSector, int>
-        {
-            [WorkforceSector.Agriculture] = 0,
-            [WorkforceSector.Fishing] = 0,
-            [WorkforceSector.Hunting] = 0,
-            [WorkforceSector.ResourceGathering] = 0,
-            [WorkforceSector.Crafting] = 0,
-            [WorkforceSector.Trade] = 0,
-            [WorkforceSector.Guards] = 0,
-            [WorkforceSector.Maintenance] = 0
-        };
+        var assignments = CreateEmptyAssignments();
 
         foreach (var demand in BuildDemands(city, capacityProfile))
         {
@@ -61,6 +71,116 @@ public sealed class CityWorkforceAllocator
             remainingWorkers -= assigned;
         }
 
+        return assignments;
+    }
+
+    private Dictionary<WorkforceSector, int> SmoothAssignments(
+        CityWorkforceAllocation currentAllocation,
+        Dictionary<WorkforceSector, int> desiredAssignments,
+        int totalWorkers,
+        SettlementSectorCapacityProfile capacityProfile)
+    {
+        var assignments = ToDictionary(currentAllocation);
+        NormalizeTotal(assignments, totalWorkers, capacityProfile);
+
+        var reallocationLimit = _reallocationSettings.CalculateDailyReallocationLimit(totalWorkers);
+        for (var i = 0; i < reallocationLimit; i++)
+        {
+            var source = FindBestSourceSector(assignments, desiredAssignments);
+            var target = FindBestTargetSector(assignments, desiredAssignments, capacityProfile);
+            if (source is null || target is null)
+            {
+                break;
+            }
+
+            assignments[source.Value]--;
+            assignments[target.Value]++;
+        }
+
+        return assignments;
+    }
+
+    private static void NormalizeTotal(Dictionary<WorkforceSector, int> assignments, int totalWorkers, SettlementSectorCapacityProfile capacityProfile)
+    {
+        var assignedWorkers = assignments.Values.Sum();
+        while (assignedWorkers > totalWorkers)
+        {
+            var source = assignments
+                .Where(pair => pair.Value > 0)
+                .OrderByDescending(pair => pair.Value)
+                .First().Key;
+            assignments[source]--;
+            assignedWorkers--;
+        }
+
+        while (assignedWorkers < totalWorkers)
+        {
+            var target = assignments
+                .Where(pair => pair.Value < capacityProfile.GetCapacity(pair.Key))
+                .OrderByDescending(pair => capacityProfile.GetCapacity(pair.Key) - pair.Value)
+                .Select(pair => (WorkforceSector?)pair.Key)
+                .FirstOrDefault();
+            if (target is null)
+            {
+                break;
+            }
+
+            assignments[target.Value]++;
+            assignedWorkers++;
+        }
+    }
+
+    private static WorkforceSector? FindBestSourceSector(
+        IReadOnlyDictionary<WorkforceSector, int> assignments,
+        IReadOnlyDictionary<WorkforceSector, int> desiredAssignments)
+    {
+        return assignments
+            .Where(pair => pair.Value > desiredAssignments[pair.Key])
+            .OrderByDescending(pair => pair.Value - desiredAssignments[pair.Key])
+            .Select(pair => (WorkforceSector?)pair.Key)
+            .FirstOrDefault();
+    }
+
+    private static WorkforceSector? FindBestTargetSector(
+        IReadOnlyDictionary<WorkforceSector, int> assignments,
+        IReadOnlyDictionary<WorkforceSector, int> desiredAssignments,
+        SettlementSectorCapacityProfile capacityProfile)
+    {
+        return assignments
+            .Where(pair => pair.Value < desiredAssignments[pair.Key])
+            .Where(pair => pair.Value < capacityProfile.GetCapacity(pair.Key))
+            .OrderByDescending(pair => desiredAssignments[pair.Key] - pair.Value)
+            .Select(pair => (WorkforceSector?)pair.Key)
+            .FirstOrDefault();
+    }
+
+    private static Dictionary<WorkforceSector, int> CreateEmptyAssignments() => new()
+    {
+        [WorkforceSector.Agriculture] = 0,
+        [WorkforceSector.Fishing] = 0,
+        [WorkforceSector.Hunting] = 0,
+        [WorkforceSector.ResourceGathering] = 0,
+        [WorkforceSector.Crafting] = 0,
+        [WorkforceSector.Trade] = 0,
+        [WorkforceSector.Guards] = 0,
+        [WorkforceSector.Maintenance] = 0
+    };
+
+    private static Dictionary<WorkforceSector, int> ToDictionary(CityWorkforceAllocation allocation) => new()
+    {
+        [WorkforceSector.Agriculture] = allocation.AgricultureWorkers,
+        [WorkforceSector.Fishing] = allocation.FishingWorkers,
+        [WorkforceSector.Hunting] = allocation.HuntingWorkers,
+        [WorkforceSector.ResourceGathering] = allocation.ResourceGatheringWorkers,
+        [WorkforceSector.Crafting] = allocation.CraftingWorkers,
+        [WorkforceSector.Trade] = allocation.TradeWorkers,
+        [WorkforceSector.Guards] = allocation.GuardWorkers,
+        [WorkforceSector.Maintenance] = allocation.MaintenanceWorkers
+    };
+
+    private static CityWorkforceAllocation BuildAllocation(WorkforceCalculationResult workforce, IReadOnlyDictionary<WorkforceSector, int> assignments)
+    {
+        var assignedWorkers = assignments.Values.Sum();
         return new CityWorkforceAllocation(
             workforce,
             assignments[WorkforceSector.Agriculture],
@@ -71,7 +191,7 @@ public sealed class CityWorkforceAllocator
             assignments[WorkforceSector.Trade],
             assignments[WorkforceSector.Guards],
             assignments[WorkforceSector.Maintenance],
-            remainingWorkers);
+            Math.Max(0, workforce.TotalWorkers - assignedWorkers));
     }
 
     private static IReadOnlyList<WorkforceSectorDemand> BuildDemands(City city, SettlementSectorCapacityProfile capacityProfile)
