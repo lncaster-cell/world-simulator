@@ -14,10 +14,18 @@ public sealed class WorldTradeFlowServiceTests
     {
         var world = BuildWorld(TradeGoodType.Food, 300m, 0m, 10m);
 
-        _service.RunWeeklyTrade(world, currentDay: 7);
+        var result = _service.RunWeeklyTrade(world, currentDay: 7);
 
         world.TradeShipments.Should().ContainSingle();
+        world.TradeShipments[0].Status.Should().Be(TradeShipmentStatus.InTransitToDestination);
         world.FindCity("b")!.Food.Should().Be(0m);
+        result.Transfers.Should().ContainSingle(t =>
+            t.RouteId == "route1"
+            && t.ExporterCityId == "a"
+            && t.ImporterCityId == "b"
+            && t.CaravanId == "c1"
+            && t.GoodType == TradeGoodType.Food
+            && t.AmountTransferred == 10m);
     }
 
     [Fact]
@@ -38,9 +46,12 @@ public sealed class WorldTradeFlowServiceTests
         _service.RunWeeklyTrade(world, currentDay: 7);
         _service.ProcessShipments(world, currentDay: 9);
         world.FindCity("b")!.Food.Should().Be(0m);
+        world.TradeShipments[0].Status.Should().Be(TradeShipmentStatus.InTransitToDestination);
 
         _service.ProcessShipments(world, currentDay: 10);
         world.FindCity("b")!.Food.Should().Be(10m);
+        world.TradeShipments[0].Status.Should().Be(TradeShipmentStatus.DeliveredReturning);
+        world.Caravans[0].Status.Should().Be(CaravanStatus.Returning);
     }
 
     [Fact]
@@ -53,6 +64,9 @@ public sealed class WorldTradeFlowServiceTests
         world.TradeShipments.Should().HaveCount(1);
 
         _service.ProcessShipments(world, currentDay: 11);
+        world.TradeShipments[0].Status.Should().Be(TradeShipmentStatus.Completed);
+        world.Caravans[0].Status.Should().Be(CaravanStatus.Idle);
+
         _service.RunWeeklyTrade(world, currentDay: 14);
         world.TradeShipments.Should().HaveCount(2);
     }
@@ -77,6 +91,23 @@ public sealed class WorldTradeFlowServiceTests
 
         world.TradeShipments.Should().ContainSingle();
         world.TradeShipments[0].Amount.Should().Be(5m);
+    }
+
+
+    [Fact]
+    public void WeeklyTradeResult_AccumulatesSettlementTotalsAndWealthDeltas()
+    {
+        var world = BuildWorld(TradeGoodType.Food, 300m, 0m, 10m);
+
+        var result = _service.RunWeeklyTrade(world, currentDay: 7);
+
+        result.TotalFoodMoved.Should().Be(10m);
+        result.TotalGoodsMoved.Should().Be(0m);
+        result.TotalResourcesMoved.Should().Be(0m);
+        result.TotalExporterWealthGain.Should().Be(0.2m);
+        result.TotalImporterWealthCost.Should().Be(0.2m);
+        result.SettlementResults["a"].Should().Be(new SettlementTradeFlowResult("a", 10m, 0m, 0m, 0m, 0m, 0m, 0.2m));
+        result.SettlementResults["b"].Should().Be(new SettlementTradeFlowResult("b", 0m, 10m, 0m, 0m, 0m, 0m, -0.2m));
     }
 
     [Fact]
