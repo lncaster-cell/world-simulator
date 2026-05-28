@@ -7,7 +7,7 @@ namespace WorldSimulator.Persistence.Saves;
 
 public sealed class WorldSaveData
 {
-    public int Version { get; set; } = 2;
+    public int Version { get; set; } = 3;
     public DateTime SavedAtUtc { get; set; }
     public ClockSaveData Clock { get; set; } = new();
     public SimulationWorldSaveData? World { get; set; }
