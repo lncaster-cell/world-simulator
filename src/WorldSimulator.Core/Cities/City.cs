@@ -1,3 +1,5 @@
+using WorldSimulator.Core.Workforce;
+
 namespace WorldSimulator.Core.Cities;
 
 /// <summary>
@@ -32,7 +34,8 @@ public sealed class City
         decimal goods,
         CityState cityState,
         CityInfrastructure? infrastructure = null,
-        CityPopulationDemographics? demographics = null)
+        CityPopulationDemographics? demographics = null,
+        CityWorkforceAssignmentState? workforceAssignments = null)
     {
         Id = id;
         Name = name;
@@ -47,6 +50,7 @@ public sealed class City
         CityState = cityState;
         Infrastructure = infrastructure ?? new CityInfrastructure();
         Demographics = demographics ?? CityPopulationDemographics.CreateDefaultHuman(Population);
+        WorkforceAssignments = workforceAssignments ?? new CityWorkforceAssignmentState();
     }
 
     public string Id
@@ -118,6 +122,8 @@ public sealed class City
     public CityInfrastructure Infrastructure { get; }
 
     public CityPopulationDemographics Demographics { get; }
+
+    public CityWorkforceAssignmentState WorkforceAssignments { get; }
 
     public const decimal DailyFoodConsumptionPerPerson = 0.2m;
 
