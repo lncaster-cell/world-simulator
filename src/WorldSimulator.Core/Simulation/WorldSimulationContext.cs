@@ -11,22 +11,26 @@ public sealed class WorldSimulationContext
 {
     private readonly WorldEventState _eventState;
     private readonly CityEventManager _defaultEventManager;
+    private readonly SimulationCadenceResolver _cadenceResolver;
     private readonly Dictionary<string, CityStepState> _cityStates = new(StringComparer.Ordinal);
 
     public WorldSimulationContext(
         string selectedCityId,
         bool randomEventsEnabled,
         WorldEventState eventState,
-        CityEventManager defaultEventManager)
+        CityEventManager defaultEventManager,
+        SimulationCadenceResolver cadenceResolver)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(selectedCityId);
         ArgumentNullException.ThrowIfNull(eventState);
         ArgumentNullException.ThrowIfNull(defaultEventManager);
+        ArgumentNullException.ThrowIfNull(cadenceResolver);
 
         SelectedCityId = selectedCityId;
         RandomEventsEnabled = randomEventsEnabled;
         _eventState = eventState;
         _defaultEventManager = defaultEventManager;
+        _cadenceResolver = cadenceResolver;
     }
 
     public string SelectedCityId { get; }
@@ -39,6 +43,8 @@ public sealed class WorldSimulationContext
     public IReadOnlyList<string> ActiveEventNamesBeforeAdvance { get; private set; } = Array.Empty<string>();
 
     public bool IsSelectedCity(City city) => city.Id == SelectedCityId;
+
+    public bool ShouldRun(SimulationCadence cadence) => _cadenceResolver.ShouldRun(CurrentDay, cadence);
 
     public void CaptureActiveEventNamesBeforeAdvance()
     {
