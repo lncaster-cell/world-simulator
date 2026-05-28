@@ -17,10 +17,10 @@ public sealed class WorldSimulationStepOrderTests
 
         Assert.Equal(5, order.DailyPreCadenceCitySteps.Count);
         Assert.Single(order.WeeklyCitySteps);
-        Assert.Empty(order.MonthlyCitySteps);
+        Assert.Single(order.MonthlyCitySteps);
         Assert.Empty(order.HalfYearlyCitySteps);
         Assert.Empty(order.YearlyCitySteps);
-        Assert.Single(order.DailyPostCadenceCitySteps);
+        Assert.Empty(order.DailyPostCadenceCitySteps);
     }
 
     [Fact]
@@ -30,20 +30,31 @@ public sealed class WorldSimulationStepOrderTests
 
         var steps = order.GetRunnableCitySteps(1);
 
-        Assert.Equal(order.DailyPreCadenceCitySteps.Count + order.DailyPostCadenceCitySteps.Count, steps.Count);
+        Assert.Equal(order.DailyPreCadenceCitySteps.Count, steps.Count);
         Assert.DoesNotContain(steps, step => step is CrimeSimulationStep);
-        Assert.IsType<PopulationSimulationStep>(steps[^1]);
+        Assert.DoesNotContain(steps, step => step is PopulationSimulationStep);
     }
 
     [Fact]
-    public void GetRunnableCitySteps_OnWeeklyDay_IncludesWeeklyStepsBeforePostDailySteps()
+    public void GetRunnableCitySteps_OnWeeklyDay_IncludesWeeklyStepsAfterDailyPreSteps()
     {
         var order = CreateOrder();
 
         var steps = order.GetRunnableCitySteps(7);
 
-        Assert.Equal(order.DailyPreCadenceCitySteps.Count + order.WeeklyCitySteps.Count + order.DailyPostCadenceCitySteps.Count, steps.Count);
-        Assert.IsType<CrimeSimulationStep>(steps[^2]);
+        Assert.Equal(order.DailyPreCadenceCitySteps.Count + order.WeeklyCitySteps.Count, steps.Count);
+        Assert.IsType<CrimeSimulationStep>(steps[^1]);
+        Assert.DoesNotContain(steps, step => step is PopulationSimulationStep);
+    }
+
+    [Fact]
+    public void GetRunnableCitySteps_OnMonthlyDay_IncludesMonthlyPopulationStep()
+    {
+        var order = CreateOrder();
+
+        var steps = order.GetRunnableCitySteps(30);
+
+        Assert.Contains(steps, step => step is PopulationSimulationStep);
         Assert.IsType<PopulationSimulationStep>(steps[^1]);
     }
 
