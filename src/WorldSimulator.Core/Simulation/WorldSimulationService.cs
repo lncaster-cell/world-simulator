@@ -33,6 +33,7 @@ public sealed class WorldSimulationService
         CityEventGenerator eventGenerator)
     {
         _defaultEventManager = eventManager;
+        var cadenceResolver = new SimulationCadenceResolver();
         var tradeSimulationStep = new TradeSimulationStep(worldTradeFlowService, caravanHiringService);
         _stepOrder = WorldSimulationStepOrder.CreateDefault(
             tradeSimulationStep,
@@ -51,12 +52,13 @@ public sealed class WorldSimulationService
                 dailyWealthFlowCalculator),
             new CityStateSimulationStep(cityStateEvaluator),
             new CrimeSimulationStep(householdConsumptionCalculator, weeklyCrimeFlowCalculator),
-            new PopulationSimulationStep(populationChangeCalculator));
+            new PopulationSimulationStep(populationChangeCalculator),
+            cadenceResolver);
     }
 
     public WorldDayAdvanceResult AdvanceDay(SimulationWorld world, string selectedCityId, int day, bool randomEventsEnabled)
     {
-        var context = new WorldSimulationContext(selectedCityId, randomEventsEnabled, _eventState, _defaultEventManager);
+        var context = new WorldSimulationContext(selectedCityId, randomEventsEnabled, _eventState, _defaultEventManager, _stepOrder.CadenceResolver);
         context.SetCurrentDay(day);
         context.EnsureSelectedCityEventManagerBinding();
         context.CaptureActiveEventNamesBeforeAdvance();
