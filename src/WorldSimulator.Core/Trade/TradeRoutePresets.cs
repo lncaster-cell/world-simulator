@@ -8,7 +8,13 @@ public static class TradeRoutePresets
 {
     public static List<TradeRoute> CreateDefaultRoutes()
     {
-        var routes = LoadRoutesFromEmbeddedJson();
+        var routes = TradeRouteDataLoader.LoadRoutesFromEmbeddedJson();
+        ApplyFallbackPoints(routes);
+        return routes;
+    }
+
+    private static void ApplyFallbackPoints(IEnumerable<TradeRoute> routes)
+    {
         foreach (var route in routes)
         {
             route.HasLoadedPath = false;
@@ -22,8 +28,6 @@ public static class TradeRoutePresets
                 route.Points = fallbackPoints;
             }
         }
-
-        return routes;
     }
 
     private static bool TryBuildFallbackPoints(TradeRoute route, out List<RoutePoint> points)
