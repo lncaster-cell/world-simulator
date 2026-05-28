@@ -31,7 +31,8 @@ public sealed class City
         decimal resources,
         decimal goods,
         CityState cityState,
-        CityInfrastructure? infrastructure = null)
+        CityInfrastructure? infrastructure = null,
+        CityPopulationDemographics? demographics = null)
     {
         Id = id;
         Name = name;
@@ -45,6 +46,7 @@ public sealed class City
         Goods = goods;
         CityState = cityState;
         Infrastructure = infrastructure ?? new CityInfrastructure();
+        Demographics = demographics ?? CityPopulationDemographics.CreateDefaultHuman(Population);
     }
 
     public string Id
@@ -114,6 +116,8 @@ public sealed class City
     public CityState CityState { get; set; }
 
     public CityInfrastructure Infrastructure { get; }
+
+    public CityPopulationDemographics Demographics { get; }
 
     public const decimal DailyFoodConsumptionPerPerson = 0.2m;
 
