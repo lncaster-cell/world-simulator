@@ -25,18 +25,7 @@ public static class WorldPresets
             [
                 RegionPresets.CreateRiviaRegion()
             ],
-            SettlementMapLocations =
-            [
-                new SettlementMapLocation { SettlementId = "gotha", RegionId = RegionPresets.RiviaRegionId, X = 0.6664m, Y = 0.2322m },
-                new SettlementMapLocation { SettlementId = "rivenstal", RegionId = RegionPresets.RiviaRegionId, X = 0.4824m, Y = 0.4500m },
-                new SettlementMapLocation { SettlementId = "gavern", RegionId = RegionPresets.RiviaRegionId, X = 0.5066m, Y = 0.5963m },
-                new SettlementMapLocation { SettlementId = "mlynek", RegionId = RegionPresets.RiviaRegionId, X = 0.2833m, Y = 0.2487m },
-                new SettlementMapLocation { SettlementId = "brno", RegionId = RegionPresets.RiviaRegionId, X = 0.4527m, Y = 0.7448m },
-                new SettlementMapLocation { SettlementId = "wodenz", RegionId = RegionPresets.RiviaRegionId, X = 0.8036m, Y = 0.9604m },
-                new SettlementMapLocation { SettlementId = "wardmark", RegionId = RegionPresets.RiviaRegionId, X = 0.0380m, Y = 0.4027m },
-                new SettlementMapLocation { SettlementId = "highrock", RegionId = RegionPresets.RiviaRegionId, X = 0.1579m, Y = 0.2179m },
-                new SettlementMapLocation { SettlementId = "thokur_rus", RegionId = RegionPresets.RiviaRegionId, X = 0.8652m, Y = 0.4753m }
-            ],
+            SettlementMapLocations = RiviaSettlementPresets.CreateSettlementMapLocations(),
             SettlementEconomyProfiles =
             [
                 new SettlementEconomyProfile { SettlementId = "gotha", AgriculturePotential = 8m, FishingMultiplier = 1.00m, HuntingMultiplier = 0.50m, MainlandSupplyMultiplier = 1.00m, ResourceGatheringMultiplier = 0.60m, GoodsCraftingMultiplier = 1.00m, IsPort = true, IsFortress = false, IsCapital = false },
