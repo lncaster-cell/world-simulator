@@ -26,6 +26,16 @@ public sealed class JsonWorldSaveServiceTests
         world.Cities[0].Infrastructure.UrbanLevel = 3;
         world.Cities[0].Infrastructure.ProductionLevel = 4;
         world.Cities[0].Infrastructure.MilitaryLevel = 5;
+        world.Cities[0].Demographics.ReplaceWith([
+            new RacePopulationGroup
+            {
+                RaceId = "human",
+                Children = 80,
+                AdultMen = 150,
+                AdultWomen = 160,
+                Elderly = 30
+            }
+        ]);
         world.Cities[1].Mood = 73;
         world.SelectedCityId = world.Cities[0].Id;
         world.SelectedRegionId = world.Regions[0].Id;
@@ -64,6 +74,7 @@ public sealed class JsonWorldSaveServiceTests
             Assert.Equal(world.Caravans[0].PurchaseCost, loaded.World.Caravans[0].PurchaseCost);
             Assert.Equal(world.Caravans[0].UpkeepPerWeek, loaded.World.Caravans[0].UpkeepPerWeek);
             Assert.Equal(world.TradeRoutes.Count, loaded.World.TradeRoutes.Count);
+            Assert.Equal(world.SettlementSectorCapacityProfiles.Count, loaded.World.SettlementSectorCapacityProfiles.Count);
             Assert.Single(loaded.World.TradeShipments);
 
             var loadedInfrastructure = loaded.World.Cities[0].Infrastructure;
@@ -71,6 +82,13 @@ public sealed class JsonWorldSaveServiceTests
             Assert.Equal(3, loadedInfrastructure.UrbanLevel);
             Assert.Equal(4, loadedInfrastructure.ProductionLevel);
             Assert.Equal(5, loadedInfrastructure.MilitaryLevel);
+
+            var loadedDemographics = loaded.World.Cities[0].Demographics;
+            Assert.Equal(420, loadedDemographics.TotalPopulation);
+            Assert.Single(loadedDemographics.RaceGroups);
+            Assert.Equal("human", loadedDemographics.RaceGroups[0].RaceId);
+            Assert.Equal(150, loadedDemographics.RaceGroups[0].AdultMen);
+            Assert.Equal(160, loadedDemographics.RaceGroups[0].AdultWomen);
 
             var selectedManager = loaded.EventState.GetManagerOrEmpty(loaded.World.SelectedCityId);
             Assert.Single(selectedManager.ActiveEvents);
@@ -90,7 +108,7 @@ public sealed class JsonWorldSaveServiceTests
             await service.SaveAsync(filePath, world, new SimulationClock(), new WorldEventState());
             var json = await File.ReadAllTextAsync(filePath);
             using var document = JsonDocument.Parse(json);
-            Assert.Equal(3, document.RootElement.GetProperty("Version").GetInt32());
+            Assert.Equal(4, document.RootElement.GetProperty("Version").GetInt32());
         }
         finally { Cleanup(filePath); }
     }
@@ -165,6 +183,8 @@ public sealed class JsonWorldSaveServiceTests
             Assert.Equal(987m, loaded.World.Cities[0].Food);
             Assert.Equal(world.Regions.Count, loaded.World.Regions.Count);
             Assert.Equal(world.TradeRoutes.Count, loaded.World.TradeRoutes.Count);
+            Assert.Equal(world.SettlementSectorCapacityProfiles.Count, loaded.World.SettlementSectorCapacityProfiles.Count);
+            Assert.Equal(city.Population, loaded.World.Cities[0].Demographics.TotalPopulation);
             Assert.Equal(city.Id, loaded.World.SelectedCityId);
         }
         finally { Cleanup(filePath); }
@@ -238,16 +258,34 @@ public sealed class JsonWorldSaveServiceTests
         var filePath = TempFile();
         var save = new
         {
-            Version = 3,
+            Version = 4,
             SavedAtUtc = DateTime.UtcNow,
             Clock = new { Day = 1, Hour = 0, IsRunning = false, AccumulatedRealTime = "00:00:00", RealTimePerGameHour = "00:05:00" },
             World = new
             {
-                Cities = new[] { new { Id = "gotha", Name = "Gotha", Population = 1, Food = 1m, Wealth = 1m, Mood = 1, Security = 1, Crime = 1, Resources = 1m, Goods = 1m, CityState = "Stagnation" } },
+                Cities = new[]
+                {
+                    new
+                    {
+                        Id = "gotha",
+                        Name = "Gotha",
+                        Population = 1,
+                        Food = 1m,
+                        Wealth = 1m,
+                        Mood = 1,
+                        Security = 1,
+                        Crime = 1,
+                        Resources = 1m,
+                        Goods = 1m,
+                        CityState = "Stagnation",
+                        Demographics = new { RaceGroups = Array.Empty<object>() }
+                    }
+                },
                 CitiesById = new Dictionary<string, object>(),
                 Regions = new[] { new { Id = "rivia", DisplayName = "Rivia", MapAssetId = "x" } },
                 SettlementMapLocations = Array.Empty<object>(),
                 SettlementEconomyProfiles = Array.Empty<object>(),
+                SettlementSectorCapacityProfiles = Array.Empty<object>(),
                 Caravans = Array.Empty<object>(),
                 TradeRoutes = Array.Empty<object>(),
                 TradeShipments = Array.Empty<object>(),
