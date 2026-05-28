@@ -21,7 +21,7 @@ public sealed class WorkforceSimulationStep : IWorldSimulationStep
         var capacityProfile = world.FindSettlementSectorCapacityProfile(city.Id)
             ?? throw new InvalidOperationException($"Settlement '{city.Id}' is missing a workforce sector capacity profile.");
 
-        state.WorkforceAllocation = _allocator.Allocate(city, capacityProfile, _defaultLawProfile);
+        state.WorkforceAllocation = _allocator.Allocate(city, capacityProfile, _defaultLawProfile, city.WorkforceAssignments);
 
         next();
     }
