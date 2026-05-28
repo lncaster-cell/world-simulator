@@ -1,0 +1,46 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:conv="clr-namespace:WorldSimulator.App.Converters">
+    <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+    <conv:MapMarkerCanvasLeftConverter x:Key="MapMarkerCanvasLeftConverter" />
+    <conv:MapMarkerCanvasTopConverter x:Key="MapMarkerCanvasTopConverter" />
+    <conv:TradeRoutePointsToPointCollectionConverter x:Key="TradeRoutePointsToPointCollectionConverter" />
+    <conv:TradeRoutePointsToSmoothPathGeometryConverter x:Key="TradeRoutePointsToSmoothPathGeometryConverter" />
+    <conv:CaravanMarkerCanvasCoordinateConverter x:Key="CaravanMarkerCanvasCoordinateConverter" />
+
+    <SolidColorBrush x:Key="MapRouteShadowBrush" Color="#CC101010" />
+    <SolidColorBrush x:Key="MapTradeRouteBrush" Color="#FFE3B45A" />
+    <SolidColorBrush x:Key="MapActiveTradeRouteBrush" Color="#FF38D9FF" />
+    <SolidColorBrush x:Key="MapSeaRouteBrush" Color="#FF26B6DA" />
+    <SolidColorBrush x:Key="MapDebugRouteBrush" Color="#FFDFB13D" />
+    <SolidColorBrush x:Key="MapActiveDebugRouteBrush" Color="#FFFF4DF0" />
+    <SolidColorBrush x:Key="MapAuthoringRouteBrush" Color="#FF00B7FF" />
+    <SolidColorBrush x:Key="MapAuthoringRouteOverlayBrush" Color="#8800B7FF" />
+    <SolidColorBrush x:Key="MapDebugLabelBackgroundBrush" Color="#AA111111" />
+    <SolidColorBrush x:Key="MapDebugLabelForegroundBrush" Color="White" />
+
+    <Style x:Key="MapDebugRoutePolylineStyle" TargetType="Polyline">
+        <Setter Property="Stroke" Value="{StaticResource MapDebugRouteBrush}" />
+        <Setter Property="StrokeThickness" Value="2.1" />
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding IsSeaRoute}" Value="True">
+                <Setter Property="Stroke" Value="{StaticResource MapSeaRouteBrush}" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding IsActive}" Value="True">
+                <Setter Property="Stroke" Value="{StaticResource MapActiveDebugRouteBrush}" />
+                <Setter Property="StrokeThickness" Value="2.6" />
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="MapTradeRoutePolylineStyle" TargetType="Polyline">
+        <Setter Property="Stroke" Value="{StaticResource MapTradeRouteBrush}" />
+        <Setter Property="StrokeThickness" Value="2.8" />
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding IsActive}" Value="True">
+                <Setter Property="Stroke" Value="{StaticResource MapActiveTradeRouteBrush}" />
+                <Setter Property="StrokeThickness" Value="3.4" />
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+</ResourceDictionary>
