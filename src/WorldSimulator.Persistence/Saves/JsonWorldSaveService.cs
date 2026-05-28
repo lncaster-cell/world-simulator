@@ -1,22 +1,14 @@
 using System.Text.Json;
-using WorldSimulator.Core.Cities;
 using WorldSimulator.Core.Events;
 using WorldSimulator.Core.Time;
-using WorldSimulator.Core.Trade;
 using WorldSimulator.Core.World;
 
 namespace WorldSimulator.Persistence.Saves;
 
 public sealed class JsonWorldSaveService
 {
-    private const int CurrentSaveVersion = 3;
-
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
-
-    private static readonly Lazy<Dictionary<string, decimal>> DefaultRouteDistanceDaysCache = new(() =>
-        TradeRoutePresets.CreateDefaultRoutes()
-            .GroupBy(route => route.Id, StringComparer.Ordinal)
-            .ToDictionary(group => group.Key, group => group.First().DistanceDays, StringComparer.Ordinal));
+    private readonly WorldSaveMigrationService _migrationService = new();
 
     public async Task SaveAsync(string filePath, SimulationWorld world, SimulationClock clock, WorldEventState eventState, CancellationToken cancellationToken = default)
     {
@@ -27,35 +19,18 @@ public sealed class JsonWorldSaveService
 
         var saveData = new WorldSaveData
         {
-            Version = CurrentSaveVersion,
+            Version = WorldSaveMigrationService.CurrentSaveVersion,
             SavedAtUtc = DateTime.UtcNow,
-            Clock = new ClockSaveData { Day = clock.Day, Hour = clock.Hour, IsRunning = clock.IsRunning, AccumulatedRealTime = clock.AccumulatedRealTime, RealTimePerGameHour = clock.RealTimePerGameHour },
-            World = new SimulationWorldSaveData
+            Clock = new ClockSaveData
             {
-                Cities = world.Cities.Select(ToSaveData).ToList(),
-                CitiesById = world.Cities.ToDictionary(city => city.Id, ToSaveData, StringComparer.Ordinal),
-                Regions = world.Regions.Select(ToSaveData).ToList(),
-                SettlementMapLocations = world.SettlementMapLocations.Select(ToSaveData).ToList(),
-                SettlementEconomyProfiles = world.SettlementEconomyProfiles.Select(ToSaveData).ToList(),
-                Caravans = world.Caravans.Select(ToSaveData).ToList(),
-                TradeRoutes = world.TradeRoutes.Select(ToSaveData).ToList(),
-                TradeShipments = world.TradeShipments.Select(ToSaveData).ToList(),
-                SelectedCityId = world.SelectedCityId,
-                SelectedRegionId = world.SelectedRegionId
+                Day = clock.Day,
+                Hour = clock.Hour,
+                IsRunning = clock.IsRunning,
+                AccumulatedRealTime = clock.AccumulatedRealTime,
+                RealTimePerGameHour = clock.RealTimePerGameHour
             },
-            Events = new EventSaveData
-            {
-                ActiveEvents = eventState.GetManagerOrEmpty(world.SelectedCityId).ActiveEvents.Select(ToSaveData).ToList(),
-                CompletedEvents = eventState.GetManagerOrEmpty(world.SelectedCityId).CompletedEvents.Select(ToSaveData).ToList(),
-                EventsByCityId = eventState.EventManagersByCity.ToDictionary(
-                    x => x.Key,
-                    x => new CityEventBucketSaveData
-                    {
-                        ActiveEvents = x.Value.ActiveEvents.Select(ToSaveData).ToList(),
-                        CompletedEvents = x.Value.CompletedEvents.Select(ToSaveData).ToList()
-                    },
-                    StringComparer.Ordinal)
-            }
+            World = WorldSaveMapper.ToSaveData(world),
+            Events = WorldSaveMapper.ToSaveData(eventState, world.SelectedCityId)
         };
 
         var directory = Path.GetDirectoryName(filePath);
@@ -70,334 +45,33 @@ public sealed class JsonWorldSaveService
         ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
         if (!File.Exists(filePath)) throw new FileNotFoundException($"Save file was not found: '{filePath}'.", filePath);
 
-        WorldSaveData? saveData;
-        try
-        {
-            await using var stream = File.OpenRead(filePath);
-            if (stream.Length == 0) throw new InvalidDataException($"Save file '{filePath}' is empty.");
-            saveData = await JsonSerializer.DeserializeAsync<WorldSaveData>(stream, JsonOptions, cancellationToken);
-        }
-        catch (JsonException ex)
-        {
-            throw new InvalidDataException($"Save file '{filePath}' contains invalid JSON.", ex);
-        }
+        var saveData = await ReadSaveDataAsync(filePath, cancellationToken);
+        saveData = _migrationService.Migrate(saveData, filePath);
 
-        if (saveData is null) throw new InvalidDataException($"Save file '{filePath}' is empty or malformed.");
-        if (saveData.Version != CurrentSaveVersion) throw new InvalidDataException($"Save file '{filePath}' has unsupported version '{saveData.Version}'. Expected '{CurrentSaveVersion}'.");
-        if (saveData.World is null) throw new InvalidDataException($"Save file '{filePath}' version {CurrentSaveVersion} is missing world data.");
-
-        var world = BuildWorld(saveData.World, filePath);
-        ValidateWorld(world, filePath);
+        var world = WorldSaveMapper.ToCoreWorld(saveData.World!, filePath);
+        WorldSaveValidator.ValidateWorld(world, filePath);
 
         var settings = new SimulationTimeSettings { RealTimePerGameHour = saveData.Clock.RealTimePerGameHour };
         var clock = new SimulationClock(settings);
         clock.RestoreState(saveData.Clock.Day, saveData.Clock.Hour, saveData.Clock.IsRunning, saveData.Clock.AccumulatedRealTime, saveData.Clock.RealTimePerGameHour);
 
-        var eventState = BuildEventState(saveData.Events, world.SelectedCityId);
+        var eventState = WorldSaveMapper.ToCoreEventState(saveData.Events, world.SelectedCityId);
 
         return new WorldLoadResult(world, clock, eventState);
     }
 
-    private static SimulationWorld BuildWorld(SimulationWorldSaveData worldData, string filePath)
+    private static async Task<WorldSaveData> ReadSaveDataAsync(string filePath, CancellationToken cancellationToken)
     {
-        var loadedCities = ResolveCities(worldData, filePath);
-        var regions = worldData.Regions.Select(ToCoreRegion).ToList();
-        var settlementMapLocations = worldData.SettlementMapLocations.Select(ToCoreSettlementMapLocation).ToList();
-        var settlementEconomyProfiles = worldData.SettlementEconomyProfiles.Select(ToCoreSettlementEconomyProfile).ToList();
-        var caravans = worldData.Caravans.Select(ToCoreCaravan).ToList();
-        var tradeRoutes = worldData.TradeRoutes.Select(routeData => ToCoreTradeRoute(routeData, DefaultRouteDistanceDaysCache.Value)).ToList();
-
-        if (loadedCities.Count == 0) throw new InvalidDataException($"Save file '{filePath}' has no cities.");
-        if (regions.Count == 0) throw new InvalidDataException($"Save file '{filePath}' has no regions.");
-
-        var selectedCityId = loadedCities.Any(c => c.Id == worldData.SelectedCityId)
-            ? worldData.SelectedCityId
-            : loadedCities.First().Id;
-        var selectedRegionId = regions.Any(r => r.Id == worldData.SelectedRegionId)
-            ? worldData.SelectedRegionId
-            : regions.First().Id;
-
-        return new SimulationWorld
+        try
         {
-            Cities = loadedCities,
-            Regions = regions,
-            SettlementMapLocations = settlementMapLocations,
-            SettlementEconomyProfiles = settlementEconomyProfiles,
-            Caravans = caravans,
-            TradeRoutes = tradeRoutes,
-            TradeShipments = worldData.TradeShipments.Select(ToCoreTradeShipment).ToList(),
-            SelectedCityId = selectedCityId,
-            SelectedRegionId = selectedRegionId
-        };
-    }
-
-    private static WorldEventState BuildEventState(EventSaveData? events, string selectedCityId)
-    {
-        var state = new WorldEventState();
-        if (events?.EventsByCityId is { Count: > 0 })
-        {
-            foreach (var pair in events.EventsByCityId)
-            {
-                var manager = new CityEventManager();
-                manager.Restore(
-                    (pair.Value.ActiveEvents ?? []).Select(ToCoreEvent).ToList(),
-                    (pair.Value.CompletedEvents ?? []).Select(ToCoreEvent).ToList());
-                state.SetManager(pair.Key, manager);
-            }
-
-            if (!state.EventManagersByCity.ContainsKey(selectedCityId))
-            {
-                var firstManager = state.EventManagersByCity.Values.First();
-                var selectedManager = new CityEventManager();
-                selectedManager.Restore(firstManager.ActiveEvents.ToList(), firstManager.CompletedEvents.ToList());
-                state.SetManager(selectedCityId, selectedManager);
-            }
-
-            return state;
+            await using var stream = File.OpenRead(filePath);
+            if (stream.Length == 0) throw new InvalidDataException($"Save file '{filePath}' is empty.");
+            var saveData = await JsonSerializer.DeserializeAsync<WorldSaveData>(stream, JsonOptions, cancellationToken);
+            return saveData ?? throw new InvalidDataException($"Save file '{filePath}' is empty or malformed.");
         }
-
-        var fallbackManager = new CityEventManager();
-        fallbackManager.Restore(
-            (events?.ActiveEvents ?? []).Select(ToCoreEvent).ToList(),
-            (events?.CompletedEvents ?? []).Select(ToCoreEvent).ToList());
-        state.SetManager(selectedCityId, fallbackManager);
-        return state;
-    }
-
-    private static List<City> ResolveCities(SimulationWorldSaveData worldData, string filePath)
-    {
-        if (worldData.CitiesById.Count > 0)
+        catch (JsonException ex)
         {
-            return worldData.CitiesById.Values.Select(x => ToCoreCity(x, filePath)).ToList();
-        }
-
-        return worldData.Cities.Select(x => ToCoreCity(x, filePath)).ToList();
-    }
-
-    private static void ValidateWorld(SimulationWorld world, string filePath)
-    {
-        if (!world.EnsureValidSelection(out _))
-            throw new InvalidDataException(
-                $"Save file '{filePath}' has invalid world selection and fallback could not be applied. " +
-                $"Cities: {world.Cities.Count}, Regions: {world.Regions.Count}, SelectedCityId: '{world.SelectedCityId}', SelectedRegionId: '{world.SelectedRegionId}'.");
-
-        var caravanIds = world.Caravans.Select(x => x.Id).ToHashSet(StringComparer.Ordinal);
-        var routeIds = world.TradeRoutes.Select(x => x.Id).ToHashSet(StringComparer.Ordinal);
-        var settlementIds = world.Cities.Select(x => x.Id).ToHashSet(StringComparer.Ordinal);
-        foreach (var shipment in world.TradeShipments)
-        {
-            if (!caravanIds.Contains(shipment.CaravanId)) throw new InvalidDataException($"Save file '{filePath}' shipment '{shipment.Id}' references unknown caravan '{shipment.CaravanId}'.");
-            if (!routeIds.Contains(shipment.RouteId)) throw new InvalidDataException($"Save file '{filePath}' shipment '{shipment.Id}' references unknown route '{shipment.RouteId}'.");
-            if (!settlementIds.Contains(shipment.FromSettlementId)) throw new InvalidDataException($"Save file '{filePath}' shipment '{shipment.Id}' references unknown origin settlement '{shipment.FromSettlementId}'.");
-            if (!settlementIds.Contains(shipment.ToSettlementId)) throw new InvalidDataException($"Save file '{filePath}' shipment '{shipment.Id}' references unknown destination settlement '{shipment.ToSettlementId}'.");
-            if (shipment.ArrivalDay < shipment.DepartureDay) throw new InvalidDataException($"Save file '{filePath}' shipment '{shipment.Id}' has arrival day before departure day.");
-            if (shipment.ReturnDay < shipment.ArrivalDay) throw new InvalidDataException($"Save file '{filePath}' shipment '{shipment.Id}' has return day before arrival day.");
+            throw new InvalidDataException($"Save file '{filePath}' contains invalid JSON.", ex);
         }
     }
-
-    private static CitySaveData ToSaveData(City city) => new()
-    {
-        Id = city.Id,
-        Name = city.Name,
-        Population = city.Population,
-        Food = city.Food,
-        Wealth = city.Wealth,
-        Mood = city.Mood,
-        Security = city.Security,
-        Crime = city.Crime,
-        Resources = city.Resources,
-        Goods = city.Goods,
-        CityState = city.CityState.ToString(),
-        Infrastructure = ToSaveData(city.Infrastructure)
-    };
-
-    private static CityInfrastructureSaveData ToSaveData(CityInfrastructure infrastructure) => new()
-    {
-        HousingLevel = infrastructure.HousingLevel,
-        UrbanLevel = infrastructure.UrbanLevel,
-        ProductionLevel = infrastructure.ProductionLevel,
-        MilitaryLevel = infrastructure.MilitaryLevel
-    };
-
-    private static RegionSaveData ToSaveData(Region region) => new()
-    {
-        Id = region.Id,
-        DisplayName = region.DisplayName,
-        MapAssetId = region.MapAssetId
-    };
-
-    private static SettlementMapLocationSaveData ToSaveData(SettlementMapLocation location) => new()
-    {
-        SettlementId = location.SettlementId,
-        RegionId = location.RegionId,
-        X = location.X,
-        Y = location.Y
-    };
-
-    private static SettlementEconomyProfileSaveData ToSaveData(SettlementEconomyProfile profile) => new()
-    {
-        SettlementId = profile.SettlementId,
-        AgriculturePotential = profile.AgriculturePotential,
-        FishingMultiplier = profile.FishingMultiplier,
-        HuntingMultiplier = profile.HuntingMultiplier,
-        MainlandSupplyMultiplier = profile.MainlandSupplyMultiplier,
-        ResourceGatheringMultiplier = profile.ResourceGatheringMultiplier,
-        GoodsCraftingMultiplier = profile.GoodsCraftingMultiplier,
-        IsPort = profile.IsPort,
-        IsFortress = profile.IsFortress,
-        IsCapital = profile.IsCapital
-    };
-
-    private static CaravanSaveData ToSaveData(Caravan caravan) => new()
-    {
-        Id = caravan.Id,
-        OwnerSettlementId = caravan.OwnerSettlementId,
-        Type = caravan.Type.ToString(),
-        Capacity = caravan.Capacity,
-        RequiredWorkers = caravan.RequiredWorkers,
-        IsAvailable = caravan.IsAvailable,
-        PurchaseCost = caravan.PurchaseCost,
-        UpkeepPerWeek = caravan.UpkeepPerWeek,
-        Status = caravan.Status.ToString()
-    };
-
-    private static City ToCoreCity(CitySaveData cityData, string filePath)
-    {
-        if (!Enum.TryParse<CityState>(cityData.CityState, true, out var parsedCityState))
-            throw new InvalidDataException($"Save file '{filePath}' contains unknown city_state '{cityData.CityState}'.");
-        if (cityData.Infrastructure is null)
-            throw new InvalidDataException($"Save file '{filePath}' city '{cityData.Id}' is missing infrastructure data.");
-
-        return new City(cityData.Id, cityData.Name, cityData.Population, cityData.Food, cityData.Wealth, cityData.Mood, cityData.Security, cityData.Crime, cityData.Resources, cityData.Goods, parsedCityState, ToCoreInfrastructure(cityData.Infrastructure));
-    }
-
-    private static CityInfrastructure ToCoreInfrastructure(CityInfrastructureSaveData infrastructureData) => new()
-    {
-        HousingLevel = infrastructureData.HousingLevel,
-        UrbanLevel = infrastructureData.UrbanLevel,
-        ProductionLevel = infrastructureData.ProductionLevel,
-        MilitaryLevel = infrastructureData.MilitaryLevel
-    };
-
-    private static Region ToCoreRegion(RegionSaveData regionData) => new()
-    {
-        Id = regionData.Id,
-        DisplayName = regionData.DisplayName,
-        MapAssetId = regionData.MapAssetId
-    };
-
-    private static SettlementMapLocation ToCoreSettlementMapLocation(SettlementMapLocationSaveData locationData) => new()
-    {
-        SettlementId = locationData.SettlementId,
-        RegionId = locationData.RegionId,
-        X = locationData.X,
-        Y = locationData.Y
-    };
-
-    private static SettlementEconomyProfile ToCoreSettlementEconomyProfile(SettlementEconomyProfileSaveData profileData) => new()
-    {
-        SettlementId = profileData.SettlementId,
-        AgriculturePotential = profileData.AgriculturePotential,
-        FishingMultiplier = profileData.FishingMultiplier,
-        HuntingMultiplier = profileData.HuntingMultiplier,
-        MainlandSupplyMultiplier = profileData.MainlandSupplyMultiplier,
-        ResourceGatheringMultiplier = profileData.ResourceGatheringMultiplier,
-        GoodsCraftingMultiplier = profileData.GoodsCraftingMultiplier,
-        IsPort = profileData.IsPort,
-        IsFortress = profileData.IsFortress,
-        IsCapital = profileData.IsCapital
-    };
-
-    private static Caravan ToCoreCaravan(CaravanSaveData caravanData)
-    {
-        if (!Enum.TryParse<CaravanType>(caravanData.Type, true, out var caravanType))
-            throw new InvalidDataException($"Unknown caravan type '{caravanData.Type}'.");
-        if (!Enum.TryParse<CaravanStatus>(caravanData.Status, true, out var caravanStatus))
-            throw new InvalidDataException($"Unknown caravan status '{caravanData.Status}'.");
-
-        return new Caravan { Id = caravanData.Id, OwnerSettlementId = caravanData.OwnerSettlementId, Type = caravanType, Capacity = caravanData.Capacity, RequiredWorkers = caravanData.RequiredWorkers, IsAvailable = caravanData.IsAvailable, PurchaseCost = caravanData.PurchaseCost, UpkeepPerWeek = caravanData.UpkeepPerWeek, Status = caravanStatus };
-    }
-
-    private static TradeRouteSaveData ToSaveData(TradeRoute route) => new()
-    {
-        Id = route.Id,
-        FromSettlementId = route.FromSettlementId,
-        ToSettlementId = route.ToSettlementId,
-        Type = route.Type.ToString(),
-        Distance = route.Distance,
-        TravelDays = route.TravelDays,
-        DistanceDays = route.DistanceDays,
-        IsEnabled = route.IsEnabled,
-        DifficultyMultiplier = route.DifficultyMultiplier,
-        Points = route.Points.Select(point => new RoutePointSaveData { X = point.X, Y = point.Y }).ToList()
-    };
-
-    private static TradeRoute ToCoreTradeRoute(TradeRouteSaveData routeData, IReadOnlyDictionary<string, decimal> defaultDistanceDaysByRouteId)
-    {
-        if (!Enum.TryParse<CaravanType>(routeData.Type, true, out var caravanType))
-            throw new InvalidDataException($"Unknown trade route caravan type '{routeData.Type}'.");
-
-        var defaultDistanceDays = defaultDistanceDaysByRouteId.TryGetValue(routeData.Id, out var cachedDistanceDays)
-            ? cachedDistanceDays
-            : 1m;
-
-        return new TradeRoute
-        {
-            Id = routeData.Id,
-            FromSettlementId = routeData.FromSettlementId,
-            ToSettlementId = routeData.ToSettlementId,
-            Type = caravanType,
-            Distance = routeData.Distance,
-            TravelDays = routeData.TravelDays,
-            DistanceDays = routeData.DistanceDays ?? defaultDistanceDays,
-            IsEnabled = routeData.IsEnabled,
-            DifficultyMultiplier = routeData.DifficultyMultiplier,
-            Points = routeData.Points?.Select(point => new RoutePoint { X = point.X, Y = point.Y }).ToList() ?? []
-        };
-    }
-
-    private static TradeShipmentSaveData ToSaveData(TradeShipment shipment) => new()
-    {
-        Id = shipment.Id,
-        CaravanId = shipment.CaravanId,
-        RouteId = shipment.RouteId,
-        FromSettlementId = shipment.FromSettlementId,
-        ToSettlementId = shipment.ToSettlementId,
-        GoodType = shipment.GoodType.ToString(),
-        Amount = shipment.Amount,
-        DepartureDay = shipment.DepartureDay,
-        ArrivalDay = shipment.ArrivalDay,
-        ReturnDay = shipment.ReturnDay,
-        ExporterWealthDelta = shipment.ExporterWealthDelta,
-        ImporterWealthDelta = shipment.ImporterWealthDelta,
-        Status = shipment.Status.ToString()
-    };
-
-    private static TradeShipment ToCoreTradeShipment(TradeShipmentSaveData shipmentData)
-    {
-        if (!Enum.TryParse<TradeGoodType>(shipmentData.GoodType, true, out var goodType))
-            throw new InvalidDataException($"Unknown shipment good type '{shipmentData.GoodType}'.");
-        if (!Enum.TryParse<TradeShipmentStatus>(shipmentData.Status, true, out var status))
-            throw new InvalidDataException($"Unknown shipment status '{shipmentData.Status}'.");
-
-        return new TradeShipment
-        {
-            Id = shipmentData.Id,
-            CaravanId = shipmentData.CaravanId,
-            RouteId = shipmentData.RouteId,
-            FromSettlementId = shipmentData.FromSettlementId,
-            ToSettlementId = shipmentData.ToSettlementId,
-            GoodType = goodType,
-            Amount = shipmentData.Amount,
-            DepartureDay = shipmentData.DepartureDay,
-            ArrivalDay = shipmentData.ArrivalDay,
-            ReturnDay = shipmentData.ReturnDay,
-            ExporterWealthDelta = shipmentData.ExporterWealthDelta,
-            ImporterWealthDelta = shipmentData.ImporterWealthDelta,
-            Status = status
-        };
-    }
-
-    private static CityEventSaveData ToSaveData(CityEvent cityEvent) => new() { Id = cityEvent.Id, Name = cityEvent.Name, Description = cityEvent.Description, StartedDay = cityEvent.StartedDay, DurationDays = cityEvent.DurationDays, RemainingDays = cityEvent.RemainingDays };
-    private static CityEvent ToCoreEvent(CityEventSaveData eventSaveData) => new(eventSaveData.Id, eventSaveData.Name, eventSaveData.Description, eventSaveData.StartedDay, eventSaveData.DurationDays, eventSaveData.RemainingDays);
 }
