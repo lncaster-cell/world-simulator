@@ -229,18 +229,40 @@
                             </ItemsControl.ItemContainerStyle>
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Image Width="18" Height="18" Source="/Assets/Maps/caravan_icon_clean_transparent.png" ToolTip="{Binding DisplayName}">
-                                        <Image.Style>
-                                            <Style TargetType="Image">
-                                                <Setter Property="Opacity" Value="0.9"/>
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding HasActiveFlow}" Value="True">
-                                                        <Setter Property="Opacity" Value="1"/>
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </Image.Style>
-                                    </Image>
+                                    <Grid Width="22" Height="22" ToolTip="{Binding DisplayName}" RenderTransformOrigin="0.5,0.5">
+                                        <Image Width="18" Height="18" Source="/Assets/Maps/caravan_icon_clean_transparent.png">
+                                            <Image.Style>
+                                                <Style TargetType="Image">
+                                                    <Setter Property="Opacity" Value="0.9"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding HasActiveFlow}" Value="True">
+                                                            <Setter Property="Opacity" Value="1"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding IsSeaRoute}" Value="True">
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Image.Style>
+                                        </Image>
+                                        <Canvas Width="22" Height="22" Visibility="Collapsed">
+                                            <Canvas.Style>
+                                                <Style TargetType="Canvas">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsSeaRoute}" Value="True">
+                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Canvas.Style>
+                                            <Path Data="M2,15 C5,18 17,18 20,15 L18,19 L5,19 Z" Fill="#FF1F6F7F" Stroke="#FF0E2525" StrokeThickness="1"/>
+                                            <Path Data="M5,9 L18,9 L16,15 L7,15 Z" Fill="#FF7A4B24" Stroke="#FF0E2525" StrokeThickness="1"/>
+                                            <Path Data="M11,3 L11,15" Stroke="#FF0E2525" StrokeThickness="1.4" StrokeStartLineCap="Round"/>
+                                            <Path Data="M12,4 C16,5 17,8 12,11 Z" Fill="#FFE8D7A6" Stroke="#FF0E2525" StrokeThickness="1"/>
+                                            <Path Data="M10,5 C7,6 7,9 10,12 Z" Fill="#FFE8D7A6" Stroke="#FF0E2525" StrokeThickness="1"/>
+                                            <Path Data="M8,9 L14,9 L14,13 L8,13 Z" Fill="#FFB57A37" Stroke="#FF0E2525" StrokeThickness="0.8"/>
+                                        </Canvas>
+                                    </Grid>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
