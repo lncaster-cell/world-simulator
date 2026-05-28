@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using WorldSimulator.Core.Cities;
 using WorldSimulator.Core.Events;
 using WorldSimulator.Core.Time;
@@ -12,7 +13,7 @@ namespace WorldSimulator.Persistence.Tests;
 public sealed class JsonWorldSaveServiceTests
 {
     [Fact]
-    public async Task SaveLoad_Preserves_Current_World_State()
+    public async Task LoadAsync_RoundTrip_Preserves_Current_World_State()
     {
         var service = new JsonWorldSaveService();
         var world = WorldPresets.CreateDefaultWorld();
@@ -95,13 +96,13 @@ public sealed class JsonWorldSaveServiceTests
     }
 
     [Fact]
-    public async Task LoadAsync_Unsupported_Save_Version_Throws_InvalidDataException()
+    public async Task LoadAsync_Save_Version_Newer_Than_Current_Throws_InvalidDataException()
     {
         var service = new JsonWorldSaveService();
         var filePath = TempFile();
         var save = new
         {
-            Version = 2,
+            Version = 99,
             SavedAtUtc = DateTime.UtcNow,
             Clock = new { Day = 1, Hour = 0, IsRunning = false, AccumulatedRealTime = "00:00:00", RealTimePerGameHour = "00:05:00" },
             World = new { Cities = Array.Empty<object>(), Regions = Array.Empty<object>() }
@@ -110,6 +111,121 @@ public sealed class JsonWorldSaveServiceTests
         try
         {
             await File.WriteAllTextAsync(filePath, JsonSerializer.Serialize(save));
+            await Assert.ThrowsAsync<InvalidDataException>(() => service.LoadAsync(filePath));
+        }
+        finally { Cleanup(filePath); }
+    }
+
+    [Fact]
+    public async Task LoadAsync_Old_Save_Version_Migrates_To_Current_World()
+    {
+        var service = new JsonWorldSaveService();
+        var world = WorldPresets.CreateDefaultWorld();
+        var city = world.Cities[0];
+        city.Food = 987m;
+        var filePath = TempFile();
+        var save = new
+        {
+            Version = 1,
+            SavedAtUtc = DateTime.UtcNow,
+            Clock = new { Day = 4, Hour = 8, IsRunning = true, AccumulatedRealTime = "00:00:07", RealTimePerGameHour = "00:00:03" },
+            City = new
+            {
+                city.Id,
+                city.Name,
+                city.Population,
+                city.Food,
+                city.Wealth,
+                city.Mood,
+                city.Security,
+                city.Crime,
+                city.Resources,
+                city.Goods,
+                CityState = city.CityState.ToString(),
+                Infrastructure = new
+                {
+                    city.Infrastructure.HousingLevel,
+                    city.Infrastructure.UrbanLevel,
+                    city.Infrastructure.ProductionLevel,
+                    city.Infrastructure.MilitaryLevel
+                }
+            },
+            Events = new { ActiveEvents = Array.Empty<object>(), CompletedEvents = Array.Empty<object>(), EventsByCityId = new Dictionary<string, object>() }
+        };
+
+        try
+        {
+            await File.WriteAllTextAsync(filePath, JsonSerializer.Serialize(save));
+
+            var loaded = await service.LoadAsync(filePath);
+
+            Assert.Equal(4, loaded.Clock.Day);
+            Assert.True(loaded.Clock.IsRunning);
+            Assert.Equal(world.Cities.Count, loaded.World.Cities.Count);
+            Assert.Equal(987m, loaded.World.Cities[0].Food);
+            Assert.Equal(world.Regions.Count, loaded.World.Regions.Count);
+            Assert.Equal(world.TradeRoutes.Count, loaded.World.TradeRoutes.Count);
+            Assert.Equal(city.Id, loaded.World.SelectedCityId);
+        }
+        finally { Cleanup(filePath); }
+    }
+
+    [Fact]
+    public async Task LoadAsync_Restores_Missing_Route_Fields_From_Defaults()
+    {
+        var service = new JsonWorldSaveService();
+        var world = WorldPresets.CreateDefaultWorld();
+        var route = world.TradeRoutes[0];
+        var filePath = TempFile();
+        try
+        {
+            await service.SaveAsync(filePath, world, new SimulationClock(), new WorldEventState());
+            var root = await ReadSavedJsonAsync(filePath);
+            root["Version"] = 2;
+            var routeNode = root["World"]!["TradeRoutes"]![0]!.AsObject();
+            routeNode.Remove("DistanceDays");
+            routeNode.Remove("Points");
+            routeNode["DifficultyMultiplier"] = 0m;
+            await File.WriteAllTextAsync(filePath, root.ToJsonString());
+
+            var loaded = await service.LoadAsync(filePath);
+            var loadedRoute = loaded.World.TradeRoutes.First(x => x.Id == route.Id);
+
+            Assert.Equal(route.DistanceDays, loadedRoute.DistanceDays);
+            Assert.Equal(1m, loadedRoute.DifficultyMultiplier);
+            Assert.NotEmpty(loadedRoute.Points);
+        }
+        finally { Cleanup(filePath); }
+    }
+
+    [Fact]
+    public async Task LoadAsync_Invalid_World_Throws_InvalidDataException()
+    {
+        var service = new JsonWorldSaveService();
+        var world = WorldPresets.CreateDefaultWorld();
+        var filePath = TempFile();
+        try
+        {
+            await service.SaveAsync(filePath, world, new SimulationClock(), new WorldEventState());
+            var root = await ReadSavedJsonAsync(filePath);
+            root["World"]!["TradeShipments"] = new JsonArray(new JsonObject
+            {
+                ["Id"] = "invalid-shipment",
+                ["CaravanId"] = "missing-caravan",
+                ["RouteId"] = world.TradeRoutes[0].Id,
+                ["FromSettlementId"] = world.TradeRoutes[0].FromSettlementId,
+                ["ToSettlementId"] = world.TradeRoutes[0].ToSettlementId,
+                ["GoodType"] = TradeGoodType.Food.ToString(),
+                ["Amount"] = 10m,
+                ["DepartureDay"] = 1,
+                ["ArrivalDay"] = 2,
+                ["ReturnDay"] = 3,
+                ["ExporterWealthDelta"] = 0.1m,
+                ["ImporterWealthDelta"] = -0.1m,
+                ["Status"] = TradeShipmentStatus.InTransitToDestination.ToString()
+            });
+            await File.WriteAllTextAsync(filePath, root.ToJsonString());
+
             await Assert.ThrowsAsync<InvalidDataException>(() => service.LoadAsync(filePath));
         }
         finally { Cleanup(filePath); }
@@ -156,6 +272,12 @@ public sealed class JsonWorldSaveServiceTests
         var state = new WorldEventState();
         state.SetManager(cityId, manager);
         return state;
+    }
+
+    private static async Task<JsonObject> ReadSavedJsonAsync(string filePath)
+    {
+        var json = await File.ReadAllTextAsync(filePath);
+        return JsonNode.Parse(json)!.AsObject();
     }
 
     private static string TempFile() => Path.Combine(Path.GetTempPath(), $"world-save-{Guid.NewGuid():N}.json");
