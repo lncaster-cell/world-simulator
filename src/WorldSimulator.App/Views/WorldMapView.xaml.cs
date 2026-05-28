@@ -60,9 +60,9 @@ public partial class WorldMapView : UserControl
             viewModel.RegisterMapCalibrationPoint(relativeX, relativeY);
         }
 
-        if (viewModel.IsTradeRouteAuthoringModeEnabled)
+        if (viewModel.TradeRouteAuthoring.IsTradeRouteAuthoringModeEnabled)
         {
-            viewModel.RegisterTradeRouteAuthoringPoint(relativeX, relativeY);
+            viewModel.TradeRouteAuthoring.RegisterTradeRouteAuthoringPoint(relativeX, relativeY);
         }
     }
 }

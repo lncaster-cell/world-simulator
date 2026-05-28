@@ -1,5 +1,4 @@
 using System.Collections.ObjectModel;
-using System.Globalization;
 using System.ComponentModel;
 using System.IO;
 using System.Runtime.CompilerServices;
@@ -7,6 +6,7 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Threading;
 using WorldSimulator.App.Infrastructure;
+using WorldSimulator.App.Services;
 using WorldSimulator.Core.Cities;
 using WorldSimulator.Core.Events;
 using WorldSimulator.Core.Resources;
@@ -64,19 +64,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     private readonly List<TradeRouteVisualViewModel> _tradeRouteVisuals = [];
     private readonly DispatcherTimer _tradeMarkerAnimationTimer;
     private DateTimeOffset _lastTradeMarkerAnimationTickUtc;
-    private TradeRoute? _selectedTradeRouteForAuthoring;
-    private City? _routeAuthoringOriginSettlement;
-    private City? _routeAuthoringDestinationCandidateSettlement;
-    private City? _activeRouteAuthoringDestinationSettlement;
-    private string _routeAuthoringRouteIdDisplay = "RouteId: —";
-    private string? _currentDraftDestinationId;
-    private readonly Dictionary<string, List<MapPointViewModel>> _routeAuthoringDraftPointsByDestinationId = [];
     private readonly HashSet<string> _loadedCaravanPathRouteIds = new(StringComparer.OrdinalIgnoreCase);
-    private bool _isTradeRouteAuthoringModeEnabled;
-    private decimal _selectedTradeRouteDistanceDays = 1m;
-    private string _selectedTradeRouteDistanceDaysInput = "1.0";
     private bool _isTradeRoutesOverlayVisible;
-    private bool _isLoadedRoutePathsDebugVisible;
 
     public MainWindowViewModel()
     {
@@ -129,12 +118,12 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         SaveCommand = new AsyncRelayCommand(SaveStateAsync);
         LoadCommand = new AsyncRelayCommand(LoadStateAsync);
         ToggleMapCalibrationModeCommand = new RelayCommand(ToggleMapCalibrationMode);
-        AddTradeRoutePointCommand = new RelayCommand<MapPointViewModel>(AddTradeRoutePoint);
-        UndoTradeRoutePointCommand = new RelayCommand(UndoTradeRoutePoint);
-        ClearTradeRoutePointsCommand = new RelayCommand(ClearTradeRoutePoints);
-        SaveTradeRoutePointsCommand = new RelayCommand(SaveTradeRoutePoints);
-        CopyTradeRoutePointsCommand = new RelayCommand(CopyTradeRoutePoints);
-        AddRouteAuthoringDestinationCommand = new RelayCommand(AddRouteAuthoringDestination);
+        TradeRouteAuthoring = new TradeRouteAuthoringViewModel(
+            () => _world,
+            AddTechnicalLogEntry,
+            NotifyTradeRoutesChanged,
+            () => RefreshTradeRouteVisuals(null),
+            new TradeRouteAuthoringService());
 
         _lastTickUtc = DateTimeOffset.UtcNow;
         _timer = new DispatcherTimer
@@ -152,12 +141,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         _timer.Start();
         _tradeMarkerAnimationTimer.Start();
 
-        EditedTradeRoutePoints.CollectionChanged += (_, _) =>
-        {
-            OnPropertyChanged(nameof(EditedTradeRoutePointCount));
-            OnPropertyChanged(nameof(EditedTradeRoutePolylinePoints));
-        };
-        SelectedTradeRouteForAuthoring = _world.TradeRoutes.FirstOrDefault();
+        TradeRouteAuthoring.SelectedTradeRouteForAuthoring = _world.TradeRoutes.FirstOrDefault();
 
         RefreshCityState();
         RefreshDailyFoodFlowPreview();
@@ -192,12 +176,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     public ICommand SaveCommand { get; }
     public ICommand LoadCommand { get; }
     public ICommand ToggleMapCalibrationModeCommand { get; }
-    public ICommand AddTradeRoutePointCommand { get; }
-    public ICommand UndoTradeRoutePointCommand { get; }
-    public ICommand ClearTradeRoutePointsCommand { get; }
-    public ICommand SaveTradeRoutePointsCommand { get; }
-    public ICommand CopyTradeRoutePointsCommand { get; }
-    public ICommand AddRouteAuthoringDestinationCommand { get; }
+    public TradeRouteAuthoringViewModel TradeRouteAuthoring { get; }
 
     public IReadOnlyList<City> Cities => _world.Cities;
 
@@ -240,17 +219,6 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     public IReadOnlyList<TradeRouteVisualViewModel> TradeRouteVisuals => _tradeRouteVisuals;
     public IReadOnlyList<TradeRouteVisualViewModel> DebugLoadedRoutePathVisuals => _tradeRouteVisuals.Where(x => x.IsLoadedPath && x.Points.Count >= 2).ToList();
     public IReadOnlyList<TradeRoute> TradeRoutes => _world.TradeRoutes;
-    public IReadOnlyList<City> RouteAuthoringSettlements => _world.Cities;
-    public IReadOnlyList<City> AvailableRouteAuthoringDestinations => _world.Cities;
-    public ObservableCollection<City> RouteAuthoringDestinationSettlements { get; } = [];
-    public ObservableCollection<MapPointViewModel> EditedTradeRoutePoints { get; } = [];
-    public int EditedTradeRoutePointCount => EditedTradeRoutePoints.Count;
-    public int EditedTradeRouteIntermediatePointCount => EditedTradeRoutePoints.Count;
-    public int RouteAuthoringDestinationCount => RouteAuthoringDestinationSettlements.Count;
-    public bool CanAddMoreRouteAuthoringDestinations => RouteAuthoringDestinationSettlements.Count < 8;
-    public bool HasSelectedTradeRouteForAuthoring => SelectedTradeRouteForAuthoring is not null;
-    public List<RoutePoint> EditedTradeRoutePolylinePoints => BuildFullRoutePoints();
-    public string RouteAuthoringRouteIdDisplay => _routeAuthoringRouteIdDisplay;
 
     public string SimulationSummaryDayAndHour => $"День {Day}, час {Hour}";
 
@@ -509,17 +477,6 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         ? "Выключить калибровку карты"
         : "Включить калибровку карты";
 
-    public bool IsTradeRouteAuthoringModeEnabled
-    {
-        get => _isTradeRouteAuthoringModeEnabled;
-        set
-        {
-            if (_isTradeRouteAuthoringModeEnabled == value) return;
-            _isTradeRouteAuthoringModeEnabled = value;
-            OnPropertyChanged();
-        }
-    }
-
     public bool IsTradeRoutesOverlayVisible
     {
         get => _isTradeRoutesOverlayVisible;
@@ -538,92 +495,6 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
 
     public Visibility TradeRoutesOverlayVisibility =>
         IsTradeRoutesOverlayVisible ? Visibility.Visible : Visibility.Collapsed;
-
-    public bool IsLoadedRoutePathsDebugVisible
-    {
-        get => _isLoadedRoutePathsDebugVisible;
-        set
-        {
-            if (_isLoadedRoutePathsDebugVisible == value)
-            {
-                return;
-            }
-
-            _isLoadedRoutePathsDebugVisible = value;
-            OnPropertyChanged();
-        }
-    }
-
-    public City? RouteAuthoringOriginSettlement
-    {
-        get => _routeAuthoringOriginSettlement;
-        set
-        {
-            if (_routeAuthoringOriginSettlement == value) return;
-            _routeAuthoringOriginSettlement = value;
-            OnPropertyChanged();
-            ResetRouteAuthoringOriginState();
-        }
-    }
-
-    public City? RouteAuthoringDestinationCandidateSettlement
-    {
-        get => _routeAuthoringDestinationCandidateSettlement;
-        set
-        {
-            if (_routeAuthoringDestinationCandidateSettlement == value) return;
-            _routeAuthoringDestinationCandidateSettlement = value;
-            OnPropertyChanged();
-        }
-    }
-
-    public City? ActiveRouteAuthoringDestinationSettlement
-    {
-        get => _activeRouteAuthoringDestinationSettlement;
-        set
-        {
-            if (_activeRouteAuthoringDestinationSettlement == value) return;
-            SaveCurrentActiveDraftPoints();
-            _activeRouteAuthoringDestinationSettlement = value;
-            OnPropertyChanged();
-            LoadActiveRouteDraftOrExisting();
-        }
-    }
-
-    public TradeRoute? SelectedTradeRouteForAuthoring
-    {
-        get => _selectedTradeRouteForAuthoring;
-        set
-        {
-            if (_selectedTradeRouteForAuthoring == value) return;
-            _selectedTradeRouteForAuthoring = value;
-            ReloadEditedTradeRoutePointsFromSelectedRoute();
-            OnPropertyChanged();
-            OnPropertyChanged(nameof(HasSelectedTradeRouteForAuthoring));
-        }
-    }
-
-    public decimal SelectedTradeRouteDistanceDays
-    {
-        get => _selectedTradeRouteDistanceDays;
-        set
-        {
-            if (_selectedTradeRouteDistanceDays == value) return;
-            _selectedTradeRouteDistanceDays = value;
-            OnPropertyChanged();
-        }
-    }
-
-    public string SelectedTradeRouteDistanceDaysInput
-    {
-        get => _selectedTradeRouteDistanceDaysInput;
-        set
-        {
-            if (_selectedTradeRouteDistanceDaysInput == value) return;
-            _selectedTradeRouteDistanceDaysInput = value;
-            OnPropertyChanged();
-        }
-    }
 
     public string LastMapCalibrationPointDisplay => _lastMapCalibrationX.HasValue && _lastMapCalibrationY.HasValue
         ? $"Последняя точка карты: X={_lastMapCalibrationX.Value:0.0000}, Y={_lastMapCalibrationY.Value:0.0000}"
@@ -721,268 +592,6 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
             : "Режим калибровки карты выключен.");
     }
 
-    public void RegisterTradeRouteAuthoringPoint(double relativeX, double relativeY)
-    {
-        if (!IsTradeRouteAuthoringModeEnabled)
-        {
-            return;
-        }
-        if (RouteAuthoringOriginSettlement is null || ActiveRouteAuthoringDestinationSettlement is null)
-        {
-            AddTechnicalLogEntry("Выберите пункт отправления и активный пункт назначения.");
-            return;
-        }
-
-        AddTradeRoutePoint(new MapPointViewModel { X = Math.Clamp(relativeX, 0d, 1d), Y = Math.Clamp(relativeY, 0d, 1d) });
-    }
-
-    private void AddTradeRoutePoint(MapPointViewModel? point)
-    {
-        if (point is null) return;
-        EditedTradeRoutePoints.Add(new MapPointViewModel { X = Math.Clamp(point.X, 0d, 1d), Y = Math.Clamp(point.Y, 0d, 1d) });
-    }
-
-    private void UndoTradeRoutePoint()
-    {
-        if (EditedTradeRoutePoints.Count > 0) EditedTradeRoutePoints.RemoveAt(EditedTradeRoutePoints.Count - 1);
-    }
-
-    private void ClearTradeRoutePoints() => EditedTradeRoutePoints.Clear();
-
-    private void SaveTradeRoutePoints()
-    {
-        if (RouteAuthoringOriginSettlement is null || ActiveRouteAuthoringDestinationSettlement is null)
-        {
-            AddTechnicalLogEntry("Маршрут не сохранён: выберите пункт отправления и активный пункт назначения.");
-            return;
-        }
-        if (RouteAuthoringOriginSettlement.Id == ActiveRouteAuthoringDestinationSettlement.Id)
-        {
-            AddTechnicalLogEntry("Маршрут не сохранён: отправление и назначение совпадают.");
-            return;
-        }
-        if (!decimal.TryParse(SelectedTradeRouteDistanceDaysInput, NumberStyles.Number, CultureInfo.InvariantCulture, out var parsedDistanceDays))
-        {
-            AddTechnicalLogEntry("Маршрут не сохранён: укажите корректное значение дней пути.");
-            return;
-        }
-        if (parsedDistanceDays < 0.1m)
-        {
-            AddTechnicalLogEntry("Маршрут не сохранён: дней пути должно быть не меньше 0.1.");
-            return;
-        }
-        SelectedTradeRouteDistanceDays = parsedDistanceDays;
-        var fullPoints = BuildFullRoutePoints();
-        if (fullPoints.Count < 2)
-        {
-            AddTechnicalLogEntry("Маршрут не сохранён: нужно минимум 2 точки.");
-            return;
-        }
-
-        var existingRoute = FindRouteBetween(RouteAuthoringOriginSettlement, ActiveRouteAuthoringDestinationSettlement);
-        var updatedRoute = new TradeRoute
-        {
-            Id = existingRoute?.Id ?? $"{RouteAuthoringOriginSettlement.Id}_{ActiveRouteAuthoringDestinationSettlement.Id}",
-            FromSettlementId = existingRoute?.FromSettlementId ?? RouteAuthoringOriginSettlement.Id,
-            ToSettlementId = existingRoute?.ToSettlementId ?? ActiveRouteAuthoringDestinationSettlement.Id,
-            Type = existingRoute?.Type ?? InferRouteType(RouteAuthoringOriginSettlement.Id, ActiveRouteAuthoringDestinationSettlement.Id),
-            Distance = existingRoute?.Distance ?? 100m,
-            TravelDays = existingRoute?.TravelDays ?? 3,
-            DistanceDays = SelectedTradeRouteDistanceDays,
-            IsEnabled = existingRoute?.IsEnabled ?? true,
-            DifficultyMultiplier = existingRoute?.DifficultyMultiplier ?? 1m,
-            Points = fullPoints
-        };
-
-        var routeIndex = existingRoute is null ? -1 : _world.TradeRoutes.FindIndex(x => x.Id == existingRoute.Id);
-        if (routeIndex >= 0)
-        {
-            _world.TradeRoutes[routeIndex] = updatedRoute;
-        }
-        else
-        {
-            _world.TradeRoutes.Add(updatedRoute);
-        }
-        SelectedTradeRouteForAuthoring = updatedRoute;
-
-        OnPropertyChanged(nameof(TradeRoutes));
-        OnPropertyChanged(nameof(SelectedTradeRouteForAuthoring));
-        OnPropertyChanged(nameof(EditedTradeRoutePointCount));
-        OnPropertyChanged(nameof(EditedTradeRoutePolylinePoints));
-        RefreshTradeRouteVisuals(null);
-        AddTechnicalLogEntry($"Маршрут {updatedRoute.Id}: сохранено {fullPoints.Count} точек, дней пути {SelectedTradeRouteDistanceDays:0.###}.");
-    }
-
-    private void CopyTradeRoutePoints()
-    {
-        if (RouteAuthoringOriginSettlement is null || ActiveRouteAuthoringDestinationSettlement is null)
-        {
-            AddTechnicalLogEntry("Копирование Points недоступно: выберите пункт отправления и активный пункт назначения.");
-            return;
-        }
-        var fullPoints = BuildFullRoutePoints();
-        var routeId = SelectedTradeRouteForAuthoring?.Id ?? $"{RouteAuthoringOriginSettlement.Id}_{ActiveRouteAuthoringDestinationSettlement.Id}";
-        var lines = fullPoints.Select(x =>
-            $"    new RoutePoint {{ X = {Math.Clamp(x.X, 0m, 1m).ToString("0.0000", CultureInfo.InvariantCulture)}m, Y = {Math.Clamp(x.Y, 0m, 1m).ToString("0.0000", CultureInfo.InvariantCulture)}m }}");
-        var text = $"RouteId: {routeId}{Environment.NewLine}From: {RouteAuthoringOriginSettlement.Id}{Environment.NewLine}To: {ActiveRouteAuthoringDestinationSettlement.Id}{Environment.NewLine}DistanceDays: {SelectedTradeRouteDistanceDays:0.0###}{Environment.NewLine}{Environment.NewLine}Points ={Environment.NewLine}[{Environment.NewLine}{string.Join($",{Environment.NewLine}", lines)}{Environment.NewLine}]";
-        Clipboard.SetText(text);
-        AddTechnicalLogEntry($"Маршрут {routeId}: Points скопированы.");
-    }
-
-    private void ReloadEditedTradeRoutePointsFromSelectedRoute()
-    {
-        EditedTradeRoutePoints.Clear();
-        if (SelectedTradeRouteForAuthoring is not null)
-        {
-            SelectedTradeRouteDistanceDays = SelectedTradeRouteForAuthoring.DistanceDays;
-            SelectedTradeRouteDistanceDaysInput = SelectedTradeRouteDistanceDays.ToString("0.0###", CultureInfo.InvariantCulture);
-            foreach (var point in SelectedTradeRouteForAuthoring.Points)
-            {
-                EditedTradeRoutePoints.Add(new MapPointViewModel { X = (double)point.X, Y = (double)point.Y });
-            }
-        }
-
-        OnPropertyChanged(nameof(EditedTradeRoutePoints));
-        OnPropertyChanged(nameof(EditedTradeRoutePointCount));
-        OnPropertyChanged(nameof(EditedTradeRouteIntermediatePointCount));
-        OnPropertyChanged(nameof(EditedTradeRoutePolylinePoints));
-    }
-
-    private TradeRoute? FindRouteBetween(City from, City to) => _world.TradeRoutes.FirstOrDefault(route =>
-        (route.FromSettlementId == from.Id && route.ToSettlementId == to.Id)
-        || (route.FromSettlementId == to.Id && route.ToSettlementId == from.Id));
-
-    private void ResolveRouteAuthoringSelection(City origin, City destination)
-    {
-        var existingRoute = FindRouteBetween(origin, destination);
-        if (existingRoute is not null)
-        {
-            SelectedTradeRouteForAuthoring = existingRoute;
-            _routeAuthoringRouteIdDisplay = $"RouteId: {existingRoute.Id}";
-        }
-        else
-        {
-            SelectedTradeRouteForAuthoring = null;
-            EditedTradeRoutePoints.Clear();
-            SelectedTradeRouteDistanceDays = 1m;
-            SelectedTradeRouteDistanceDaysInput = "1.0";
-            _routeAuthoringRouteIdDisplay = $"Новый маршрут: {origin.Id}_{destination.Id}";
-        }
-        OnPropertyChanged(nameof(RouteAuthoringRouteIdDisplay));
-    }
-
-    private List<RoutePoint> BuildFullRoutePoints()
-    {
-        var fullPoints = new List<RoutePoint>();
-        if (RouteAuthoringOriginSettlement is not null && TryGetSettlementPoint(RouteAuthoringOriginSettlement.Id, out var start))
-        {
-            fullPoints.Add(start);
-        }
-        fullPoints.AddRange(EditedTradeRoutePoints.Select(x => new RoutePoint { X = (decimal)Math.Clamp(x.X, 0d, 1d), Y = (decimal)Math.Clamp(x.Y, 0d, 1d) }));
-        if (ActiveRouteAuthoringDestinationSettlement is not null && TryGetSettlementPoint(ActiveRouteAuthoringDestinationSettlement.Id, out var end))
-        {
-            fullPoints.Add(end);
-        }
-        return fullPoints;
-    }
-
-    private bool TryGetSettlementPoint(string cityId, out RoutePoint point)
-    {
-        var location = _world.FindSettlementMapLocation(cityId);
-        if (location is not null)
-        {
-            point = new RoutePoint { X = location.X, Y = location.Y };
-            return true;
-        }
-        point = new RoutePoint { X = 0m, Y = 0m };
-        return false;
-    }
-
-    private static CaravanType InferRouteType(string fromId, string toId)
-        => fromId == "thokur_rus" || toId == "thokur_rus" ? CaravanType.Sea : CaravanType.Land;
-
-    private void AddRouteAuthoringDestination()
-    {
-        if (RouteAuthoringOriginSettlement is null)
-        {
-            AddTechnicalLogEntry("Сначала выберите пункт отправления.");
-            return;
-        }
-        var destination = RouteAuthoringDestinationCandidateSettlement;
-        if (destination is null) return;
-        if (destination.Id == RouteAuthoringOriginSettlement.Id)
-        {
-            AddTechnicalLogEntry("Пункт назначения не может совпадать с пунктом отправления.");
-            return;
-        }
-        if (RouteAuthoringDestinationSettlements.Any(x => x.Id == destination.Id))
-        {
-            AddTechnicalLogEntry("Пункт назначения уже добавлен.");
-            return;
-        }
-        if (RouteAuthoringDestinationSettlements.Count >= 8)
-        {
-            AddTechnicalLogEntry("Можно выбрать максимум 8 пунктов назначения.");
-            return;
-        }
-        RouteAuthoringDestinationSettlements.Add(destination);
-        OnPropertyChanged(nameof(RouteAuthoringDestinationCount));
-        OnPropertyChanged(nameof(CanAddMoreRouteAuthoringDestinations));
-        if (ActiveRouteAuthoringDestinationSettlement is null)
-        {
-            ActiveRouteAuthoringDestinationSettlement = destination;
-        }
-    }
-
-    private void ResetRouteAuthoringOriginState()
-    {
-        _routeAuthoringDraftPointsByDestinationId.Clear();
-        _currentDraftDestinationId = null;
-        RouteAuthoringDestinationSettlements.Clear();
-        ActiveRouteAuthoringDestinationSettlement = null;
-        RouteAuthoringDestinationCandidateSettlement = null;
-        EditedTradeRoutePoints.Clear();
-        SelectedTradeRouteForAuthoring = null;
-        SelectedTradeRouteDistanceDays = 1m;
-        SelectedTradeRouteDistanceDaysInput = "1.0";
-        _routeAuthoringRouteIdDisplay = "RouteId: —";
-        OnPropertyChanged(nameof(RouteAuthoringRouteIdDisplay));
-        OnPropertyChanged(nameof(RouteAuthoringDestinationCount));
-        OnPropertyChanged(nameof(CanAddMoreRouteAuthoringDestinations));
-        AddTechnicalLogEntry("Источник маршрутов изменён, список назначений очищен.");
-    }
-
-    private void SaveCurrentActiveDraftPoints()
-    {
-        if (string.IsNullOrWhiteSpace(_currentDraftDestinationId)) return;
-        _routeAuthoringDraftPointsByDestinationId[_currentDraftDestinationId] = EditedTradeRoutePoints
-            .Select(x => new MapPointViewModel { X = x.X, Y = x.Y })
-            .ToList();
-    }
-
-    private void LoadActiveRouteDraftOrExisting()
-    {
-        EditedTradeRoutePoints.Clear();
-        if (RouteAuthoringOriginSettlement is null || ActiveRouteAuthoringDestinationSettlement is null)
-        {
-            _currentDraftDestinationId = null;
-            _routeAuthoringRouteIdDisplay = "RouteId: —";
-            OnPropertyChanged(nameof(RouteAuthoringRouteIdDisplay));
-            return;
-        }
-
-        _currentDraftDestinationId = ActiveRouteAuthoringDestinationSettlement.Id;
-        if (_routeAuthoringDraftPointsByDestinationId.TryGetValue(_currentDraftDestinationId, out var draftPoints))
-        {
-            foreach (var point in draftPoints)
-            {
-                EditedTradeRoutePoints.Add(new MapPointViewModel { X = point.X, Y = point.Y });
-            }
-        }
-
-        ResolveRouteAuthoringSelection(RouteAuthoringOriginSettlement, ActiveRouteAuthoringDestinationSettlement);
-    }
-
     private void Start()
     {
         _clock.Start();
@@ -1044,26 +653,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
 
     private void ResetRouteAuthoringStateForWorldReset()
     {
-        _routeAuthoringDraftPointsByDestinationId.Clear();
-        _currentDraftDestinationId = null;
-        _routeAuthoringOriginSettlement = null;
-        _routeAuthoringDestinationCandidateSettlement = null;
-        _activeRouteAuthoringDestinationSettlement = null;
-        RouteAuthoringDestinationSettlements.Clear();
-        EditedTradeRoutePoints.Clear();
-        SelectedTradeRouteDistanceDays = 1m;
-        SelectedTradeRouteDistanceDaysInput = "1.0";
-        _routeAuthoringRouteIdDisplay = "RouteId: —";
-        _selectedTradeRouteForAuthoring = null;
-
-        OnPropertyChanged(nameof(RouteAuthoringOriginSettlement));
-        OnPropertyChanged(nameof(RouteAuthoringDestinationCandidateSettlement));
-        OnPropertyChanged(nameof(ActiveRouteAuthoringDestinationSettlement));
-        OnPropertyChanged(nameof(SelectedTradeRouteForAuthoring));
-        OnPropertyChanged(nameof(HasSelectedTradeRouteForAuthoring));
-        OnPropertyChanged(nameof(RouteAuthoringDestinationCount));
-        OnPropertyChanged(nameof(CanAddMoreRouteAuthoringDestinations));
-        OnPropertyChanged(nameof(RouteAuthoringRouteIdDisplay));
+        TradeRouteAuthoring.ResetForWorldReset();
     }
 
     private void SetNormalSpeed() => SetSimulationSpeed(NormalSimulationSpeed);
@@ -1538,14 +1128,17 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         }
     }
 
+    private void NotifyTradeRoutesChanged()
+    {
+        OnPropertyChanged(nameof(TradeRoutes));
+    }
+
     private void RefreshWorldCollectionsAfterLoad()
     {
         OnPropertyChanged(nameof(Cities));
         OnPropertyChanged(nameof(SettlementCountText));
-        OnPropertyChanged(nameof(TradeRoutes));
-        OnPropertyChanged(nameof(RouteAuthoringSettlements));
-        OnPropertyChanged(nameof(AvailableRouteAuthoringDestinations));
-        SelectedTradeRouteForAuthoring = _world.TradeRoutes.FirstOrDefault();
+        NotifyTradeRoutesChanged();
+        TradeRouteAuthoring.RefreshWorldCollections();
         RefreshTradeRouteVisuals(null);
         RefreshSimulationJournalFilter();
     }
