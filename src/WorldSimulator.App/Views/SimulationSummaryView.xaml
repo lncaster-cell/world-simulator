@@ -1,0 +1,29 @@
+<UserControl x:Class="WorldSimulator.App.Views.SimulationSummaryView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:WorldSimulator.App.ViewModels"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance Type=vm:MainWindowViewModel, IsDesignTimeCreatable=False}">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Resources/MainWindowResources.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
+    <Border BorderBrush="LightGray" BorderThickness="1" CornerRadius="6" Padding="12" Margin="0,0,0,12">
+                    <StackPanel>
+                        <TextBlock Text="{Binding SimulationSummaryTitle}" FontWeight="SemiBold" FontSize="16" Margin="0,0,0,8"/>
+                        <TextBlock Text="{Binding SimulationSummaryDayAndHour}" Margin="0,0,0,4"/>
+                        <TextBlock Text="{Binding SimulationSummaryCityState}" Margin="0,0,0,4"/>
+                        <TextBlock Text="{Binding SimulationSummaryFoodBalance}" ToolTip="{Binding FoodBalanceTooltip}" Margin="0,0,0,4"/>
+                        <TextBlock Text="{Binding SimulationSummaryActiveEvents}" Margin="0,0,0,4"/>
+                        <TextBlock Text="{Binding SimulationSummaryRandomEventsStatus}" Margin="0,0,0,4"/>
+                        <TextBlock Text="{Binding SelectedRegionName, StringFormat=Регион: {0}}" Margin="0,0,0,4"/>
+                        <TextBlock Text="{Binding SimulationSummaryLastImportantChange}" TextWrapping="Wrap"/>
+                    </StackPanel>
+                </Border>
+
+</UserControl>

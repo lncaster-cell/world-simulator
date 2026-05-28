@@ -1,0 +1,59 @@
+<UserControl x:Class="WorldSimulator.App.Views.SelectedCityPanelView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:WorldSimulator.App.ViewModels"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance Type=vm:MainWindowViewModel, IsDesignTimeCreatable=False}">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Resources/MainWindowResources.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
+    <Border BorderBrush="LightGray"
+                        BorderThickness="1"
+                        CornerRadius="6"
+                        Padding="12"
+                        Margin="0,0,0,12"
+                        Visibility="Visible">
+                    <StackPanel>
+                        <TextBlock Text="Выбранный город" FontWeight="SemiBold" FontSize="16" Margin="0,0,0,10"/>
+                        <TextBlock Text="{Binding SelectedCityName}" FontSize="18" FontWeight="Bold" Margin="0,0,0,8"/>
+                        <TextBlock Text="Тип/профиль:" FontWeight="SemiBold"/>
+                        <TextBlock Text="{Binding SelectedCityProfile}" TextWrapping="Wrap" Margin="0,0,0,8"/>
+
+                        <TextBlock Text="Состояние города:" FontWeight="SemiBold"/>
+                        <TextBlock Text="{Binding CityStateDisplay}" Margin="0,0,0,6"/>
+
+                        <TextBlock Text="Население:" FontWeight="SemiBold"/>
+                        <TextBlock Text="{Binding Population}" Margin="0,0,0,6"/>
+
+                        <TextBlock Text="Ресурсы:" FontWeight="SemiBold" ToolTip="{Binding ResourcesTooltip}"/>
+                        <TextBlock Text="{Binding Resources}" ToolTip="{Binding ResourcesTooltip}" Margin="0,0,0,6"/>
+
+                        <TextBlock Text="Товары:" FontWeight="SemiBold" ToolTip="{Binding GoodsTooltip}"/>
+                        <TextBlock Text="{Binding Goods}" ToolTip="{Binding GoodsTooltip}" Margin="0,0,0,6"/>
+
+                        <TextBlock Text="Пища:" FontWeight="SemiBold" ToolTip="{Binding FoodBalanceTooltip}"/>
+                        <TextBlock Text="{Binding Food}" ToolTip="{Binding FoodBalanceTooltip}" Margin="0,0,0,6"/>
+
+                        <TextBlock Text="Безопасность:" FontWeight="SemiBold"/>
+                        <TextBlock Text="{Binding Security}" Margin="0,0,0,6"/>
+
+                        <TextBlock Text="Преступность:" FontWeight="SemiBold" ToolTip="{Binding CrimeFlowTooltip}"/>
+                        <TextBlock Text="{Binding Crime}" ToolTip="{Binding CrimeFlowTooltip}" Margin="0,0,0,6"/>
+
+                        <TextBlock Text="Настроение:" FontWeight="SemiBold"/>
+                        <TextBlock Text="{Binding Mood}" Margin="0,0,0,12"/>
+
+                        <WrapPanel>
+                            <Button Content="Открыть город" Width="130" Command="{Binding OpenSelectedCityCommand}" Click="OpenCityButton_Click" Margin="0,0,8,0"/>
+                            <Button Content="Открыть летопись города" Width="140" Click="OpenLogButton_Click"/>
+                        </WrapPanel>
+                    </StackPanel>
+                </Border>
+
+</UserControl>

@@ -1,0 +1,39 @@
+<UserControl x:Class="WorldSimulator.App.Views.TradeRouteAuthoringPanelView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:WorldSimulator.App.ViewModels"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance Type=vm:MainWindowViewModel, IsDesignTimeCreatable=False}">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Resources/MainWindowResources.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
+    <Border BorderBrush="LightGray" BorderThickness="1" CornerRadius="6" Padding="10" Margin="0,0,0,10"
+                    Visibility="{Binding IsTradeRouteAuthoringModeEnabled, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <WrapPanel VerticalAlignment="Center">
+                    <TextBlock Text="Редактор маршрутов" FontWeight="SemiBold" Margin="0,0,12,0" VerticalAlignment="Center"/>
+                    <TextBlock Text="Откуда:" VerticalAlignment="Center"/>
+                    <ComboBox Width="170" Margin="6,0,8,0" ItemsSource="{Binding RouteAuthoringSettlements}" SelectedItem="{Binding RouteAuthoringOriginSettlement}" DisplayMemberPath="Name"/>
+                    <TextBlock Text="Добавить пункт:" VerticalAlignment="Center"/>
+                    <ComboBox Width="170" Margin="6,0,8,0" ItemsSource="{Binding AvailableRouteAuthoringDestinations}" SelectedItem="{Binding RouteAuthoringDestinationCandidateSettlement}" DisplayMemberPath="Name"/>
+                    <Button Content="Добавить" Command="{Binding AddRouteAuthoringDestinationCommand}" Margin="0,0,8,0"/>
+                    <TextBlock Text="Активное назначение:" VerticalAlignment="Center"/>
+                    <ComboBox Width="170" Margin="6,0,8,0" ItemsSource="{Binding RouteAuthoringDestinationSettlements}" SelectedItem="{Binding ActiveRouteAuthoringDestinationSettlement}" DisplayMemberPath="Name"/>
+                    <TextBlock Text="Дней:" VerticalAlignment="Center"/>
+                    <TextBox Width="70" Margin="6,0,8,0" Text="{Binding SelectedTradeRouteDistanceDaysInput, UpdateSourceTrigger=PropertyChanged}"/>
+                    <TextBlock Text="{Binding EditedTradeRouteIntermediatePointCount, StringFormat=Точек: {0}}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <TextBlock Text="{Binding RouteAuthoringDestinationCount, StringFormat=Назначений: {0}/8}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <TextBlock Text="{Binding RouteAuthoringRouteIdDisplay}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <Button Content="Отменить" Command="{Binding UndoTradeRoutePointCommand}" Margin="0,0,8,0"/>
+                    <Button Content="Очистить" Command="{Binding ClearTradeRoutePointsCommand}" Margin="0,0,8,0"/>
+                    <Button Content="Сохранить" Command="{Binding SaveTradeRoutePointsCommand}" Margin="0,0,8,0"/>
+                    <Button Content="Скопировать Points" Command="{Binding CopyTradeRoutePointsCommand}"/>
+                </WrapPanel>
+            </Border>
+
+</UserControl>
