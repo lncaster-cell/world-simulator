@@ -9,7 +9,7 @@ namespace WorldSimulator.Persistence.Saves;
 
 public sealed class JsonWorldSaveService
 {
-    private const string FallbackCityId = "gotha";
+    private const int CurrentSaveVersion = 3;
 
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
 
@@ -27,18 +27,18 @@ public sealed class JsonWorldSaveService
 
         var saveData = new WorldSaveData
         {
-            Version = 2,
+            Version = CurrentSaveVersion,
             SavedAtUtc = DateTime.UtcNow,
             Clock = new ClockSaveData { Day = clock.Day, Hour = clock.Hour, IsRunning = clock.IsRunning, AccumulatedRealTime = clock.AccumulatedRealTime, RealTimePerGameHour = clock.RealTimePerGameHour },
             World = new SimulationWorldSaveData
             {
-                Cities = world.Cities.Select(city => ToSaveData(city)).ToList(),
+                Cities = world.Cities.Select(ToSaveData).ToList(),
                 CitiesById = world.Cities.ToDictionary(city => city.Id, ToSaveData, StringComparer.Ordinal),
                 Regions = world.Regions.Select(ToSaveData).ToList(),
                 SettlementMapLocations = world.SettlementMapLocations.Select(ToSaveData).ToList(),
                 SettlementEconomyProfiles = world.SettlementEconomyProfiles.Select(ToSaveData).ToList(),
                 Caravans = world.Caravans.Select(ToSaveData).ToList(),
-                TradeRoutes = world.TradeRoutes.Select(route => ToSaveData(route)).ToList(),
+                TradeRoutes = world.TradeRoutes.Select(ToSaveData).ToList(),
                 TradeShipments = world.TradeShipments.Select(ToSaveData).ToList(),
                 SelectedCityId = world.SelectedCityId,
                 SelectedRegionId = world.SelectedRegionId
@@ -83,14 +83,10 @@ public sealed class JsonWorldSaveService
         }
 
         if (saveData is null) throw new InvalidDataException($"Save file '{filePath}' is empty or malformed.");
+        if (saveData.Version != CurrentSaveVersion) throw new InvalidDataException($"Save file '{filePath}' has unsupported version '{saveData.Version}'. Expected '{CurrentSaveVersion}'.");
+        if (saveData.World is null) throw new InvalidDataException($"Save file '{filePath}' version {CurrentSaveVersion} is missing world data.");
 
-        var world = saveData.Version switch
-        {
-            1 => BuildWorldFromVersion1(saveData, filePath),
-            2 => BuildWorldFromVersion2(saveData, filePath),
-            _ => throw new InvalidDataException($"Save file '{filePath}' has unsupported version '{saveData.Version}'.")
-        };
-
+        var world = BuildWorld(saveData.World, filePath);
         ValidateWorld(world, filePath);
 
         var settings = new SimulationTimeSettings { RealTimePerGameHour = saveData.Clock.RealTimePerGameHour };
@@ -100,6 +96,39 @@ public sealed class JsonWorldSaveService
         var eventState = BuildEventState(saveData.Events, world.SelectedCityId);
 
         return new WorldLoadResult(world, clock, eventState);
+    }
+
+    private static SimulationWorld BuildWorld(SimulationWorldSaveData worldData, string filePath)
+    {
+        var loadedCities = ResolveCities(worldData, filePath);
+        var regions = worldData.Regions.Select(ToCoreRegion).ToList();
+        var settlementMapLocations = worldData.SettlementMapLocations.Select(ToCoreSettlementMapLocation).ToList();
+        var settlementEconomyProfiles = worldData.SettlementEconomyProfiles.Select(ToCoreSettlementEconomyProfile).ToList();
+        var caravans = worldData.Caravans.Select(ToCoreCaravan).ToList();
+        var tradeRoutes = worldData.TradeRoutes.Select(routeData => ToCoreTradeRoute(routeData, DefaultRouteDistanceDaysCache.Value)).ToList();
+
+        if (loadedCities.Count == 0) throw new InvalidDataException($"Save file '{filePath}' has no cities.");
+        if (regions.Count == 0) throw new InvalidDataException($"Save file '{filePath}' has no regions.");
+
+        var selectedCityId = loadedCities.Any(c => c.Id == worldData.SelectedCityId)
+            ? worldData.SelectedCityId
+            : loadedCities.First().Id;
+        var selectedRegionId = regions.Any(r => r.Id == worldData.SelectedRegionId)
+            ? worldData.SelectedRegionId
+            : regions.First().Id;
+
+        return new SimulationWorld
+        {
+            Cities = loadedCities,
+            Regions = regions,
+            SettlementMapLocations = settlementMapLocations,
+            SettlementEconomyProfiles = settlementEconomyProfiles,
+            Caravans = caravans,
+            TradeRoutes = tradeRoutes,
+            TradeShipments = worldData.TradeShipments.Select(ToCoreTradeShipment).ToList(),
+            SelectedCityId = selectedCityId,
+            SelectedRegionId = selectedRegionId
+        };
     }
 
     private static WorldEventState BuildEventState(EventSaveData? events, string selectedCityId)
@@ -135,54 +164,6 @@ public sealed class JsonWorldSaveService
         return state;
     }
 
-    private static SimulationWorld BuildWorldFromVersion2(WorldSaveData saveData, string filePath)
-    {
-        if (saveData.World is null) throw new InvalidDataException($"Save file '{filePath}' version 2 is missing world data.");
-
-        var defaultWorld = WorldPresets.CreateDefaultWorld();
-
-        var regions = saveData.World.Regions.Any()
-            ? saveData.World.Regions.Select(ToCoreRegion).ToList()
-            : defaultWorld.Regions;
-
-        var settlementMapLocations = saveData.World.SettlementMapLocations.Any()
-            ? saveData.World.SettlementMapLocations.Select(ToCoreSettlementMapLocation).ToList()
-            : defaultWorld.SettlementMapLocations;
-
-        var settlementEconomyProfiles = saveData.World.SettlementEconomyProfiles.Any()
-            ? saveData.World.SettlementEconomyProfiles.Select(ToCoreSettlementEconomyProfile).ToList()
-            : defaultWorld.SettlementEconomyProfiles;
-
-        var caravans = saveData.World.Caravans.Any()
-            ? saveData.World.Caravans.Select(ToCoreCaravan).ToList()
-            : defaultWorld.Caravans;
-
-        var tradeRoutes = saveData.World.TradeRoutes.Any()
-            ? saveData.World.TradeRoutes.Select(routeData => ToCoreTradeRoute(routeData, DefaultRouteDistanceDaysCache.Value)).ToList()
-            : defaultWorld.TradeRoutes;
-
-        var loadedCities = ResolveCities(saveData.World, filePath);
-        var selectedCityId = loadedCities.Any(c => c.Id == saveData.World.SelectedCityId)
-            ? saveData.World.SelectedCityId
-            : loadedCities.First().Id;
-        var selectedRegionId = regions.Any(r => r.Id == saveData.World.SelectedRegionId)
-            ? saveData.World.SelectedRegionId
-            : regions.First().Id;
-
-        return new SimulationWorld
-        {
-            Cities = loadedCities,
-            Regions = regions,
-            SettlementMapLocations = settlementMapLocations,
-            SettlementEconomyProfiles = settlementEconomyProfiles,
-            Caravans = caravans,
-            TradeRoutes = tradeRoutes,
-            TradeShipments = saveData.World.TradeShipments.Select(ToCoreTradeShipment).ToList(),
-            SelectedCityId = selectedCityId,
-            SelectedRegionId = selectedRegionId
-        };
-    }
-
     private static List<City> ResolveCities(SimulationWorldSaveData worldData, string filePath)
     {
         if (worldData.CitiesById.Count > 0)
@@ -191,20 +172,6 @@ public sealed class JsonWorldSaveService
         }
 
         return worldData.Cities.Select(x => ToCoreCity(x, filePath)).ToList();
-    }
-
-    private static SimulationWorld BuildWorldFromVersion1(WorldSaveData saveData, string filePath)
-    {
-        if (saveData.City is null) throw new InvalidDataException($"Save file '{filePath}' version 1 is missing city data.");
-
-        var world = WorldPresets.CreateDefaultWorld();
-        var restoredCity = ToCoreCity(saveData.City, filePath);
-        var cityIndex = world.Cities.FindIndex(c => c.Id == restoredCity.Id);
-        if (cityIndex >= 0) world.Cities[cityIndex] = restoredCity;
-
-        world.SelectedCityId = world.Cities.Any(c => c.Id == restoredCity.Id) ? restoredCity.Id : FallbackCityId;
-        world.SelectedRegionId = world.Regions.Any(r => r.Id == world.SelectedRegionId) ? world.SelectedRegionId : world.Regions.First().Id;
-        return world;
     }
 
     private static void ValidateWorld(SimulationWorld world, string filePath)
@@ -230,9 +197,27 @@ public sealed class JsonWorldSaveService
 
     private static CitySaveData ToSaveData(City city) => new()
     {
-        Id = city.Id, Name = city.Name, Population = city.Population, Food = city.Food, Wealth = city.Wealth, Mood = city.Mood, Security = city.Security, Crime = city.Crime, Resources = city.Resources, Goods = city.Goods, CityState = city.CityState.ToString()
+        Id = city.Id,
+        Name = city.Name,
+        Population = city.Population,
+        Food = city.Food,
+        Wealth = city.Wealth,
+        Mood = city.Mood,
+        Security = city.Security,
+        Crime = city.Crime,
+        Resources = city.Resources,
+        Goods = city.Goods,
+        CityState = city.CityState.ToString(),
+        Infrastructure = ToSaveData(city.Infrastructure)
     };
 
+    private static CityInfrastructureSaveData ToSaveData(CityInfrastructure infrastructure) => new()
+    {
+        HousingLevel = infrastructure.HousingLevel,
+        UrbanLevel = infrastructure.UrbanLevel,
+        ProductionLevel = infrastructure.ProductionLevel,
+        MilitaryLevel = infrastructure.MilitaryLevel
+    };
 
     private static RegionSaveData ToSaveData(Region region) => new()
     {
@@ -280,10 +265,19 @@ public sealed class JsonWorldSaveService
     {
         if (!Enum.TryParse<CityState>(cityData.CityState, true, out var parsedCityState))
             throw new InvalidDataException($"Save file '{filePath}' contains unknown city_state '{cityData.CityState}'.");
+        if (cityData.Infrastructure is null)
+            throw new InvalidDataException($"Save file '{filePath}' city '{cityData.Id}' is missing infrastructure data.");
 
-        return new City(cityData.Id, cityData.Name, cityData.Population, cityData.Food, cityData.Wealth, cityData.Mood, cityData.Security, cityData.Crime, cityData.Resources, cityData.Goods, parsedCityState);
+        return new City(cityData.Id, cityData.Name, cityData.Population, cityData.Food, cityData.Wealth, cityData.Mood, cityData.Security, cityData.Crime, cityData.Resources, cityData.Goods, parsedCityState, ToCoreInfrastructure(cityData.Infrastructure));
     }
 
+    private static CityInfrastructure ToCoreInfrastructure(CityInfrastructureSaveData infrastructureData) => new()
+    {
+        HousingLevel = infrastructureData.HousingLevel,
+        UrbanLevel = infrastructureData.UrbanLevel,
+        ProductionLevel = infrastructureData.ProductionLevel,
+        MilitaryLevel = infrastructureData.MilitaryLevel
+    };
 
     private static Region ToCoreRegion(RegionSaveData regionData) => new()
     {

@@ -30,7 +30,8 @@ public sealed class City
         int crime,
         decimal resources,
         decimal goods,
-        CityState cityState)
+        CityState cityState,
+        CityInfrastructure? infrastructure = null)
     {
         Id = id;
         Name = name;
@@ -43,6 +44,7 @@ public sealed class City
         Resources = resources;
         Goods = goods;
         CityState = cityState;
+        Infrastructure = infrastructure ?? new CityInfrastructure();
     }
 
     public string Id
@@ -110,6 +112,8 @@ public sealed class City
     }
 
     public CityState CityState { get; set; }
+
+    public CityInfrastructure Infrastructure { get; }
 
     public const decimal DailyFoodConsumptionPerPerson = 0.2m;
 
