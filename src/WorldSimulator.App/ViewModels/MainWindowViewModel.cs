@@ -275,6 +275,14 @@ public sealed class MainWindowViewModel : ViewModelBase
 
     public string CityName => _city.Name;
 
+    public IReadOnlyList<CityInfrastructureRowViewModel> CityInfrastructureRows =>
+    [
+        new("Жилая инфраструктура", _city.Infrastructure.HousingLevel, "Жильё, районы проживания, базовая вместимость населения."),
+        new("Городская инфраструктура", _city.Infrastructure.UrbanLevel, "Дороги, склады, рынки, городские службы."),
+        new("Производственная инфраструктура", _city.Infrastructure.ProductionLevel, "Мастерские, производственные площадки, ремесленные мощности."),
+        new("Военная инфраструктура", _city.Infrastructure.MilitaryLevel, "Казармы, укрепления, стража, оборонные объекты.")
+    ];
+
     public string CityState => _city.CityState.ToString();
 
     public string CityStateDisplay => ToRussianCityState(_city.CityState);
@@ -1491,6 +1499,7 @@ public sealed class MainWindowViewModel : ViewModelBase
     private void RefreshAllCityProperties()
     {
         OnPropertyChanged(nameof(CityName));
+        OnPropertyChanged(nameof(CityInfrastructureRows));
         OnPropertyChanged(nameof(CityState));
         OnPropertyChanged(nameof(CityStateDisplay));
         OnPropertyChanged(nameof(Population));
