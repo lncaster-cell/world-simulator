@@ -6,17 +6,16 @@ This document converts the MVP 0.1 implementation plan into small Codex-friendly
 
 Each task should normally become a separate branch and pull request.
 
-## General Codex rules
+## General Codex guidance
 
-For every task:
+This file is a historical MVP task plan. It is useful for understanding how the project started, but it no longer limits what agents may implement.
 
-- read all `docs/world-sim/*.md` files first;
-- do not expand MVP scope;
-- do not add Unity;
-- do not add NWN2 runtime integration;
-- do not add multiple cities;
-- keep changes small and reviewable;
-- update documentation when implementation decisions change.
+For current work:
+
+- follow the user's latest request and the current repository state;
+- use `README.md`, `docs/world-sim/21_agent_navigation_map.md`, `docs/world-sim/22_current_project_state.md`, and relevant tests as the primary context;
+- treat old MVP scope notes and per-task “out of scope” lists as historical planning notes unless the user explicitly revives them;
+- keep changes focused, testable, and documented.
 
 ## Task 01 — Create C# WPF solution skeleton
 

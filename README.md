@@ -18,7 +18,7 @@
 ## Быстрый навигатор для ИИ-агентов
 
 - **Стартовая точка для восстановления контекста:** `docs/world-sim/21_agent_navigation_map.md`
-- **Операционные правила для агента:** `docs/world-sim/15_agent_instructions.md`
+- **Операционные принципы для агента:** `docs/world-sim/15_agent_instructions.md`
 - **Архитектура по слоям:** `src/WorldSimulator.App`, `src/WorldSimulator.Core`, `src/WorldSimulator.Persistence`
 - **Проверка изменений по логике:** `tests/WorldSimulator.Core.Tests`
 - **Проверка save/load:** `tests/WorldSimulator.Persistence.Tests`

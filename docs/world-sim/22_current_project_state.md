@@ -61,9 +61,9 @@ Before adding new large systems, stabilize the existing simulator:
 6. split save/load mapping, migration, and validation into smaller components;
 7. add city-state hysteresis/state memory before making city states more complex.
 
-## Expansion boundary
+## Expansion notes
 
-The following systems are not implemented as current production features and should require separate design approval before major work:
+The following systems are not implemented as current production features. This list is a planning aid, not a prohibition for agents; if the user's request requires one of these areas, agents may implement it while updating the relevant design and tests:
 
 - clans;
 - dynasties;
