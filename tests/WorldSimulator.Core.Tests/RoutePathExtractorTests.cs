@@ -3,7 +3,7 @@ using FluentAssertions;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using WorldSimulator.Core.Trade;
-using WorldSimulator.RoutePathExtractor;
+using RoutePathExtractorTool = WorldSimulator.RoutePathExtractor.RoutePathExtractor;
 
 namespace WorldSimulator.Core.Tests;
 
@@ -36,7 +36,7 @@ public sealed class RoutePathExtractorTests
                 "route_id,from_node,to_node,route_type,travel_days,travel_hours,is_bidirectional,route_frequency,is_stub,comment\n" +
                 "R_BRNO_RIVENSTAL,N_BRNO,N_RIVENSTAL,road,3.0,72,True,common,False,test\n");
 
-            new RoutePathExtractor().Generate(maskPath, edgesPath, nodesPath, outputPath);
+            new RoutePathExtractorTool().Generate(maskPath, edgesPath, nodesPath, outputPath);
 
             File.Exists(outputPath).Should().BeTrue();
             using var doc = JsonDocument.Parse(File.ReadAllText(outputPath));
