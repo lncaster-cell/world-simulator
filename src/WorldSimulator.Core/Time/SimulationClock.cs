@@ -45,6 +45,7 @@ public sealed class SimulationClock
             throw new ArgumentOutOfRangeException(nameof(realTimePerGameHour), "RealTimePerGameHour must be greater than zero.");
         }
 
+        _accumulatedRealTime = ScaleAccumulatedRealTime(_accumulatedRealTime, _settings.RealTimePerGameHour, realTimePerGameHour);
         _settings.RealTimePerGameHour = realTimePerGameHour;
     }
 
@@ -94,8 +95,36 @@ public sealed class SimulationClock
         Day = day;
         Hour = hour;
         IsRunning = isRunning;
-        _accumulatedRealTime = accumulatedRealTime;
+        _accumulatedRealTime = NormalizeAccumulatedRealTime(accumulatedRealTime, realTimePerGameHour);
         _settings.RealTimePerGameHour = realTimePerGameHour;
+    }
+
+    private static TimeSpan ScaleAccumulatedRealTime(TimeSpan accumulatedRealTime, TimeSpan oldRealTimePerGameHour, TimeSpan newRealTimePerGameHour)
+    {
+        if (accumulatedRealTime == TimeSpan.Zero)
+        {
+            return TimeSpan.Zero;
+        }
+
+        var normalizedAccumulatedRealTime = NormalizeAccumulatedRealTime(accumulatedRealTime, oldRealTimePerGameHour);
+        if (normalizedAccumulatedRealTime == TimeSpan.Zero)
+        {
+            return TimeSpan.Zero;
+        }
+
+        var elapsedHourFraction = normalizedAccumulatedRealTime.Ticks / (double)oldRealTimePerGameHour.Ticks;
+        var scaledTicks = (long)Math.Floor(newRealTimePerGameHour.Ticks * elapsedHourFraction);
+        return TimeSpan.FromTicks(Math.Clamp(scaledTicks, 0, newRealTimePerGameHour.Ticks - 1));
+    }
+
+    private static TimeSpan NormalizeAccumulatedRealTime(TimeSpan accumulatedRealTime, TimeSpan realTimePerGameHour)
+    {
+        if (accumulatedRealTime < realTimePerGameHour)
+        {
+            return accumulatedRealTime;
+        }
+
+        return TimeSpan.FromTicks(accumulatedRealTime.Ticks % realTimePerGameHour.Ticks);
     }
 
     private void AdvanceOneHour()
