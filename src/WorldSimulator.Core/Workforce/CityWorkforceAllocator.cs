@@ -9,6 +9,8 @@ public sealed class CityWorkforceAllocator
     private const decimal ResourcesShortageThreshold = 80m;
     private const int LowSecurityThreshold = 35;
     private const int HighCrimeThreshold = 60;
+    private const decimal DailyReassignmentRate = 0.05m;
+    private const int MinimumDailyReassignments = 1;
 
     private readonly WorkforceCalculator _workforceCalculator;
 
@@ -27,11 +29,44 @@ public sealed class CityWorkforceAllocator
         SettlementSectorCapacityProfile capacityProfile,
         WorkforceLawProfile lawProfile)
     {
+        return Allocate(city, capacityProfile, lawProfile, assignmentState: null);
+    }
+
+    public CityWorkforceAllocation Allocate(
+        City city,
+        SettlementSectorCapacityProfile capacityProfile,
+        WorkforceLawProfile lawProfile,
+        CityWorkforceAssignmentState? assignmentState)
+    {
         ArgumentNullException.ThrowIfNull(city);
         ArgumentNullException.ThrowIfNull(capacityProfile);
         ArgumentNullException.ThrowIfNull(lawProfile);
 
         var workforce = _workforceCalculator.Calculate(city.Demographics, lawProfile);
+        var targetAllocation = BuildTargetAllocation(city, capacityProfile, workforce);
+
+        if (assignmentState is null)
+        {
+            return targetAllocation;
+        }
+
+        if (assignmentState.TotalWorkers <= 0)
+        {
+            assignmentState.ReplaceWith(targetAllocation);
+            return targetAllocation;
+        }
+
+        ReconcileTotalWorkerCount(assignmentState, workforce.TotalWorkers);
+        MoveTowardTarget(assignmentState, targetAllocation, GetDailyReassignmentLimit(workforce.TotalWorkers));
+
+        return ToAllocation(workforce, assignmentState);
+    }
+
+    private static CityWorkforceAllocation BuildTargetAllocation(
+        City city,
+        SettlementSectorCapacityProfile capacityProfile,
+        WorkforceCalculationResult workforce)
+    {
         var remainingWorkers = workforce.TotalWorkers;
         var assignments = new Dictionary<WorkforceSector, int>
         {
@@ -74,6 +109,139 @@ public sealed class CityWorkforceAllocator
             remainingWorkers);
     }
 
+    private static void ReconcileTotalWorkerCount(CityWorkforceAssignmentState assignmentState, int totalWorkers)
+    {
+        var delta = totalWorkers - assignmentState.TotalWorkers;
+        if (delta > 0)
+        {
+            assignmentState.IdleWorkers += delta;
+            return;
+        }
+
+        if (delta < 0)
+        {
+            RemoveWorkers(assignmentState, -delta);
+        }
+    }
+
+    private static void RemoveWorkers(CityWorkforceAssignmentState assignmentState, int workersToRemove)
+    {
+        var remaining = workersToRemove;
+        foreach (var sector in RemovalOrder)
+        {
+            if (remaining <= 0)
+            {
+                break;
+            }
+
+            var current = assignmentState.GetWorkers(sector);
+            var removed = Math.Min(current, remaining);
+            assignmentState.SetWorkers(sector, current - removed);
+            remaining -= removed;
+        }
+    }
+
+    private static void MoveTowardTarget(
+        CityWorkforceAssignmentState assignmentState,
+        CityWorkforceAllocation targetAllocation,
+        int maxMoves)
+    {
+        var remainingMoves = maxMoves;
+        foreach (var targetSector in TargetPriorityOrder)
+        {
+            if (remainingMoves <= 0)
+            {
+                break;
+            }
+
+            var targetWorkers = GetWorkers(targetAllocation, targetSector);
+            var currentWorkers = assignmentState.GetWorkers(targetSector);
+            var deficit = targetWorkers - currentWorkers;
+            if (deficit <= 0)
+            {
+                continue;
+            }
+
+            remainingMoves -= MoveIntoSector(assignmentState, targetSector, deficit, remainingMoves, targetAllocation);
+        }
+    }
+
+    private static int MoveIntoSector(
+        CityWorkforceAssignmentState assignmentState,
+        WorkforceSector targetSector,
+        int deficit,
+        int maxMoves,
+        CityWorkforceAllocation targetAllocation)
+    {
+        var movedTotal = 0;
+        foreach (var sourceSector in SourcePriorityOrder)
+        {
+            if (movedTotal >= maxMoves || movedTotal >= deficit)
+            {
+                break;
+            }
+
+            if (sourceSector == targetSector)
+            {
+                continue;
+            }
+
+            var currentSourceWorkers = assignmentState.GetWorkers(sourceSector);
+            var targetSourceWorkers = GetWorkers(targetAllocation, sourceSector);
+            var surplus = currentSourceWorkers - targetSourceWorkers;
+            if (surplus <= 0)
+            {
+                continue;
+            }
+
+            var movable = Math.Min(Math.Min(surplus, deficit - movedTotal), maxMoves - movedTotal);
+            assignmentState.SetWorkers(sourceSector, currentSourceWorkers - movable);
+            assignmentState.SetWorkers(targetSector, assignmentState.GetWorkers(targetSector) + movable);
+            movedTotal += movable;
+        }
+
+        return movedTotal;
+    }
+
+    private static CityWorkforceAllocation ToAllocation(WorkforceCalculationResult workforce, CityWorkforceAssignmentState assignmentState)
+    {
+        return new CityWorkforceAllocation(
+            workforce,
+            assignmentState.AgricultureWorkers,
+            assignmentState.FishingWorkers,
+            assignmentState.HuntingWorkers,
+            assignmentState.ResourceGatheringWorkers,
+            assignmentState.CraftingWorkers,
+            assignmentState.TradeWorkers,
+            assignmentState.GuardWorkers,
+            assignmentState.MaintenanceWorkers,
+            assignmentState.IdleWorkers);
+    }
+
+    private static int GetWorkers(CityWorkforceAllocation allocation, WorkforceSector sector) => sector switch
+    {
+        WorkforceSector.Agriculture => allocation.AgricultureWorkers,
+        WorkforceSector.Fishing => allocation.FishingWorkers,
+        WorkforceSector.Hunting => allocation.HuntingWorkers,
+        WorkforceSector.ResourceGathering => allocation.ResourceGatheringWorkers,
+        WorkforceSector.Crafting => allocation.CraftingWorkers,
+        WorkforceSector.Trade => allocation.TradeWorkers,
+        WorkforceSector.Guards => allocation.GuardWorkers,
+        WorkforceSector.Maintenance => allocation.MaintenanceWorkers,
+        WorkforceSector.Idle => allocation.IdleWorkers,
+        _ => throw new ArgumentOutOfRangeException(nameof(sector), sector, "Unsupported workforce sector.")
+    };
+
+    private static int GetDailyReassignmentLimit(int totalWorkers)
+    {
+        if (totalWorkers <= 0)
+        {
+            return 0;
+        }
+
+        return Math.Max(MinimumDailyReassignments, (int)decimal.Ceiling(totalWorkers * DailyReassignmentRate));
+    }
+
     private static IReadOnlyList<WorkforceSectorDemand> BuildDemands(City city, SettlementSectorCapacityProfile capacityProfile)
     {
         var foodDays = city.CalculateDailyFoodConsumption() <= 0m
@@ -105,6 +273,44 @@ public sealed class CityWorkforceAllocator
     {
         return (int)decimal.Round(Math.Max(0, capacity) * Math.Clamp(ratio, 0m, 1m), 0, MidpointRounding.AwayFromZero);
     }
+
+    private static readonly WorkforceSector[] TargetPriorityOrder =
+    [
+        WorkforceSector.Agriculture,
+        WorkforceSector.Fishing,
+        WorkforceSector.Hunting,
+        WorkforceSector.Guards,
+        WorkforceSector.ResourceGathering,
+        WorkforceSector.Crafting,
+        WorkforceSector.Trade,
+        WorkforceSector.Maintenance
+    ];
+
+    private static readonly WorkforceSector[] SourcePriorityOrder =
+    [
+        WorkforceSector.Idle,
+        WorkforceSector.Maintenance,
+        WorkforceSector.Trade,
+        WorkforceSector.Crafting,
+        WorkforceSector.ResourceGathering,
+        WorkforceSector.Hunting,
+        WorkforceSector.Fishing,
+        WorkforceSector.Guards,
+        WorkforceSector.Agriculture
+    ];
+
+    private static readonly WorkforceSector[] RemovalOrder =
+    [
+        WorkforceSector.Idle,
+        WorkforceSector.Maintenance,
+        WorkforceSector.Trade,
+        WorkforceSector.Crafting,
+        WorkforceSector.ResourceGathering,
+        WorkforceSector.Hunting,
+        WorkforceSector.Fishing,
+        WorkforceSector.Guards,
+        WorkforceSector.Agriculture
+    ];
 
     private sealed record WorkforceSectorDemand(WorkforceSector Sector, int DesiredWorkers, int Priority);
 }
