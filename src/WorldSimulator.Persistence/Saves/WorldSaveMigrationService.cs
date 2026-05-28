@@ -1,10 +1,11 @@
+using WorldSimulator.Core.Cities;
 using WorldSimulator.Core.World;
 
 namespace WorldSimulator.Persistence.Saves;
 
 internal sealed class WorldSaveMigrationService
 {
-    public const int CurrentSaveVersion = 3;
+    public const int CurrentSaveVersion = 4;
 
     public WorldSaveData Migrate(WorldSaveData saveData, string filePath)
     {
@@ -32,6 +33,9 @@ internal sealed class WorldSaveMigrationService
             RestoreMissingLegacyWorldParts(saveData.World);
         }
 
+        RestoreMissingCityInfrastructure(saveData.World);
+        RestoreMissingCityDemographics(saveData.World);
+        RestoreMissingSectorCapacityProfiles(saveData.World);
         RestoreMissingRouteFields(saveData.World);
         RestoreMissingSelections(saveData.World);
 
@@ -64,6 +68,7 @@ internal sealed class WorldSaveMigrationService
         worldData.Regions ??= [];
         worldData.SettlementMapLocations ??= [];
         worldData.SettlementEconomyProfiles ??= [];
+        worldData.SettlementSectorCapacityProfiles ??= [];
         worldData.Caravans ??= [];
         worldData.TradeRoutes ??= [];
         worldData.TradeShipments ??= [];
@@ -86,8 +91,67 @@ internal sealed class WorldSaveMigrationService
         if (worldData.Regions.Count == 0) worldData.Regions = defaultWorldData.Regions;
         if (worldData.SettlementMapLocations.Count == 0) worldData.SettlementMapLocations = defaultWorldData.SettlementMapLocations;
         if (worldData.SettlementEconomyProfiles.Count == 0) worldData.SettlementEconomyProfiles = defaultWorldData.SettlementEconomyProfiles;
+        if (worldData.SettlementSectorCapacityProfiles.Count == 0) worldData.SettlementSectorCapacityProfiles = defaultWorldData.SettlementSectorCapacityProfiles;
         if (worldData.Caravans.Count == 0) worldData.Caravans = defaultWorldData.Caravans;
         if (worldData.TradeRoutes.Count == 0) worldData.TradeRoutes = defaultWorldData.TradeRoutes;
+    }
+
+    private static void RestoreMissingCityInfrastructure(SimulationWorldSaveData worldData)
+    {
+        foreach (var city in GetAllCitySaveData(worldData))
+        {
+            city.Infrastructure ??= new CityInfrastructureSaveData();
+        }
+    }
+
+    private static void RestoreMissingCityDemographics(SimulationWorldSaveData worldData)
+    {
+        foreach (var city in GetAllCitySaveData(worldData))
+        {
+            if (city.Demographics is { RaceGroups.Count: > 0 })
+            {
+                continue;
+            }
+
+            var demographics = CityPopulationDemographics.CreateDefaultHuman(city.Population);
+            city.Demographics = new CityPopulationDemographicsSaveData
+            {
+                RaceGroups = demographics.RaceGroups.Select(group => new RacePopulationGroupSaveData
+                {
+                    RaceId = group.RaceId,
+                    Children = group.Children,
+                    AdultMen = group.AdultMen,
+                    AdultWomen = group.AdultWomen,
+                    Elderly = group.Elderly
+                }).ToList()
+            };
+        }
+    }
+
+    private static IEnumerable<CitySaveData> GetAllCitySaveData(SimulationWorldSaveData worldData)
+    {
+        if (worldData.CitiesById.Count > 0)
+        {
+            foreach (var city in worldData.CitiesById.Values)
+            {
+                yield return city;
+            }
+        }
+
+        foreach (var city in worldData.Cities)
+        {
+            yield return city;
+        }
+    }
+
+    private static void RestoreMissingSectorCapacityProfiles(SimulationWorldSaveData worldData)
+    {
+        if (worldData.SettlementSectorCapacityProfiles.Count > 0)
+        {
+            return;
+        }
+
+        worldData.SettlementSectorCapacityProfiles = WorldSaveMapper.ToSaveData(WorldPresets.CreateDefaultWorld()).SettlementSectorCapacityProfiles;
     }
 
     private static void RestoreMissingRouteFields(SimulationWorldSaveData worldData)
