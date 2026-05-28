@@ -34,6 +34,8 @@ public sealed class CaravanMovementMarkerViewModel : INotifyPropertyChanged
     public decimal GoodsMoved { get; set; }
     public bool HasActiveFlow { get; set; }
 
+    public bool IsSeaRoute => RouteId.EndsWith("_sea", StringComparison.OrdinalIgnoreCase);
+
     public decimal TotalVolume => FoodMoved + ResourcesMoved + GoodsMoved;
 
     private static double NormalizeProgress(double value)
