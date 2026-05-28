@@ -35,7 +35,8 @@
                 <TextBlock Text="{Binding SimulationState}" Margin="0,0,16,0"/>
 
                 <Button Content="Старт" Command="{Binding StartCommand}" Width="90" Margin="0,0,8,0"/>
-                <Button Content="Пауза" Command="{Binding PauseCommand}" Width="90" Margin="0,0,16,0"/>
+                <Button Content="Пауза" Command="{Binding PauseCommand}" Width="90" Margin="0,0,8,0"/>
+                <Button Content="Сброс" Command="{Binding ResetCommand}" Width="90" Margin="0,0,16,0" ToolTip="Сбросить симуляцию к дню 1, часу 0 без перезапуска приложения"/>
                 <Button Content="Сохранить" Command="{Binding SaveCommand}" Width="110" Margin="0,0,8,0"/>
                 <Button Content="Загрузить" Command="{Binding LoadCommand}" Width="110" Margin="0,0,8,0"/>
                 <CheckBox Content="Показать маршруты"

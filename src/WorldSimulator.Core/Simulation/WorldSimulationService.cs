@@ -154,6 +154,11 @@ public sealed class WorldSimulationService
         EnsureSelectedCityEventManagerBinding(selectedCityId);
     }
 
+    public void ResetEventState()
+    {
+        _eventState.ReplaceWith(new Dictionary<string, CityEventManager>(StringComparer.Ordinal));
+    }
+
     private CityEventManager GetOrCreateCityEventManager(string cityId)
     {
         return _eventState.GetOrCreateManager(cityId);

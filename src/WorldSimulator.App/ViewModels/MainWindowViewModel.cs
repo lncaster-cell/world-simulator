@@ -113,6 +113,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
 
         StartCommand = new RelayCommand(Start, () => !_clock.IsRunning);
         PauseCommand = new RelayCommand(Pause, () => _clock.IsRunning);
+        ResetCommand = new RelayCommand(ResetSimulation);
         SetNormalSpeedCommand = new RelayCommand(SetNormalSpeed);
         SetFastSpeedCommand = new RelayCommand(SetFastSpeed);
         SetVeryFastSpeedCommand = new RelayCommand(SetVeryFastSpeed);
@@ -170,6 +171,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     public ICommand StartCommand { get; }
 
     public ICommand PauseCommand { get; }
+
+    public ICommand ResetCommand { get; }
 
     public ICommand SetNormalSpeedCommand { get; }
     public ICommand SetFastSpeedCommand { get; }
@@ -991,6 +994,76 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     {
         _clock.Pause();
         RefreshClockProperties();
+    }
+
+    private void ResetSimulation()
+    {
+        _world = WorldPresets.CreateDefaultWorld();
+        LoadRoutePathsForWorld();
+        _city = _world.SelectedCity;
+
+        _clock.RestoreState(1, 0, false, TimeSpan.Zero, NormalSimulationSpeed);
+        _lastTickUtc = DateTimeOffset.UtcNow;
+        _lastTradeMarkerAnimationTickUtc = DateTimeOffset.UtcNow;
+        _dailyWealthFlowResult = null;
+        _eventManager.Clear();
+        _worldSimulationService.ResetEventState();
+        IsRandomEventGenerationEnabled = true;
+        SelectedJournalCityId = _city.Id;
+        SelectedSimulationJournalFilter = SimulationJournalFilterOption.All;
+        SelectedSimulationJournalEntry = null;
+
+        ClearSimulationCollections();
+        SetLastImportantChange("симуляция сброшена к началу.");
+
+        RefreshWorldCollectionsAfterLoad();
+        ResetRouteAuthoringStateForWorldReset();
+        RefreshAllCityProperties();
+        RefreshClockProperties();
+        RefreshSelectedCityProperties();
+        RefreshDailyFoodFlowPreview();
+        RefreshEventEntries();
+        OnPropertyChanged(nameof(CurrentSimulationSpeedDisplay));
+        RefreshSimulationSummary();
+
+        AddTechnicalLogEntry("Симуляция сброшена: день 1, час 0, мир возвращён к начальному состоянию.");
+    }
+
+    private void ClearSimulationCollections()
+    {
+        TechnicalLogEntries.Clear();
+        ActiveCaravanMovementMarkers.Clear();
+        ActiveEventEntries.Clear();
+        CompletedEventEntries.Clear();
+        SimulationJournalEntries.Clear();
+        FilteredSimulationJournalEntries.Clear();
+        OnPropertyChanged(nameof(HasTechnicalLogEntries));
+        OnPropertyChanged(nameof(HasActiveEventEntries));
+        OnPropertyChanged(nameof(HasCompletedEventEntries));
+    }
+
+    private void ResetRouteAuthoringStateForWorldReset()
+    {
+        _routeAuthoringDraftPointsByDestinationId.Clear();
+        _currentDraftDestinationId = null;
+        _routeAuthoringOriginSettlement = null;
+        _routeAuthoringDestinationCandidateSettlement = null;
+        _activeRouteAuthoringDestinationSettlement = null;
+        RouteAuthoringDestinationSettlements.Clear();
+        EditedTradeRoutePoints.Clear();
+        SelectedTradeRouteDistanceDays = 1m;
+        SelectedTradeRouteDistanceDaysInput = "1.0";
+        _routeAuthoringRouteIdDisplay = "RouteId: —";
+        _selectedTradeRouteForAuthoring = null;
+
+        OnPropertyChanged(nameof(RouteAuthoringOriginSettlement));
+        OnPropertyChanged(nameof(RouteAuthoringDestinationCandidateSettlement));
+        OnPropertyChanged(nameof(ActiveRouteAuthoringDestinationSettlement));
+        OnPropertyChanged(nameof(SelectedTradeRouteForAuthoring));
+        OnPropertyChanged(nameof(HasSelectedTradeRouteForAuthoring));
+        OnPropertyChanged(nameof(RouteAuthoringDestinationCount));
+        OnPropertyChanged(nameof(CanAddMoreRouteAuthoringDestinations));
+        OnPropertyChanged(nameof(RouteAuthoringRouteIdDisplay));
     }
 
     private void SetNormalSpeed() => SetSimulationSpeed(NormalSimulationSpeed);
