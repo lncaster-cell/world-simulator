@@ -16,8 +16,8 @@
     <Border BorderBrush="LightGray" BorderThickness="1" CornerRadius="6" Padding="12" Margin="0,0,0,12">
                     <StackPanel>
                         <TextBlock Text="Отладка карты" FontWeight="SemiBold" Margin="0,0,0,8"/>
-                        <Button Content="{Binding MapCalibrationToggleButtonText}" Command="{Binding ToggleMapCalibrationModeCommand}" Margin="0,0,0,8"/>
-                        <TextBlock Text="{Binding LastMapCalibrationPointDisplay}" TextWrapping="Wrap"/>
+                        <Button Content="{Binding WorldMap.MapCalibrationToggleButtonText}" Command="{Binding WorldMap.ToggleMapCalibrationModeCommand}" Margin="0,0,0,8"/>
+                        <TextBlock Text="{Binding WorldMap.LastMapCalibrationPointDisplay}" TextWrapping="Wrap"/>
                     </StackPanel>
                 </Border>
 

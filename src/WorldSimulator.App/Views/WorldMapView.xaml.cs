@@ -55,9 +55,9 @@ public partial class WorldMapView : UserControl
         relativeX = Math.Clamp(relativeX, 0d, 1d);
         relativeY = Math.Clamp(relativeY, 0d, 1d);
 
-        if (viewModel.IsMapCalibrationModeEnabled)
+        if (viewModel.WorldMap.IsMapCalibrationModeEnabled)
         {
-            viewModel.RegisterMapCalibrationPoint(relativeX, relativeY);
+            viewModel.WorldMap.RegisterMapCalibrationPoint(relativeX, relativeY);
         }
 
         if (viewModel.IsTradeRouteAuthoringModeEnabled)
