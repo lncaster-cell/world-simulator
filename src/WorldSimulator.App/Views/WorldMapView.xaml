@@ -1,89 +1,19 @@
-<Window x:Class="WorldSimulator.App.MainWindow"
-        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:views="clr-namespace:WorldSimulator.App.Views"
-        Title="Симулятор мира MVP 0.1"
-        Height="720"
-        Width="1200">
-    <Window.Resources>
+<UserControl x:Class="WorldSimulator.App.Views.WorldMapView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:WorldSimulator.App.ViewModels"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance Type=vm:MainWindowViewModel, IsDesignTimeCreatable=False}">
+    <UserControl.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="/Resources/MainWindowResources.xaml" />
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
-    </Window.Resources>
-
-    <Grid Margin="16">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-        </Grid.RowDefinitions>
-
-        <Border Grid.Row="0" BorderBrush="LightGray" BorderThickness="1" Padding="12" CornerRadius="6" Margin="0,0,0,12">
-            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                <TextBlock Text="День:" FontWeight="SemiBold"/>
-                <TextBlock Text=" " />
-                <TextBlock Text="{Binding Control.Day}" Margin="0,0,16,0"/>
-
-                <TextBlock Text="Час:" FontWeight="SemiBold"/>
-                <TextBlock Text=" " />
-                <TextBlock Text="{Binding Control.Hour}" Margin="0,0,16,0"/>
-
-                <TextBlock Text="Состояние:" FontWeight="SemiBold"/>
-                <TextBlock Text=" " />
-                <TextBlock Text="{Binding Control.SimulationState}" Margin="0,0,16,0"/>
-
-                <Button Content="Старт" Command="{Binding Control.StartCommand}" Width="90" Margin="0,0,8,0"/>
-                <Button Content="Пауза" Command="{Binding Control.PauseCommand}" Width="90" Margin="0,0,8,0"/>
-                <Button Content="Сброс" Command="{Binding Control.ResetCommand}" Width="90" Margin="0,0,16,0" ToolTip="Сбросить симуляцию к дню 1, часу 0 без перезапуска приложения"/>
-                <Button Content="Сохранить" Command="{Binding SaveCommand}" Width="110" Margin="0,0,8,0"/>
-                <Button Content="Загрузить" Command="{Binding LoadCommand}" Width="110" Margin="0,0,8,0"/>
-                <CheckBox Content="Показать маршруты"
-                          IsChecked="{Binding Map.IsTradeRoutesOverlayVisible}"
-                          Margin="12,0,0,0"
-                          VerticalAlignment="Center"/>
-                <CheckBox Content="Debug: реальные пути караванов"
-                          IsChecked="{Binding Map.IsLoadedRoutePathsDebugVisible}"
-                          Margin="12,0,0,0"
-                          VerticalAlignment="Center"/>
-                <ToggleButton Content="Редактор маршрутов" IsChecked="{Binding TradeAuthoring.IsTradeRouteAuthoringModeEnabled}" Width="160"/>
-            </StackPanel>
-        </Border>
-
-        <Grid Grid.Row="1">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="*"/>
-            </Grid.RowDefinitions>
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="2*"/>
-                <ColumnDefinition Width="16"/>
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
-            <Border Grid.Row="0" Grid.ColumnSpan="3" BorderBrush="LightGray" BorderThickness="1" CornerRadius="6" Padding="10" Margin="0,0,0,10"
-                    Visibility="{Binding TradeAuthoring.IsTradeRouteAuthoringModeEnabled, Converter={StaticResource BooleanToVisibilityConverter}}">
-                <WrapPanel VerticalAlignment="Center">
-                    <TextBlock Text="Редактор маршрутов" FontWeight="SemiBold" Margin="0,0,12,0" VerticalAlignment="Center"/>
-                    <TextBlock Text="Откуда:" VerticalAlignment="Center"/>
-                    <ComboBox Width="170" Margin="6,0,8,0" ItemsSource="{Binding TradeAuthoring.RouteAuthoringSettlements}" SelectedItem="{Binding TradeAuthoring.RouteAuthoringOriginSettlement}" DisplayMemberPath="Name"/>
-                    <TextBlock Text="Добавить пункт:" VerticalAlignment="Center"/>
-                    <ComboBox Width="170" Margin="6,0,8,0" ItemsSource="{Binding TradeAuthoring.AvailableRouteAuthoringDestinations}" SelectedItem="{Binding TradeAuthoring.RouteAuthoringDestinationCandidateSettlement}" DisplayMemberPath="Name"/>
-                    <Button Content="Добавить" Command="{Binding TradeAuthoring.AddRouteAuthoringDestinationCommand}" Margin="0,0,8,0"/>
-                    <TextBlock Text="Активное назначение:" VerticalAlignment="Center"/>
-                    <ComboBox Width="170" Margin="6,0,8,0" ItemsSource="{Binding TradeAuthoring.RouteAuthoringDestinationSettlements}" SelectedItem="{Binding TradeAuthoring.ActiveRouteAuthoringDestinationSettlement}" DisplayMemberPath="Name"/>
-                    <TextBlock Text="Дней:" VerticalAlignment="Center"/>
-                    <TextBox Width="70" Margin="6,0,8,0" Text="{Binding TradeAuthoring.SelectedTradeRouteDistanceDaysInput, UpdateSourceTrigger=PropertyChanged}"/>
-                    <TextBlock Text="{Binding TradeAuthoring.EditedTradeRouteIntermediatePointCount, StringFormat=Точек: {0}}" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                    <TextBlock Text="{Binding TradeAuthoring.RouteAuthoringDestinationCount, StringFormat=Назначений: {0}/8}" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                    <TextBlock Text="{Binding TradeAuthoring.RouteAuthoringRouteIdDisplay}" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                    <Button Content="Отменить" Command="{Binding TradeAuthoring.UndoTradeRoutePointCommand}" Margin="0,0,8,0"/>
-                    <Button Content="Очистить" Command="{Binding TradeAuthoring.ClearTradeRoutePointsCommand}" Margin="0,0,8,0"/>
-                    <Button Content="Сохранить" Command="{Binding TradeAuthoring.SaveTradeRoutePointsCommand}" Margin="0,0,8,0"/>
-                    <Button Content="Скопировать Points" Command="{Binding TradeAuthoring.CopyTradeRoutePointsCommand}"/>
-                </WrapPanel>
-            </Border>
-
-            <Border Grid.Row="1" Grid.Column="0" BorderBrush="LightGray" BorderThickness="1" CornerRadius="6" Padding="8">
+    </UserControl.Resources>
+    <Border BorderBrush="LightGray" BorderThickness="1" CornerRadius="6" Padding="8">
                 <Grid x:Name="MapContainer"
                       MouseLeftButtonDown="MapContainer_MouseLeftButtonDown"
                       SizeChanged="MapContainer_SizeChanged">
@@ -95,39 +25,25 @@
                            Source="/Assets/Maps/world_map_routes.png"
                            Stretch="Uniform"
                            IsHitTestVisible="False"
-                           Visibility="{Binding Map.IsTradeRoutesOverlayVisible, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                           Visibility="{Binding IsTradeRoutesOverlayVisible, Converter={StaticResource BooleanToVisibilityConverter}}" />
 
                     <Canvas x:Name="MapOverlay"
                             Background="Transparent"
                             IsHitTestVisible="True">
 
 
-                        <ItemsControl ItemsSource="{Binding Map.DebugLoadedRoutePathVisuals}"
-                                      Visibility="{Binding Map.IsLoadedRoutePathsDebugVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <ItemsControl ItemsSource="{Binding DebugLoadedRoutePathVisuals}"
+                                      Visibility="{Binding IsLoadedRoutePathsDebugVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
                             <ItemsControl.ItemsPanel><ItemsPanelTemplate><Canvas/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <Grid>
-                                        <Polyline StrokeLineJoin="Round"
+                                        <Polyline Style="{StaticResource MapDebugRoutePolylineStyle}"
+                                                  StrokeLineJoin="Round"
                                                   StrokeStartLineCap="Round"
                                                   StrokeEndLineCap="Round"
                                                   Opacity="0.62"
                                                   ToolTip="{Binding RouteId}">
-                                            <Polyline.Style>
-                                                <Style TargetType="Polyline">
-                                                    <Setter Property="Stroke" Value="#FFDFB13D"/>
-                                                    <Setter Property="StrokeThickness" Value="2.1"/>
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding IsSeaRoute}" Value="True">
-                                                            <Setter Property="Stroke" Value="#FF26B6DA"/>
-                                                        </DataTrigger>
-                                                        <DataTrigger Binding="{Binding IsActive}" Value="True">
-                                                            <Setter Property="Stroke" Value="#FFFF4DF0"/>
-                                                            <Setter Property="StrokeThickness" Value="2.6"/>
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </Polyline.Style>
                                             <Polyline.Points>
                                                 <MultiBinding Converter="{StaticResource TradeRoutePointsToPointCollectionConverter}">
                                                     <Binding Path="Points"/>
@@ -143,9 +59,9 @@
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
 
-                        <ItemsControl ItemsSource="{Binding Map.DebugLoadedRoutePathVisuals}"
+                        <ItemsControl ItemsSource="{Binding DebugLoadedRoutePathVisuals}"
                                       IsHitTestVisible="False"
-                                      Visibility="{Binding Map.IsLoadedRoutePathsDebugVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                      Visibility="{Binding IsLoadedRoutePathsDebugVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
                             <ItemsControl.ItemsPanel><ItemsPanelTemplate><Canvas/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                             <ItemsControl.ItemContainerStyle>
                                 <Style TargetType="ContentPresenter">
@@ -159,23 +75,23 @@
                             </ItemsControl.ItemContainerStyle>
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Border Background="#AA111111"
+                                    <Border Background="{StaticResource MapDebugLabelBackgroundBrush}"
                                             CornerRadius="3"
                                             Padding="3,1"
                                             Margin="4,-10,0,0">
                                         <TextBlock Text="{Binding RouteId}"
-                                                   Foreground="White"
+                                                   Foreground="{StaticResource MapDebugLabelForegroundBrush}"
                                                    FontSize="10"/>
                                     </Border>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
 
-                        <ItemsControl ItemsSource="{Binding Map.TradeRouteVisuals}" Visibility="Collapsed">
+                        <ItemsControl ItemsSource="{Binding TradeRouteVisuals}" Visibility="Collapsed">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <Grid IsHitTestVisible="False">
-                                        <Polyline Stroke="#CC101010" StrokeThickness="4.6" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Opacity="0.8">
+                                        <Polyline Stroke="{StaticResource MapRouteShadowBrush}" StrokeThickness="4.6" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Opacity="0.8">
                                             <Polyline.Points>
                                                 <MultiBinding Converter="{StaticResource TradeRoutePointsToPointCollectionConverter}">
                                                     <Binding Path="Points"/>
@@ -186,19 +102,7 @@
                                                 </MultiBinding>
                                             </Polyline.Points>
                                         </Polyline>
-                                        <Polyline StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round">
-                                            <Polyline.Style>
-                                                <Style TargetType="Polyline">
-                                                    <Setter Property="Stroke" Value="#FFE3B45A"/>
-                                                    <Setter Property="StrokeThickness" Value="2.8"/>
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding IsActive}" Value="True">
-                                                            <Setter Property="Stroke" Value="#FF38D9FF"/>
-                                                            <Setter Property="StrokeThickness" Value="3.4"/>
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </Polyline.Style>
+                                        <Polyline Style="{StaticResource MapTradeRoutePolylineStyle}" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round">
                                             <Polyline.ToolTip>
                                                 <TextBlock TextWrapping="Wrap">
                                                     <Run Text="Маршрут: "/><Run Text="{Binding DisplayName}"/><LineBreak/>
@@ -224,10 +128,10 @@
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
 
-                        <Path Stroke="#FF00B7FF" StrokeThickness="2.5" StrokeDashArray="2,2" IsHitTestVisible="False" Visibility="{Binding TradeAuthoring.IsTradeRouteAuthoringModeEnabled, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <Path Stroke="{StaticResource MapAuthoringRouteBrush}" StrokeThickness="2.5" StrokeDashArray="2,2" IsHitTestVisible="False" Visibility="{Binding IsTradeRouteAuthoringModeEnabled, Converter={StaticResource BooleanToVisibilityConverter}}">
                             <Path.Data>
                                 <MultiBinding Converter="{StaticResource TradeRoutePointsToSmoothPathGeometryConverter}">
-                                    <Binding Path="TradeAuthoring.EditedTradeRoutePolylinePoints"/>
+                                    <Binding Path="EditedTradeRoutePolylinePoints"/>
                                     <Binding ElementName="MapContainer" Path="ActualWidth"/>
                                     <Binding ElementName="MapImage" Path="ActualWidth"/>
                                     <Binding ElementName="MapContainer" Path="ActualHeight"/>
@@ -235,10 +139,10 @@
                                 </MultiBinding>
                             </Path.Data>
                         </Path>
-                        <Polyline Stroke="#8800B7FF" StrokeThickness="1.5" StrokeDashArray="2,2" IsHitTestVisible="False" Visibility="{Binding TradeAuthoring.IsTradeRouteAuthoringModeEnabled, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <Polyline Stroke="{StaticResource MapAuthoringRouteOverlayBrush}" StrokeThickness="1.5" StrokeDashArray="2,2" IsHitTestVisible="False" Visibility="{Binding IsTradeRouteAuthoringModeEnabled, Converter={StaticResource BooleanToVisibilityConverter}}">
                             <Polyline.Points>
                                 <MultiBinding Converter="{StaticResource TradeRoutePointsToPointCollectionConverter}">
-                                    <Binding Path="TradeAuthoring.EditedTradeRoutePolylinePoints"/>
+                                    <Binding Path="EditedTradeRoutePolylinePoints"/>
                                     <Binding ElementName="MapContainer" Path="ActualWidth"/>
                                     <Binding ElementName="MapImage" Path="ActualWidth"/>
                                     <Binding ElementName="MapContainer" Path="ActualHeight"/>
@@ -247,7 +151,7 @@
                             </Polyline.Points>
                         </Polyline>
 
-                        <ItemsControl ItemsSource="{Binding TradeAuthoring.EditedTradeRoutePoints}" Visibility="{Binding TradeAuthoring.IsTradeRouteAuthoringModeEnabled, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <ItemsControl ItemsSource="{Binding EditedTradeRoutePoints}" Visibility="{Binding IsTradeRouteAuthoringModeEnabled, Converter={StaticResource BooleanToVisibilityConverter}}">
                             <ItemsControl.ItemsPanel><ItemsPanelTemplate><Canvas/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                             <ItemsControl.ItemContainerStyle>
                                 <Style TargetType="ContentPresenter">
@@ -266,7 +170,7 @@
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
 
-                        <ItemsControl ItemsSource="{Binding Map.ActiveCaravanMovementMarkers}">
+                        <ItemsControl ItemsSource="{Binding ActiveCaravanMovementMarkers}">
                             <ItemsControl.ItemsPanel><ItemsPanelTemplate><Canvas/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                             <ItemsControl.ItemContainerStyle>
                                 <Style TargetType="ContentPresenter">
@@ -336,7 +240,7 @@
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
 
-                        <ItemsControl ItemsSource="{Binding Map.SettlementMapMarkers}">
+                        <ItemsControl ItemsSource="{Binding SettlementMapMarkers}">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
                                     <Canvas/>
@@ -401,71 +305,4 @@
                 </Grid>
             </Border>
 
-            <StackPanel Grid.Row="1" Grid.Column="2">
-
-                <Border BorderBrush="LightGray" BorderThickness="1" CornerRadius="6" Padding="12" Margin="0,0,0,12">
-                    <StackPanel>
-                        <TextBlock Text="{Binding SimulationSummaryTitle}" FontWeight="SemiBold" FontSize="16" Margin="0,0,0,8"/>
-                        <TextBlock Text="{Binding SimulationSummaryDayAndHour}" Margin="0,0,0,4"/>
-                        <TextBlock Text="{Binding SimulationSummaryCityState}" Margin="0,0,0,4"/>
-                        <TextBlock Text="{Binding SimulationSummaryFoodBalance}" ToolTip="{Binding FoodBalanceTooltip}" Margin="0,0,0,4"/>
-                        <TextBlock Text="{Binding SimulationSummaryActiveEvents}" Margin="0,0,0,4"/>
-                        <TextBlock Text="{Binding SimulationSummaryRandomEventsStatus}" Margin="0,0,0,4"/>
-                        <TextBlock Text="{Binding SelectedRegionName, StringFormat=Регион: {0}}" Margin="0,0,0,4"/>
-                        <TextBlock Text="{Binding SimulationSummaryLastImportantChange}" TextWrapping="Wrap"/>
-                    </StackPanel>
-                </Border>
-
-                <Border BorderBrush="LightGray"
-                        BorderThickness="1"
-                        CornerRadius="6"
-                        Padding="12"
-                        Margin="0,0,0,12"
-                        Visibility="Visible">
-                    <StackPanel>
-                        <TextBlock Text="Выбранный город" FontWeight="SemiBold" FontSize="16" Margin="0,0,0,10"/>
-                        <TextBlock Text="{Binding SelectedCityName}" FontSize="18" FontWeight="Bold" Margin="0,0,0,8"/>
-                        <TextBlock Text="Тип/профиль:" FontWeight="SemiBold"/>
-                        <TextBlock Text="{Binding SelectedCityProfile}" TextWrapping="Wrap" Margin="0,0,0,8"/>
-
-                        <TextBlock Text="Состояние города:" FontWeight="SemiBold"/>
-                        <TextBlock Text="{Binding CityStateDisplay}" Margin="0,0,0,6"/>
-
-                        <TextBlock Text="Население:" FontWeight="SemiBold"/>
-                        <TextBlock Text="{Binding Population}" Margin="0,0,0,6"/>
-
-                        <TextBlock Text="Ресурсы:" FontWeight="SemiBold" ToolTip="{Binding ResourcesTooltip}"/>
-                        <TextBlock Text="{Binding Resources}" ToolTip="{Binding ResourcesTooltip}" Margin="0,0,0,6"/>
-
-                        <TextBlock Text="Товары:" FontWeight="SemiBold" ToolTip="{Binding GoodsTooltip}"/>
-                        <TextBlock Text="{Binding Goods}" ToolTip="{Binding GoodsTooltip}" Margin="0,0,0,6"/>
-
-                        <TextBlock Text="Пища:" FontWeight="SemiBold" ToolTip="{Binding FoodBalanceTooltip}"/>
-                        <TextBlock Text="{Binding Food}" ToolTip="{Binding FoodBalanceTooltip}" Margin="0,0,0,6"/>
-
-                        <TextBlock Text="Безопасность:" FontWeight="SemiBold"/>
-                        <TextBlock Text="{Binding Security}" Margin="0,0,0,6"/>
-
-                        <TextBlock Text="Преступность:" FontWeight="SemiBold" ToolTip="{Binding CrimeFlowTooltip}"/>
-                        <TextBlock Text="{Binding Crime}" ToolTip="{Binding CrimeFlowTooltip}" Margin="0,0,0,6"/>
-
-                        <TextBlock Text="Настроение:" FontWeight="SemiBold"/>
-                        <TextBlock Text="{Binding Mood}" Margin="0,0,0,12"/>
-
-                        <WrapPanel>
-                            <Button Content="Открыть город" Width="130" Command="{Binding OpenSelectedCityCommand}" Click="OpenCityButton_Click" Margin="0,0,8,0"/>
-                            <Button Content="Открыть летопись города" Width="140" Click="OpenLogButton_Click"/>
-                        </WrapPanel>
-                    </StackPanel>
-                </Border>
-                <Border BorderBrush="LightGray" BorderThickness="1" CornerRadius="6" Padding="12" Margin="0,0,0,12">
-                    <StackPanel>
-                        <TextBlock Text="Отладка карты" FontWeight="SemiBold" Margin="0,0,0,8"/>
-                        <Button Content="{Binding Map.MapCalibrationToggleButtonText}" Command="{Binding Map.ToggleMapCalibrationModeCommand}" Margin="0,0,0,8"/>
-                        <TextBlock Text="{Binding Map.LastMapCalibrationPointDisplay}" TextWrapping="Wrap"/>
-                    </StackPanel>
-                </Border>
-            </StackPanel>
-        </Grid>
-    </Grid>
-</Window>
+</UserControl>

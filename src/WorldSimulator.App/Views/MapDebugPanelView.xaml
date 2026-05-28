@@ -1,0 +1,24 @@
+<UserControl x:Class="WorldSimulator.App.Views.MapDebugPanelView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:WorldSimulator.App.ViewModels"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance Type=vm:MainWindowViewModel, IsDesignTimeCreatable=False}">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Resources/MainWindowResources.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
+    <Border BorderBrush="LightGray" BorderThickness="1" CornerRadius="6" Padding="12" Margin="0,0,0,12">
+                    <StackPanel>
+                        <TextBlock Text="Отладка карты" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                        <Button Content="{Binding MapCalibrationToggleButtonText}" Command="{Binding ToggleMapCalibrationModeCommand}" Margin="0,0,0,8"/>
+                        <TextBlock Text="{Binding LastMapCalibrationPointDisplay}" TextWrapping="Wrap"/>
+                    </StackPanel>
+                </Border>
+
+</UserControl>

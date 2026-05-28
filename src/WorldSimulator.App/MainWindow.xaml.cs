@@ -1,4 +1,3 @@
-using System.Windows.Input;
 using WorldSimulator.App.ViewModels;
 
 namespace WorldSimulator.App;
@@ -14,7 +13,7 @@ public partial class MainWindow : System.Windows.Window
         DataContext = new MainWindowViewModel();
     }
 
-    private void MapContainer_SizeChanged(object sender, System.Windows.SizeChangedEventArgs e)
+    public void OpenCityWindow()
     {
     }
 
@@ -92,11 +91,6 @@ public partial class MainWindow : System.Windows.Window
 
         _cityWindow.Closed += (_, _) => _cityWindow = null;
         _cityWindow.Show();
-    }
-
-    private void OpenLogButton_Click(object sender, System.Windows.RoutedEventArgs e)
-    {
-        OpenLogWindow();
     }
 
     public void OpenLogWindow()
