@@ -1,7 +1,7 @@
 <Window x:Class="WorldSimulator.App.LogWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="{Binding CityJournalTitle}"
+        Title="{Binding Journal.CityJournalTitle}"
         Width="900"
         Height="600"
         MinWidth="700"
@@ -21,7 +21,7 @@
 
         <TextBlock Grid.Row="0"
                    Grid.ColumnSpan="3"
-                   Text="{Binding CityJournalTitle}"
+                   Text="{Binding Journal.CityJournalTitle}"
                    FontWeight="SemiBold"
                    FontSize="18"
                    Margin="0,0,0,8"/>
@@ -37,7 +37,7 @@
                   Width="220"
                   Margin="0,0,0,10"
                   DisplayMemberPath="Title"
-                  ItemsSource="{Binding Journal.SimulationJournalFilters}"
+                  ItemsSource="{Binding Journal.SimulationJournalFilterOptions}"
                   SelectedItem="{Binding Journal.SelectedSimulationJournalFilter}"/>
 
         <DataGrid x:Name="SimulationJournalGrid"

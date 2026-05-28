@@ -1,35 +1,43 @@
 using System.Collections.ObjectModel;
-using WorldSimulator.Core.Cities;
-using WorldSimulator.Core.Events;
-using WorldSimulator.Core.Resources;
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
+using WorldSimulator.App.Services;
 
 namespace WorldSimulator.App.ViewModels;
 
-public sealed class SimulationJournalViewModel : ViewModelBase
+public sealed class SimulationJournalViewModel : INotifyPropertyChanged
 {
-    private const int MaxSimulationJournalDays = 500;
-
+    private readonly SimulationJournalService _journalService;
     private SimulationJournalFilterOption _selectedSimulationJournalFilter = SimulationJournalFilterOption.All;
     private SimulationJournalEntry? _selectedSimulationJournalEntry;
     private string _selectedJournalCityId;
     private string _currentJournalCityName;
 
-    public SimulationJournalViewModel(string selectedCityId, string currentJournalCityName)
+    public SimulationJournalViewModel(SimulationJournalService journalService, string selectedJournalCityId, string currentJournalCityName)
     {
-        _selectedJournalCityId = selectedCityId;
+        _journalService = journalService;
+        _selectedJournalCityId = selectedJournalCityId;
         _currentJournalCityName = currentJournalCityName;
     }
 
-    public ObservableCollection<SimulationJournalEntry> SimulationJournalEntries { get; } = [];
-    public ObservableCollection<SimulationJournalEntry> FilteredSimulationJournalEntries { get; } = [];
-    public IReadOnlyList<SimulationJournalFilterOption> SimulationJournalFilters { get; } = SimulationJournalFilterOption.AllOptions;
+    public event PropertyChangedEventHandler? PropertyChanged;
+
+    public ObservableCollection<SimulationJournalEntry> SimulationJournalEntries { get; } = new();
+
+    public ObservableCollection<SimulationJournalEntry> FilteredSimulationJournalEntries { get; } = new();
+
+    public IReadOnlyList<SimulationJournalFilterOption> SimulationJournalFilterOptions { get; } = SimulationJournalFilterOption.AllOptions;
 
     public SimulationJournalFilterOption SelectedSimulationJournalFilter
     {
         get => _selectedSimulationJournalFilter;
         set
         {
-            if (_selectedSimulationJournalFilter == value) return;
+            if (_selectedSimulationJournalFilter == value)
+            {
+                return;
+            }
+
             _selectedSimulationJournalFilter = value;
             OnPropertyChanged();
             RefreshSimulationJournalFilter();
@@ -41,7 +49,11 @@ public sealed class SimulationJournalViewModel : ViewModelBase
         get => _selectedSimulationJournalEntry;
         set
         {
-            if (_selectedSimulationJournalEntry == value) return;
+            if (_selectedSimulationJournalEntry == value)
+            {
+                return;
+            }
+
             _selectedSimulationJournalEntry = value;
             OnPropertyChanged();
         }
@@ -52,34 +64,45 @@ public sealed class SimulationJournalViewModel : ViewModelBase
         get => _selectedJournalCityId;
         private set
         {
-            if (_selectedJournalCityId == value) return;
+            if (_selectedJournalCityId == value)
+            {
+                return;
+            }
+
             _selectedJournalCityId = value;
             OnPropertyChanged();
-            OnPropertyChanged(nameof(CurrentJournalCityName));
-            OnPropertyChanged(nameof(CityJournalTitle));
             RefreshSimulationJournalFilter();
         }
     }
 
-    public string CurrentJournalCityName => _currentJournalCityName;
-    public string CityJournalTitle => $"Летопись города: {CurrentJournalCityName}";
-
-    public void SelectCity(City city)
+    public string CurrentJournalCityName
     {
-        _currentJournalCityName = city.Name;
-        SelectedJournalCityId = city.Id;
-        OnPropertyChanged(nameof(CurrentJournalCityName));
-        OnPropertyChanged(nameof(CityJournalTitle));
+        get => _currentJournalCityName;
+        private set
+        {
+            if (_currentJournalCityName == value)
+            {
+                return;
+            }
+
+            _currentJournalCityName = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(CityJournalTitle));
+        }
     }
 
-    public void Reset(City city)
+    public string CityJournalTitle => $"Летопись города: {CurrentJournalCityName}";
+
+    public void SelectCity(string cityId, string cityName)
     {
-        SimulationJournalEntries.Clear();
-        FilteredSimulationJournalEntries.Clear();
-        _currentJournalCityName = city.Name;
-        SelectedJournalCityId = city.Id;
-        SelectedSimulationJournalFilter = SimulationJournalFilterOption.All;
-        SelectedSimulationJournalEntry = null;
+        SelectedJournalCityId = cityId;
+        CurrentJournalCityName = cityName;
+    }
+
+    public void Append(SimulationJournalAppendRequest request)
+    {
+        SimulationJournalEntries.Add(_journalService.BuildEntry(request));
+        _journalService.TrimToMaxDays(SimulationJournalEntries);
         RefreshSimulationJournalFilter();
     }
 
@@ -87,92 +110,6 @@ public sealed class SimulationJournalViewModel : ViewModelBase
     {
         SimulationJournalEntries.Clear();
         FilteredSimulationJournalEntries.Clear();
-    }
-
-    public void AppendSimulationJournalEntry(
-        City city,
-        int day,
-        DailyFoodFlowResult foodResult,
-        CityEventEffectsResult eventEffects,
-        int populationStart,
-        int populationEnd,
-        CityState cityStateStart,
-        CityState cityStateEnd,
-        int activeEventsCount,
-        IReadOnlyList<string> activeEventNamesBeforeAdvance,
-        List<SimulationJournalItem> items,
-        Func<DailyFoodFlowResult, string> buildFoodCalculationText,
-        Func<DailyFoodFlowResult, IReadOnlyList<SimulationJournalItem>, int, int, string> buildJournalSummary,
-        Func<CityState, string> toCityStateDisplay)
-    {
-        if (eventEffects.HasAnyEffect)
-        {
-            items.Add(new SimulationJournalItem
-            {
-                Category = SimulationJournalCategory.Effects,
-                Title = "Применены эффекты событий",
-                Details = $"Настроение {eventEffects.MoodDelta:+0;-0;0}, безопасность {eventEffects.SecurityDelta:+0;-0;0}, преступность {eventEffects.CrimeDelta:+0;-0;0}."
-            });
-        }
-
-        if (populationStart != populationEnd)
-        {
-            items.Add(new SimulationJournalItem
-            {
-                Category = SimulationJournalCategory.Population,
-                Title = "Изменение населения",
-                Details = $"Население {populationStart} → {populationEnd} ({populationEnd - populationStart:+0;-0;0}), причина: {city.CityState switch { CityState.Famine => "голод", _ => "состояние города" }}."
-            });
-        }
-
-        if (cityStateStart != cityStateEnd)
-        {
-            items.Add(new SimulationJournalItem
-            {
-                Category = SimulationJournalCategory.CityState,
-                Title = "Состояние города изменилось",
-                Details = $"{toCityStateDisplay(cityStateStart)} → {toCityStateDisplay(cityStateEnd)}."
-            });
-        }
-
-        var foodCalculationText = buildFoodCalculationText(foodResult);
-        items.Add(new SimulationJournalItem
-        {
-            Category = SimulationJournalCategory.Food,
-            Title = "Пищевой баланс дня",
-            Details = foodCalculationText
-        });
-
-        var summary = cityStateEnd == CityState.Abandoned
-            ? "Город опустел."
-            : buildJournalSummary(foodResult, items, populationStart, populationEnd);
-
-        var entry = new SimulationJournalEntry
-        {
-            Day = day,
-            CityId = city.Id,
-            CityName = city.Name,
-            CityState = toCityStateDisplay(cityStateEnd),
-            PopulationStart = populationStart,
-            PopulationEnd = populationEnd,
-            PopulationDelta = populationEnd - populationStart,
-            FoodStart = foodResult.StartingFood,
-            FoodEnd = foodResult.EndingFood,
-            FoodDelta = foodResult.TotalDelta,
-            ActiveEventsCount = activeEventsCount,
-            Summary = summary,
-            FoodCalculation = foodCalculationText,
-            EffectsTooltip = activeEventNamesBeforeAdvance.Count == 0 ? "Событий нет." : $"События дня: {string.Join(", ", activeEventNamesBeforeAdvance)}.",
-            Items = items
-        };
-
-        SimulationJournalEntries.Add(entry);
-        if (SimulationJournalEntries.Count > MaxSimulationJournalDays)
-        {
-            SimulationJournalEntries.RemoveAt(0);
-        }
-
-        RefreshSimulationJournalFilter();
     }
 
     public void RefreshSimulationJournalFilter()
@@ -186,22 +123,39 @@ public sealed class SimulationJournalViewModel : ViewModelBase
 
     public bool MatchesCurrentFilter(SimulationJournalEntry entry)
     {
-        return SelectedSimulationJournalFilter.Value switch
-        {
-            SimulationJournalFilter.All => true,
-            SimulationJournalFilter.Events => entry.Items.Any(i => i.Category is SimulationJournalCategory.Event or SimulationJournalCategory.Effects),
-            SimulationJournalFilter.Population => entry.Items.Any(i => i.Category == SimulationJournalCategory.Population),
-            SimulationJournalFilter.Food => entry.Items.Any(i => i.Category == SimulationJournalCategory.Food),
-            SimulationJournalFilter.CityState => entry.Items.Any(i => i.Category == SimulationJournalCategory.CityState),
-            SimulationJournalFilter.System => entry.Items.Any(i => i.Category == SimulationJournalCategory.System),
-            SimulationJournalFilter.Errors => entry.Items.Any(i => i.Category == SimulationJournalCategory.Error),
-            SimulationJournalFilter.MapAndDebug => entry.Items.Any(i => i.Category is SimulationJournalCategory.Map or SimulationJournalCategory.Debug),
-            _ => true
-        };
+        return SimulationJournalService.IsEntryInCategory(entry, SelectedSimulationJournalFilter.Value);
     }
 
-    private bool IsEntryInSelectedJournalCity(SimulationJournalEntry entry)
+    public bool IsEntryInSelectedJournalCity(SimulationJournalEntry entry)
     {
         return string.Equals(entry.CityId, SelectedJournalCityId, StringComparison.OrdinalIgnoreCase);
     }
+
+    private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+    {
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    }
+}
+
+public sealed class SimulationJournalFilterOption
+{
+    public static readonly SimulationJournalFilterOption All = new(SimulationJournalFilter.All, "Все");
+    public static readonly SimulationJournalFilterOption Events = new(SimulationJournalFilter.Events, "События");
+    public static readonly SimulationJournalFilterOption Population = new(SimulationJournalFilter.Population, "Население");
+    public static readonly SimulationJournalFilterOption Food = new(SimulationJournalFilter.Food, "Пища");
+    public static readonly SimulationJournalFilterOption CityState = new(SimulationJournalFilter.CityState, "Состояние");
+    public static readonly SimulationJournalFilterOption System = new(SimulationJournalFilter.System, "Система");
+    public static readonly SimulationJournalFilterOption Errors = new(SimulationJournalFilter.Errors, "Ошибки");
+    public static readonly SimulationJournalFilterOption MapAndDebug = new(SimulationJournalFilter.MapAndDebug, "Карта/отладка");
+    public static readonly IReadOnlyList<SimulationJournalFilterOption> AllOptions = [All, Events, Population, Food, CityState, System, Errors, MapAndDebug];
+
+    public SimulationJournalFilterOption(SimulationJournalFilter value, string title)
+    {
+        Value = value;
+        Title = title;
+    }
+
+    public SimulationJournalFilter Value { get; }
+
+    public string Title { get; }
 }

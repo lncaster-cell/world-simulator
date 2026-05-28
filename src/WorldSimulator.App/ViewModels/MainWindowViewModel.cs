@@ -7,6 +7,7 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Threading;
 using WorldSimulator.App.Infrastructure;
+using WorldSimulator.App.Services;
 using WorldSimulator.Core.Cities;
 using WorldSimulator.Core.Events;
 using WorldSimulator.Core.Resources;
@@ -27,7 +28,6 @@ public sealed class MainWindowViewModel : ViewModelBase
 
     private const string SaveFilePath = "data/save/world_save.json";
     private const int MaxTechnicalLogEntries = 500;
-    private const int MaxSimulationJournalDays = 500;
     private const int MaxVisibleCaravanMovementMarkers = 12;
     private const string GothaCityId = "gotha";
     private SimulationWorld _world;
@@ -49,6 +49,7 @@ public sealed class MainWindowViewModel : ViewModelBase
     private readonly CityEventGenerator _eventGenerator;
     private readonly WorldSimulationService _worldSimulationService;
     private readonly JsonWorldSaveService _saveService;
+    private readonly SimulationJournalService _journalService;
     private readonly DispatcherTimer _timer;
     private DateTimeOffset _lastTickUtc;
     private DailyFoodFlowResult _dailyFoodFlowResult;
@@ -56,11 +57,8 @@ public sealed class MainWindowViewModel : ViewModelBase
     private bool _isRandomEventGenerationEnabled = true;
     private string _lastImportantChange = "пока нет.";
     private bool _isMapCalibrationModeEnabled;
-    private SimulationJournalFilterOption _selectedSimulationJournalFilter = SimulationJournalFilterOption.All;
-    private SimulationJournalEntry? _selectedSimulationJournalEntry;
     private double? _lastMapCalibrationX;
     private double? _lastMapCalibrationY;
-    private string _selectedJournalCityId = GothaCityId;
     private readonly List<TradeRouteVisualViewModel> _tradeRouteVisuals = [];
     private readonly DispatcherTimer _tradeMarkerAnimationTimer;
     private DateTimeOffset _lastTradeMarkerAnimationTickUtc;
@@ -108,6 +106,8 @@ public sealed class MainWindowViewModel : ViewModelBase
             _eventEffectCalculator,
             _eventGenerator);
         _saveService = new JsonWorldSaveService();
+        _journalService = new SimulationJournalService();
+        Journal = new SimulationJournalViewModel(_journalService, _city.Id, _city.Name);
         _dailyFoodFlowResult = _dailyFoodFlowCalculator.Calculate(_city, BuildDailyFoodFlowInputs());
 
         Control = new SimulationControlViewModel(_clock, AddTechnicalLogEntry);
@@ -463,23 +463,10 @@ public sealed class MainWindowViewModel : ViewModelBase
     public bool HasTechnicalLogEntries => TechnicalLogEntries.Count > 0;
 
     public ObservableCollection<string> ActiveEventEntries { get; } = new();
-    public ObservableCollection<SimulationJournalEntry> SimulationJournalEntries => Journal.SimulationJournalEntries;
-    public ObservableCollection<SimulationJournalEntry> FilteredSimulationJournalEntries => Journal.FilteredSimulationJournalEntries;
+
+    public SimulationJournalViewModel Journal { get; }
 
     public ObservableCollection<string> CompletedEventEntries { get; } = new();
-    public IReadOnlyList<SimulationJournalFilterOption> SimulationJournalFilters => Journal.SimulationJournalFilters;
-    public SimulationJournalFilterOption SelectedSimulationJournalFilter
-    {
-        get => Journal.SelectedSimulationJournalFilter;
-        set => Journal.SelectedSimulationJournalFilter = value;
-    }
-
-    public SimulationJournalEntry? SelectedSimulationJournalEntry
-    {
-        get => Journal.SelectedSimulationJournalEntry;
-        set => Journal.SelectedSimulationJournalEntry = value;
-    }
-
     public bool HasActiveEventEntries => _eventManager.ActiveEvents.Count > 0;
 
     public bool HasCompletedEventEntries => _eventManager.CompletedEvents.Count > 0;
@@ -559,12 +546,6 @@ public sealed class MainWindowViewModel : ViewModelBase
 
     public string SelectedCityProfile => $"{_city.Name} — профиль поселения";
 
-    public string SelectedJournalCityId => Journal.SelectedJournalCityId;
-
-    public string CurrentJournalCityName => Journal.CurrentJournalCityName;
-
-    public string CityJournalTitle => Journal.CityJournalTitle;
-
     public string EconomyStocksTooltip => $"{ResourcesTooltip}{Environment.NewLine}{Environment.NewLine}{GoodsTooltip}";
 
     private static string FormatSigned(decimal value)
@@ -599,7 +580,7 @@ public sealed class MainWindowViewModel : ViewModelBase
             _world.SelectedRegionId = selectedLocation.RegionId;
         }
 
-        Journal.SelectCity(_city);
+        Journal.SelectCity(_city.Id, _city.Name);
 
         RefreshAllCityProperties();
         RefreshSelectedCityProperties();
@@ -920,9 +901,9 @@ public sealed class MainWindowViewModel : ViewModelBase
         _eventManager.Clear();
         _worldSimulationService.ResetEventState();
         IsRandomEventGenerationEnabled = true;
-        Journal.SelectCity(_city);
-        SelectedSimulationJournalFilter = SimulationJournalFilterOption.All;
-        SelectedSimulationJournalEntry = null;
+        Journal.SelectCity(_city.Id, _city.Name);
+        Journal.SelectedSimulationJournalFilter = SimulationJournalFilterOption.All;
+        Journal.SelectedSimulationJournalEntry = null;
 
         ClearSimulationCollections();
         SetLastImportantChange("симуляция сброшена к началу.");
@@ -946,8 +927,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         ActiveCaravanMovementMarkers.Clear();
         ActiveEventEntries.Clear();
         CompletedEventEntries.Clear();
-        SimulationJournalEntries.Clear();
-        FilteredSimulationJournalEntries.Clear();
+        Journal.Clear();
         OnPropertyChanged(nameof(HasTechnicalLogEntries));
         OnPropertyChanged(nameof(HasActiveEventEntries));
         OnPropertyChanged(nameof(HasCompletedEventEntries));
@@ -1419,6 +1399,7 @@ public sealed class MainWindowViewModel : ViewModelBase
             }
 
             _city = selectedCity;
+            Journal.SelectCity(_city.Id, _city.Name);
             _clock.RestoreState(
                 loaded.Clock.Day,
                 loaded.Clock.Hour,
@@ -1459,7 +1440,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         OnPropertyChanged(nameof(RouteAuthoringSettlements));
         OnPropertyChanged(nameof(AvailableRouteAuthoringDestinations));
         SelectedTradeRouteForAuthoring = _world.TradeRoutes.FirstOrDefault();
-        Map.RefreshTradeRouteVisuals(null);
+        RefreshTradeRouteVisuals(null);
         Journal.RefreshSimulationJournalFilter();
     }
 
@@ -1743,49 +1724,20 @@ public sealed class MainWindowViewModel : ViewModelBase
         IReadOnlyList<string> activeEventNamesBeforeAdvance,
         List<SimulationJournalItem> items)
     {
-        Journal.AppendSimulationJournalEntry(
-            _city,
-            day,
-            foodResult,
-            eventEffects,
-            populationStart,
-            populationEnd,
-            cityStateStart,
-            cityStateEnd,
-            _eventManager.ActiveEvents.Count,
-            activeEventNamesBeforeAdvance,
-            items,
-            BuildFoodCalculationText,
-            BuildJournalSummary,
-            ToRussianCityState);
-    }
-
-    private void RefreshSimulationJournalFilter() => Journal.RefreshSimulationJournalFilter();
-
-    private bool IsEntryInSelectedJournalCity(SimulationJournalEntry entry)
-    {
-        return string.Equals(entry.CityId, SelectedJournalCityId, StringComparison.OrdinalIgnoreCase);
-    }
-
-    private bool MatchesCurrentFilter(SimulationJournalEntry entry) => Journal.MatchesCurrentFilter(entry);
-
-    private static string BuildFoodCalculationText(DailyFoodFlowResult result) =>
-        $"Потребление: -{result.PopulationConsumption:0.##}.{Environment.NewLine}Земледелие: {result.AgricultureIncome:+0.##;-0.##;0}.{Environment.NewLine}Рыбалка: {result.FishingIncome:+0.##;-0.##;0}.{Environment.NewLine}Охота: {result.HuntingIncome:+0.##;-0.##;0}.{Environment.NewLine}Поставки: {result.MainlandSupplyIncome:+0.##;-0.##;0}.{Environment.NewLine}События: {result.EventDelta:+0.##;-0.##;0}.";
-
-    private static string BuildJournalSummary(DailyFoodFlowResult foodResult, IReadOnlyList<SimulationJournalItem> items, int populationStart, int populationEnd)
-    {
-        var eventItem = items.FirstOrDefault(i => i.Category == SimulationJournalCategory.Event);
-        if (populationStart != populationEnd)
+        Journal.Append(new SimulationJournalAppendRequest
         {
-            return $"Население {populationStart} → {populationEnd}. Пища {foodResult.TotalDelta:+0.##;-0.##;0}.";
-        }
-
-        if (eventItem is not null)
-        {
-            return $"{eventItem.Title}. Пища {foodResult.TotalDelta:+0.##;-0.##;0}.";
-        }
-
-        return $"Пища {foodResult.TotalDelta:+0.##;-0.##;0}, событий нет.";
+            Day = day,
+            City = _city,
+            FoodResult = foodResult,
+            EventEffects = eventEffects,
+            PopulationStart = populationStart,
+            PopulationEnd = populationEnd,
+            CityStateStart = cityStateStart,
+            CityStateEnd = cityStateEnd,
+            ActiveEventsCount = _eventManager.ActiveEvents.Count,
+            ActiveEventNamesBeforeAdvance = activeEventNamesBeforeAdvance,
+            Items = items
+        });
     }
 
     private static string ToRussianCityState(WorldSimulator.Core.Cities.CityState cityState)
@@ -1861,26 +1813,4 @@ public sealed class MainWindowViewModel : ViewModelBase
         OnPropertyChanged(nameof(HasTechnicalLogEntries));
     }
 
-}
-
-public sealed class SimulationJournalFilterOption
-{
-    public static readonly SimulationJournalFilterOption All = new(SimulationJournalFilter.All, "Все");
-    public static readonly SimulationJournalFilterOption Events = new(SimulationJournalFilter.Events, "События");
-    public static readonly SimulationJournalFilterOption Population = new(SimulationJournalFilter.Population, "Население");
-    public static readonly SimulationJournalFilterOption Food = new(SimulationJournalFilter.Food, "Пища");
-    public static readonly SimulationJournalFilterOption CityState = new(SimulationJournalFilter.CityState, "Состояние");
-    public static readonly SimulationJournalFilterOption System = new(SimulationJournalFilter.System, "Система");
-    public static readonly SimulationJournalFilterOption Errors = new(SimulationJournalFilter.Errors, "Ошибки");
-    public static readonly SimulationJournalFilterOption MapAndDebug = new(SimulationJournalFilter.MapAndDebug, "Карта/отладка");
-    public static readonly IReadOnlyList<SimulationJournalFilterOption> AllOptions = [All, Events, Population, Food, CityState, System, Errors, MapAndDebug];
-
-    public SimulationJournalFilterOption(SimulationJournalFilter value, string title)
-    {
-        Value = value;
-        Title = title;
-    }
-
-    public SimulationJournalFilter Value { get; }
-    public string Title { get; }
 }
