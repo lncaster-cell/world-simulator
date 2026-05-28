@@ -71,8 +71,9 @@ public sealed class WorldSimulationService
             var profile = world.FindSettlementEconomyProfile(city.Id);
             if (profile is null) continue;
 
-            context.GetOrCreateCityState(city, profile);
+            var state = context.GetOrCreateCityState(city, profile);
             ExecuteCitySteps(world, city, context, runnableCitySteps);
+            context.CaptureCityResult(city, state);
         }
 
         context.SetWeeklyTradeFlowResult(_stepOrder.ExecuteAfterCitySteps(world, day));
