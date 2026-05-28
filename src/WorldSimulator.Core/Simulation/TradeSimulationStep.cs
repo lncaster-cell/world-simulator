@@ -21,9 +21,9 @@ public sealed class TradeSimulationStep
         _worldTradeFlowService.ProcessShipments(world, day);
     }
 
-    public WorldTradeFlowResult? RunWeeklyTrade(SimulationWorld world, int day)
+    public WorldTradeFlowResult? RunWeeklyTrade(SimulationWorld world, int day, SimulationCadenceResolver cadenceResolver)
     {
-        if (!WorldSimulationStepOrder.IsWeeklyUpdateDay(day))
+        if (!cadenceResolver.ShouldRun(day, SimulationCadence.Weekly))
         {
             return null;
         }
