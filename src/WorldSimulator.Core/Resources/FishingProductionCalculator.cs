@@ -13,6 +13,18 @@ public sealed class FishingProductionCalculator
     public FishingProductionResult Calculate(City city, IReadOnlyCollection<CityEvent> activeEvents)
     {
         ArgumentNullException.ThrowIfNull(city);
+
+        return Calculate(city, activeEvents, Math.Max(0, city.Population / 10));
+    }
+
+    public FishingProductionResult Calculate(City city, int assignedWorkers)
+    {
+        return Calculate(city, Array.Empty<CityEvent>(), assignedWorkers);
+    }
+
+    public FishingProductionResult Calculate(City city, IReadOnlyCollection<CityEvent> activeEvents, int assignedWorkers)
+    {
+        ArgumentNullException.ThrowIfNull(city);
         ArgumentNullException.ThrowIfNull(activeEvents);
 
         var infrastructureModifier = GetInfrastructureModifier(InfrastructureLevel);
@@ -42,7 +54,7 @@ public sealed class FishingProductionCalculator
             };
         }
 
-        var assignedWorkers = Math.Max(0, city.Population / 10);
+        assignedWorkers = Math.Max(0, assignedWorkers);
         var workerCoverage = requiredWorkers > 0
             ? Math.Min((decimal)assignedWorkers / requiredWorkers, 1m)
             : 0m;

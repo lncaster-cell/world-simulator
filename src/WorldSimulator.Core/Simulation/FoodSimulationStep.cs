@@ -30,9 +30,11 @@ public sealed class FoodSimulationStep : IWorldSimulationStep
     {
         var state = context.GetCityState(city);
         var profile = state.Profile;
-        var agriculture = _agricultureProductionCalculator.Calculate(city, profile);
-        var fishing = _fishingProductionCalculator.Calculate(city, state.ActiveEvents);
-        var hunting = _huntingProductionCalculator.Calculate(city);
+        var allocation = state.WorkforceAllocation
+            ?? throw new InvalidOperationException("Workforce simulation must run before food simulation.");
+        var agriculture = _agricultureProductionCalculator.Calculate(city, profile, allocation.AgricultureWorkers);
+        var fishing = _fishingProductionCalculator.Calculate(city, state.ActiveEvents, allocation.FishingWorkers);
+        var hunting = _huntingProductionCalculator.Calculate(city, allocation.HuntingWorkers);
         var mainlandSupply = _mainlandSupplyProductionCalculator.Calculate(city, state.ActiveEvents);
         var foodInputs = new DailyFoodFlowInputs
         {

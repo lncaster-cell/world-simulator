@@ -21,6 +21,27 @@ public sealed class AgricultureProductionCalculatorTests
     }
 
     [Fact]
+    public void AssignedWorkers_ControlProductionAndDoNotGrowWithoutBound()
+    {
+        var city = CityPresets.CreateMlynek();
+        city.Mood = 60;
+        city.Security = 60;
+        city.CityState = CityState.Stable;
+        var profile = new SettlementEconomyProfile{ SettlementId = city.Id, AgriculturePotential = 26m, FishingMultiplier=0m, HuntingMultiplier=0m, MainlandSupplyMultiplier=0m, ResourceGatheringMultiplier=0m, GoodsCraftingMultiplier=0m, IsPort=false, IsFortress=false, IsCapital=false};
+
+        var noWorkers = _calculator.Calculate(city, profile, assignedWorkers: 0);
+        var staffed = _calculator.Calculate(city, profile, noWorkers.RequiredWorkers);
+        var overstaffed = _calculator.Calculate(city, profile, noWorkers.RequiredWorkers * 10);
+
+        Assert.Equal(0, noWorkers.AssignedWorkers);
+        Assert.Equal(0m, noWorkers.FinalOutput);
+        Assert.Equal(1m, staffed.WorkerCoverage);
+        Assert.True(staffed.FinalOutput > 0m);
+        Assert.Equal(1m, overstaffed.WorkerCoverage);
+        Assert.Equal(staffed.FinalOutput, overstaffed.FinalOutput);
+    }
+
+    [Fact]
     public void ZeroPotential_ProducesZero()
     {
         var city = CityPresets.CreateMlynek();
