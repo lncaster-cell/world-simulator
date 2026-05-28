@@ -16,6 +16,8 @@ internal static class WorldSaveValidator
             throw new InvalidDataException($"Save file '{filePath}' has no settlement map locations.");
         if (world.SettlementEconomyProfiles.Count == 0)
             throw new InvalidDataException($"Save file '{filePath}' has no settlement economy profiles.");
+        if (world.SettlementSectorCapacityProfiles.Count == 0)
+            throw new InvalidDataException($"Save file '{filePath}' has no settlement sector capacity profiles.");
         if (world.Caravans.Count == 0)
             throw new InvalidDataException($"Save file '{filePath}' has no caravans.");
         if (world.TradeRoutes.Count == 0)
@@ -44,6 +46,11 @@ internal static class WorldSaveValidator
         foreach (var profile in world.SettlementEconomyProfiles)
         {
             if (!cityIds.Contains(profile.SettlementId)) throw new InvalidDataException($"Save file '{filePath}' economy profile references unknown settlement '{profile.SettlementId}'.");
+        }
+
+        foreach (var profile in world.SettlementSectorCapacityProfiles)
+        {
+            if (!cityIds.Contains(profile.SettlementId)) throw new InvalidDataException($"Save file '{filePath}' sector capacity profile references unknown settlement '{profile.SettlementId}'.");
         }
 
         foreach (var caravan in world.Caravans)

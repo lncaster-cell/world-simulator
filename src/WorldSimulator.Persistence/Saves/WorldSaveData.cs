@@ -7,7 +7,7 @@ namespace WorldSimulator.Persistence.Saves;
 
 public sealed class WorldSaveData
 {
-    public int Version { get; set; } = 3;
+    public int Version { get; set; } = 4;
     public DateTime SavedAtUtc { get; set; }
     public ClockSaveData Clock { get; set; } = new();
     public SimulationWorldSaveData? World { get; set; }
@@ -22,6 +22,7 @@ public sealed class SimulationWorldSaveData
     public List<RegionSaveData> Regions { get; set; } = new();
     public List<SettlementMapLocationSaveData> SettlementMapLocations { get; set; } = new();
     public List<SettlementEconomyProfileSaveData> SettlementEconomyProfiles { get; set; } = new();
+    public List<SettlementSectorCapacityProfileSaveData> SettlementSectorCapacityProfiles { get; set; } = new();
     public List<CaravanSaveData> Caravans { get; set; } = new();
     public List<TradeRouteSaveData> TradeRoutes { get; set; } = new();
     public List<TradeShipmentSaveData> TradeShipments { get; set; } = new();
@@ -30,11 +31,14 @@ public sealed class SimulationWorldSaveData
 }
 
 public sealed class ClockSaveData { public int Day { get; set; } public int Hour { get; set; } public bool IsRunning { get; set; } public TimeSpan AccumulatedRealTime { get; set; } public TimeSpan RealTimePerGameHour { get; set; } }
-public sealed class CitySaveData { public string Id { get; set; } = string.Empty; public string Name { get; set; } = string.Empty; public int Population { get; set; } public decimal Food { get; set; } public decimal Wealth { get; set; } public int Mood { get; set; } public int Security { get; set; } public int Crime { get; set; } public decimal Resources { get; set; } public decimal Goods { get; set; } public string CityState { get; set; } = string.Empty; public CityInfrastructureSaveData? Infrastructure { get; set; } }
+public sealed class CitySaveData { public string Id { get; set; } = string.Empty; public string Name { get; set; } = string.Empty; public int Population { get; set; } public decimal Food { get; set; } public decimal Wealth { get; set; } public int Mood { get; set; } public int Security { get; set; } public int Crime { get; set; } public decimal Resources { get; set; } public decimal Goods { get; set; } public string CityState { get; set; } = string.Empty; public CityInfrastructureSaveData? Infrastructure { get; set; } public CityPopulationDemographicsSaveData? Demographics { get; set; } }
 public sealed class CityInfrastructureSaveData { public int HousingLevel { get; set; } = CityInfrastructure.MinLevel; public int UrbanLevel { get; set; } = CityInfrastructure.MinLevel; public int ProductionLevel { get; set; } = CityInfrastructure.MinLevel; public int MilitaryLevel { get; set; } = CityInfrastructure.MinLevel; }
+public sealed class CityPopulationDemographicsSaveData { public List<RacePopulationGroupSaveData> RaceGroups { get; set; } = new(); }
+public sealed class RacePopulationGroupSaveData { public string RaceId { get; set; } = string.Empty; public int Children { get; set; } public int AdultMen { get; set; } public int AdultWomen { get; set; } public int Elderly { get; set; } }
 public sealed class RegionSaveData { public string Id { get; set; } = string.Empty; public string DisplayName { get; set; } = string.Empty; public string MapAssetId { get; set; } = string.Empty; }
 public sealed class SettlementMapLocationSaveData { public string SettlementId { get; set; } = string.Empty; public string RegionId { get; set; } = string.Empty; public decimal X { get; set; } public decimal Y { get; set; } }
 public sealed class SettlementEconomyProfileSaveData { public string SettlementId { get; set; } = string.Empty; public decimal AgriculturePotential { get; set; } public decimal FishingMultiplier { get; set; } public decimal HuntingMultiplier { get; set; } public decimal MainlandSupplyMultiplier { get; set; } public decimal ResourceGatheringMultiplier { get; set; } public decimal GoodsCraftingMultiplier { get; set; } public bool IsPort { get; set; } public bool IsFortress { get; set; } public bool IsCapital { get; set; } }
+public sealed class SettlementSectorCapacityProfileSaveData { public string SettlementId { get; set; } = string.Empty; public int AgricultureCapacity { get; set; } public int FishingCapacity { get; set; } public int HuntingCapacity { get; set; } public int ResourceGatheringCapacity { get; set; } public int CraftingCapacity { get; set; } public int TradeCapacity { get; set; } public int GuardCapacity { get; set; } public int MaintenanceCapacity { get; set; } }
 public sealed class CaravanSaveData { public string Id { get; set; } = string.Empty; public string OwnerSettlementId { get; set; } = string.Empty; public string Type { get; set; } = string.Empty; public decimal Capacity { get; set; } public int RequiredWorkers { get; set; } public bool IsAvailable { get; set; } public decimal PurchaseCost { get; set; } public decimal UpkeepPerWeek { get; set; } public string Status { get; set; } = string.Empty; }
 public sealed class EventSaveData { public List<CityEventSaveData> ActiveEvents { get; set; } = new(); public List<CityEventSaveData> CompletedEvents { get; set; } = new(); public Dictionary<string, CityEventBucketSaveData> EventsByCityId { get; set; } = new(); }
 public sealed class CityEventBucketSaveData { public List<CityEventSaveData> ActiveEvents { get; set; } = new(); public List<CityEventSaveData> CompletedEvents { get; set; } = new(); }

@@ -1,5 +1,6 @@
 using WorldSimulator.Core.Cities;
 using WorldSimulator.Core.Trade;
+using WorldSimulator.Core.Workforce;
 
 namespace WorldSimulator.Core.World;
 
@@ -9,6 +10,7 @@ public sealed class SimulationWorld
     public required List<Region> Regions { get; init; }
     public required List<SettlementMapLocation> SettlementMapLocations { get; init; }
     public required List<SettlementEconomyProfile> SettlementEconomyProfiles { get; init; }
+    public required List<SettlementSectorCapacityProfile> SettlementSectorCapacityProfiles { get; init; }
     public required List<Caravan> Caravans { get; init; }
     public required List<TradeRoute> TradeRoutes { get; init; }
     public required List<TradeShipment> TradeShipments { get; init; }
@@ -93,6 +95,11 @@ public sealed class SimulationWorld
     public SettlementEconomyProfile? FindSettlementEconomyProfile(string settlementId)
     {
         return SettlementEconomyProfiles.FirstOrDefault(x => x.SettlementId == settlementId);
+    }
+
+    public SettlementSectorCapacityProfile? FindSettlementSectorCapacityProfile(string settlementId)
+    {
+        return SettlementSectorCapacityProfiles.FirstOrDefault(x => x.SettlementId == settlementId);
     }
 
     public IReadOnlyList<Caravan> GetCaravansForSettlement(string settlementId)

@@ -15,6 +15,7 @@ public static class WorldPresets
             ],
             SettlementMapLocations = RiviaSettlementPresets.CreateMapLocations(RegionPresets.RiviaRegionId),
             SettlementEconomyProfiles = RiviaSettlementPresets.CreateEconomyProfiles(),
+            SettlementSectorCapacityProfiles = RiviaSettlementPresets.CreateSectorCapacityProfiles(),
             Caravans =
             [
                 CaravanPresets.Create("gotha_land_1", RiviaSettlementPresets.GothaId, CaravanType.Land),
