@@ -10,36 +10,40 @@ public sealed class WorldSimulationStepOrder
     // chains, and longer cadence world steps run only when the cadence resolver
     // allows it.
     private readonly TradeSimulationStep _tradeSimulationStep;
-    private readonly IReadOnlyList<IWorldSimulationStep> _dailyCitySteps;
+    private readonly IReadOnlyList<IWorldSimulationStep> _dailyPreCadenceCitySteps;
     private readonly IReadOnlyList<IWorldSimulationStep> _weeklyCitySteps;
     private readonly IReadOnlyList<IWorldSimulationStep> _monthlyCitySteps;
     private readonly IReadOnlyList<IWorldSimulationStep> _halfYearlyCitySteps;
     private readonly IReadOnlyList<IWorldSimulationStep> _yearlyCitySteps;
+    private readonly IReadOnlyList<IWorldSimulationStep> _dailyPostCadenceCitySteps;
     private readonly SimulationCadenceResolver _cadenceResolver;
 
     public WorldSimulationStepOrder(
         TradeSimulationStep tradeSimulationStep,
-        IReadOnlyList<IWorldSimulationStep> dailyCitySteps,
+        IReadOnlyList<IWorldSimulationStep> dailyPreCadenceCitySteps,
         IReadOnlyList<IWorldSimulationStep> weeklyCitySteps,
         IReadOnlyList<IWorldSimulationStep> monthlyCitySteps,
         IReadOnlyList<IWorldSimulationStep> halfYearlyCitySteps,
         IReadOnlyList<IWorldSimulationStep> yearlyCitySteps,
+        IReadOnlyList<IWorldSimulationStep> dailyPostCadenceCitySteps,
         SimulationCadenceResolver cadenceResolver)
     {
         _tradeSimulationStep = tradeSimulationStep;
-        _dailyCitySteps = dailyCitySteps;
+        _dailyPreCadenceCitySteps = dailyPreCadenceCitySteps;
         _weeklyCitySteps = weeklyCitySteps;
         _monthlyCitySteps = monthlyCitySteps;
         _halfYearlyCitySteps = halfYearlyCitySteps;
         _yearlyCitySteps = yearlyCitySteps;
+        _dailyPostCadenceCitySteps = dailyPostCadenceCitySteps;
         _cadenceResolver = cadenceResolver;
     }
 
-    public IReadOnlyList<IWorldSimulationStep> DailyCitySteps => _dailyCitySteps;
+    public IReadOnlyList<IWorldSimulationStep> DailyPreCadenceCitySteps => _dailyPreCadenceCitySteps;
     public IReadOnlyList<IWorldSimulationStep> WeeklyCitySteps => _weeklyCitySteps;
     public IReadOnlyList<IWorldSimulationStep> MonthlyCitySteps => _monthlyCitySteps;
     public IReadOnlyList<IWorldSimulationStep> HalfYearlyCitySteps => _halfYearlyCitySteps;
     public IReadOnlyList<IWorldSimulationStep> YearlyCitySteps => _yearlyCitySteps;
+    public IReadOnlyList<IWorldSimulationStep> DailyPostCadenceCitySteps => _dailyPostCadenceCitySteps;
 
     public SimulationCadenceResolver CadenceResolver => _cadenceResolver;
 
@@ -62,8 +66,7 @@ public sealed class WorldSimulationStepOrder
                 workforceSimulationStep,
                 foodSimulationStep,
                 wealthSimulationStep,
-                cityStateSimulationStep,
-                populationSimulationStep
+                cityStateSimulationStep
             },
             new IWorldSimulationStep[]
             {
@@ -72,6 +75,10 @@ public sealed class WorldSimulationStepOrder
             Array.Empty<IWorldSimulationStep>(),
             Array.Empty<IWorldSimulationStep>(),
             Array.Empty<IWorldSimulationStep>(),
+            new IWorldSimulationStep[]
+            {
+                populationSimulationStep
+            },
             cadenceResolver);
     }
 
@@ -89,7 +96,7 @@ public sealed class WorldSimulationStepOrder
 
     public IReadOnlyList<IWorldSimulationStep> GetCityStepsForCadence(SimulationCadence cadence) => cadence switch
     {
-        SimulationCadence.Daily => _dailyCitySteps,
+        SimulationCadence.Daily => _dailyPreCadenceCitySteps.Concat(_dailyPostCadenceCitySteps).ToList(),
         SimulationCadence.Weekly => _weeklyCitySteps,
         SimulationCadence.Monthly => _monthlyCitySteps,
         SimulationCadence.HalfYearly => _halfYearlyCitySteps,
@@ -100,11 +107,12 @@ public sealed class WorldSimulationStepOrder
     public IReadOnlyList<IWorldSimulationStep> GetRunnableCitySteps(int day)
     {
         var steps = new List<IWorldSimulationStep>();
-        AddIfRunnable(steps, day, SimulationCadence.Daily);
+        steps.AddRange(_dailyPreCadenceCitySteps);
         AddIfRunnable(steps, day, SimulationCadence.Weekly);
         AddIfRunnable(steps, day, SimulationCadence.Monthly);
         AddIfRunnable(steps, day, SimulationCadence.HalfYearly);
         AddIfRunnable(steps, day, SimulationCadence.Yearly);
+        steps.AddRange(_dailyPostCadenceCitySteps);
         return steps;
     }
 
