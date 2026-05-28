@@ -2,6 +2,7 @@ using WorldSimulator.Core.Cities;
 using WorldSimulator.Core.Events;
 using WorldSimulator.Core.Trade;
 using WorldSimulator.Core.World;
+using WorldSimulator.Core.Workforce;
 
 namespace WorldSimulator.Persistence.Saves;
 
@@ -14,6 +15,7 @@ internal static class WorldSaveMapper
         Regions = world.Regions.Select(ToSaveData).ToList(),
         SettlementMapLocations = world.SettlementMapLocations.Select(ToSaveData).ToList(),
         SettlementEconomyProfiles = world.SettlementEconomyProfiles.Select(ToSaveData).ToList(),
+        SettlementSectorCapacityProfiles = world.SettlementSectorCapacityProfiles.Select(ToSaveData).ToList(),
         Caravans = world.Caravans.Select(ToSaveData).ToList(),
         TradeRoutes = world.TradeRoutes.Select(ToSaveData).ToList(),
         TradeShipments = world.TradeShipments.Select(ToSaveData).ToList(),
@@ -41,6 +43,7 @@ internal static class WorldSaveMapper
         var regions = (worldData.Regions ?? []).Select(ToCoreRegion).ToList();
         var settlementMapLocations = (worldData.SettlementMapLocations ?? []).Select(ToCoreSettlementMapLocation).ToList();
         var settlementEconomyProfiles = (worldData.SettlementEconomyProfiles ?? []).Select(ToCoreSettlementEconomyProfile).ToList();
+        var settlementSectorCapacityProfiles = (worldData.SettlementSectorCapacityProfiles ?? []).Select(ToCoreSettlementSectorCapacityProfile).ToList();
         var caravans = (worldData.Caravans ?? []).Select(ToCoreCaravan).ToList();
         var tradeRoutes = (worldData.TradeRoutes ?? []).Select(ToCoreTradeRoute).ToList();
 
@@ -60,6 +63,7 @@ internal static class WorldSaveMapper
             Regions = regions,
             SettlementMapLocations = settlementMapLocations,
             SettlementEconomyProfiles = settlementEconomyProfiles,
+            SettlementSectorCapacityProfiles = settlementSectorCapacityProfiles,
             Caravans = caravans,
             TradeRoutes = tradeRoutes,
             TradeShipments = (worldData.TradeShipments ?? []).Select(ToCoreTradeShipment).ToList(),
@@ -124,7 +128,8 @@ internal static class WorldSaveMapper
         Resources = city.Resources,
         Goods = city.Goods,
         CityState = city.CityState.ToString(),
-        Infrastructure = ToSaveData(city.Infrastructure)
+        Infrastructure = ToSaveData(city.Infrastructure),
+        Demographics = ToSaveData(city.Demographics)
     };
 
     private static CityInfrastructureSaveData ToSaveData(CityInfrastructure infrastructure) => new()
@@ -133,6 +138,20 @@ internal static class WorldSaveMapper
         UrbanLevel = infrastructure.UrbanLevel,
         ProductionLevel = infrastructure.ProductionLevel,
         MilitaryLevel = infrastructure.MilitaryLevel
+    };
+
+    private static CityPopulationDemographicsSaveData ToSaveData(CityPopulationDemographics demographics) => new()
+    {
+        RaceGroups = demographics.RaceGroups.Select(ToSaveData).ToList()
+    };
+
+    private static RacePopulationGroupSaveData ToSaveData(RacePopulationGroup group) => new()
+    {
+        RaceId = group.RaceId,
+        Children = group.Children,
+        AdultMen = group.AdultMen,
+        AdultWomen = group.AdultWomen,
+        Elderly = group.Elderly
     };
 
     public static RegionSaveData ToSaveData(Region region) => new()
@@ -164,6 +183,19 @@ internal static class WorldSaveMapper
         IsCapital = profile.IsCapital
     };
 
+    public static SettlementSectorCapacityProfileSaveData ToSaveData(SettlementSectorCapacityProfile profile) => new()
+    {
+        SettlementId = profile.SettlementId,
+        AgricultureCapacity = profile.AgricultureCapacity,
+        FishingCapacity = profile.FishingCapacity,
+        HuntingCapacity = profile.HuntingCapacity,
+        ResourceGatheringCapacity = profile.ResourceGatheringCapacity,
+        CraftingCapacity = profile.CraftingCapacity,
+        TradeCapacity = profile.TradeCapacity,
+        GuardCapacity = profile.GuardCapacity,
+        MaintenanceCapacity = profile.MaintenanceCapacity
+    };
+
     public static CaravanSaveData ToSaveData(Caravan caravan) => new()
     {
         Id = caravan.Id,
@@ -183,8 +215,23 @@ internal static class WorldSaveMapper
             throw new InvalidDataException($"Save file '{filePath}' contains unknown city_state '{cityData.CityState}'.");
         if (cityData.Infrastructure is null)
             throw new InvalidDataException($"Save file '{filePath}' city '{cityData.Id}' is missing infrastructure data.");
+        if (cityData.Demographics is null)
+            throw new InvalidDataException($"Save file '{filePath}' city '{cityData.Id}' is missing demographics data.");
 
-        return new City(cityData.Id, cityData.Name, cityData.Population, cityData.Food, cityData.Wealth, cityData.Mood, cityData.Security, cityData.Crime, cityData.Resources, cityData.Goods, parsedCityState, ToCoreInfrastructure(cityData.Infrastructure));
+        return new City(
+            cityData.Id,
+            cityData.Name,
+            cityData.Population,
+            cityData.Food,
+            cityData.Wealth,
+            cityData.Mood,
+            cityData.Security,
+            cityData.Crime,
+            cityData.Resources,
+            cityData.Goods,
+            parsedCityState,
+            ToCoreInfrastructure(cityData.Infrastructure),
+            ToCoreDemographics(cityData.Demographics));
     }
 
     private static CityInfrastructure ToCoreInfrastructure(CityInfrastructureSaveData infrastructureData) => new()
@@ -193,6 +240,22 @@ internal static class WorldSaveMapper
         UrbanLevel = infrastructureData.UrbanLevel,
         ProductionLevel = infrastructureData.ProductionLevel,
         MilitaryLevel = infrastructureData.MilitaryLevel
+    };
+
+    private static CityPopulationDemographics ToCoreDemographics(CityPopulationDemographicsSaveData demographicsData)
+    {
+        var demographics = new CityPopulationDemographics();
+        demographics.ReplaceWith((demographicsData.RaceGroups ?? []).Select(ToCoreRacePopulationGroup));
+        return demographics;
+    }
+
+    private static RacePopulationGroup ToCoreRacePopulationGroup(RacePopulationGroupSaveData groupData) => new()
+    {
+        RaceId = groupData.RaceId,
+        Children = groupData.Children,
+        AdultMen = groupData.AdultMen,
+        AdultWomen = groupData.AdultWomen,
+        Elderly = groupData.Elderly
     };
 
     public static Region ToCoreRegion(RegionSaveData regionData) => new()
@@ -222,6 +285,19 @@ internal static class WorldSaveMapper
         IsPort = profileData.IsPort,
         IsFortress = profileData.IsFortress,
         IsCapital = profileData.IsCapital
+    };
+
+    public static SettlementSectorCapacityProfile ToCoreSettlementSectorCapacityProfile(SettlementSectorCapacityProfileSaveData profileData) => new()
+    {
+        SettlementId = profileData.SettlementId,
+        AgricultureCapacity = profileData.AgricultureCapacity,
+        FishingCapacity = profileData.FishingCapacity,
+        HuntingCapacity = profileData.HuntingCapacity,
+        ResourceGatheringCapacity = profileData.ResourceGatheringCapacity,
+        CraftingCapacity = profileData.CraftingCapacity,
+        TradeCapacity = profileData.TradeCapacity,
+        GuardCapacity = profileData.GuardCapacity,
+        MaintenanceCapacity = profileData.MaintenanceCapacity
     };
 
     public static Caravan ToCoreCaravan(CaravanSaveData caravanData)
