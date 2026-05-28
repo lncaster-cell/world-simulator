@@ -3,6 +3,7 @@ using FluentAssertions;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using WorldSimulator.Core.Trade;
+using WorldSimulator.RoutePathExtractor;
 using RoutePathExtractorTool = WorldSimulator.RoutePathExtractor.RoutePathExtractor;
 
 namespace WorldSimulator.Core.Tests;
@@ -72,5 +73,81 @@ public sealed class RoutePathExtractorTests
         {
             dir.Delete(recursive: true);
         }
+    }
+
+
+    [Fact]
+    public void SplitCsv_HandlesQuotedCommasAndEscapedQuotes()
+    {
+        var columns = RouteDataLoader.SplitCsv("N_1,\"Mlynek, North\",\"road \"\"main\"\"\",false");
+
+        columns.Should().Equal("N_1", "Mlynek, North", "road \"main\"", "false");
+    }
+
+    [Theory]
+    [InlineData("N_HIGHROCK", "N_GAVERN", "road", "highrock_gavern_land")]
+    [InlineData("N_WODENZ", "N_TOKRUS", "sea", "wodenz_thokur_rus_sea")]
+    [InlineData("Custom-Node", "Other Node", "land", "custom_node_other_node_land")]
+    public void BuildTradeRouteId_MapsKnownNodesAndNormalizesCustomNames(string from, string to, string type, string expected)
+    {
+        RouteDataLoader.BuildTradeRouteId(from, to, type).Should().Be(expected);
+    }
+
+    [Fact]
+    public void FindNearestMaskCandidates_ReturnsNearestCandidatesFirst()
+    {
+        var mask = new bool[10 * 10];
+        mask[(1 * 10) + 1] = true;
+        mask[(2 * 10) + 2] = true;
+        mask[(7 * 10) + 7] = true;
+        var fallback = new RouteConnectorFallback(new RouteExtractionOptions(), new RoutePathFinder(new RouteExtractionOptions()));
+
+        var candidates = fallback.FindNearestMaskCandidates(mask, 10, 10, (0, 0), maxDistance: 4);
+
+        candidates.Should().HaveCount(2);
+        candidates.Select(c => c.Point).Should().Equal((1, 1), (2, 2));
+        candidates.Select(c => c.Distance).Should().BeInAscendingOrder();
+    }
+
+    [Fact]
+    public void TryDirectSettlementConnectorOverride_UsesForcedGavernRouteWhenWithinLimit()
+    {
+        var options = new RouteExtractionOptions { ForcedDirectGavernConnectorMaxPx = 20 };
+        var fallback = new RouteConnectorFallback(options, new RoutePathFinder(options));
+
+        var handled = fallback.TryDirectSettlementConnectorOverride(
+            "R_RIVENSTAL_GAVERN",
+            "Rivenstal",
+            "Gavern",
+            (0.0, 0.0),
+            (1.0, 0.0),
+            w: 11,
+            h: 11,
+            startAnchor: (1, 1),
+            endAnchor: (4, 5),
+            out var result);
+
+        handled.Should().BeTrue();
+        result.Success.Should().BeTrue();
+        result.UsedForcedDirectConnector.Should().BeTrue();
+        result.Connectors.Should().ContainSingle().Which.Should().Be(5.0);
+    }
+
+    [Fact]
+    public void Simplify_RemovesCollinearIntermediatePointsAndKeepsTurns()
+    {
+        var points = new List<(int X, int Y)>
+        {
+            (0, 0),
+            (1, 0),
+            (2, 0),
+            (3, 2),
+            (4, 4),
+            (5, 4)
+        };
+
+        var simplified = RoutePathFinder.Simplify(points, eps: 0.25);
+
+        simplified.Should().Equal((0, 0), (2, 0), (4, 4), (5, 4));
     }
 }

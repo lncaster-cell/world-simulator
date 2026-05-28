@@ -23,23 +23,23 @@
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                 <TextBlock Text="День:" FontWeight="SemiBold"/>
                 <TextBlock Text=" " />
-                <TextBlock Text="{Binding Day}" Margin="0,0,16,0"/>
+                <TextBlock Text="{Binding Control.Day}" Margin="0,0,16,0"/>
 
                 <TextBlock Text="Час:" FontWeight="SemiBold"/>
                 <TextBlock Text=" " />
-                <TextBlock Text="{Binding Hour}" Margin="0,0,16,0"/>
+                <TextBlock Text="{Binding Control.Hour}" Margin="0,0,16,0"/>
 
                 <TextBlock Text="Состояние:" FontWeight="SemiBold"/>
                 <TextBlock Text=" " />
-                <TextBlock Text="{Binding SimulationState}" Margin="0,0,16,0"/>
+                <TextBlock Text="{Binding Control.SimulationState}" Margin="0,0,16,0"/>
 
-                <Button Content="Старт" Command="{Binding StartCommand}" Width="90" Margin="0,0,8,0"/>
-                <Button Content="Пауза" Command="{Binding PauseCommand}" Width="90" Margin="0,0,8,0"/>
-                <Button Content="Сброс" Command="{Binding ResetCommand}" Width="90" Margin="0,0,16,0" ToolTip="Сбросить симуляцию к дню 1, часу 0 без перезапуска приложения"/>
+                <Button Content="Старт" Command="{Binding Control.StartCommand}" Width="90" Margin="0,0,8,0"/>
+                <Button Content="Пауза" Command="{Binding Control.PauseCommand}" Width="90" Margin="0,0,8,0"/>
+                <Button Content="Сброс" Command="{Binding Control.ResetCommand}" Width="90" Margin="0,0,16,0" ToolTip="Сбросить симуляцию к дню 1, часу 0 без перезапуска приложения"/>
                 <Button Content="Сохранить" Command="{Binding SaveCommand}" Width="110" Margin="0,0,8,0"/>
                 <Button Content="Загрузить" Command="{Binding LoadCommand}" Width="110" Margin="0,0,8,0"/>
                 <CheckBox Content="Показать маршруты"
-                          IsChecked="{Binding IsTradeRoutesOverlayVisible}"
+                          IsChecked="{Binding Map.IsTradeRoutesOverlayVisible}"
                           Margin="12,0,0,0"
                           VerticalAlignment="Center"/>
                 <CheckBox Content="Debug: реальные пути караванов"
@@ -60,14 +60,411 @@
                 <ColumnDefinition Width="16"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
+            <Border Grid.Row="0" Grid.ColumnSpan="3" BorderBrush="LightGray" BorderThickness="1" CornerRadius="6" Padding="10" Margin="0,0,0,10"
+                    Visibility="{Binding TradeAuthoring.IsTradeRouteAuthoringModeEnabled, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <WrapPanel VerticalAlignment="Center">
+                    <TextBlock Text="Редактор маршрутов" FontWeight="SemiBold" Margin="0,0,12,0" VerticalAlignment="Center"/>
+                    <TextBlock Text="Откуда:" VerticalAlignment="Center"/>
+                    <ComboBox Width="170" Margin="6,0,8,0" ItemsSource="{Binding TradeAuthoring.RouteAuthoringSettlements}" SelectedItem="{Binding TradeAuthoring.RouteAuthoringOriginSettlement}" DisplayMemberPath="Name"/>
+                    <TextBlock Text="Добавить пункт:" VerticalAlignment="Center"/>
+                    <ComboBox Width="170" Margin="6,0,8,0" ItemsSource="{Binding TradeAuthoring.AvailableRouteAuthoringDestinations}" SelectedItem="{Binding TradeAuthoring.RouteAuthoringDestinationCandidateSettlement}" DisplayMemberPath="Name"/>
+                    <Button Content="Добавить" Command="{Binding TradeAuthoring.AddRouteAuthoringDestinationCommand}" Margin="0,0,8,0"/>
+                    <TextBlock Text="Активное назначение:" VerticalAlignment="Center"/>
+                    <ComboBox Width="170" Margin="6,0,8,0" ItemsSource="{Binding TradeAuthoring.RouteAuthoringDestinationSettlements}" SelectedItem="{Binding TradeAuthoring.ActiveRouteAuthoringDestinationSettlement}" DisplayMemberPath="Name"/>
+                    <TextBlock Text="Дней:" VerticalAlignment="Center"/>
+                    <TextBox Width="70" Margin="6,0,8,0" Text="{Binding TradeAuthoring.SelectedTradeRouteDistanceDaysInput, UpdateSourceTrigger=PropertyChanged}"/>
+                    <TextBlock Text="{Binding TradeAuthoring.EditedTradeRouteIntermediatePointCount, StringFormat=Точек: {0}}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <TextBlock Text="{Binding TradeAuthoring.RouteAuthoringDestinationCount, StringFormat=Назначений: {0}/8}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <TextBlock Text="{Binding TradeAuthoring.RouteAuthoringRouteIdDisplay}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <Button Content="Отменить" Command="{Binding TradeAuthoring.UndoTradeRoutePointCommand}" Margin="0,0,8,0"/>
+                    <Button Content="Очистить" Command="{Binding TradeAuthoring.ClearTradeRoutePointsCommand}" Margin="0,0,8,0"/>
+                    <Button Content="Сохранить" Command="{Binding TradeAuthoring.SaveTradeRoutePointsCommand}" Margin="0,0,8,0"/>
+                    <Button Content="Скопировать Points" Command="{Binding TradeAuthoring.CopyTradeRoutePointsCommand}"/>
+                </WrapPanel>
+            </Border>
 
-            <views:TradeRouteAuthoringPanelView Grid.Row="0" Grid.ColumnSpan="3" />
-            <views:WorldMapView Grid.Row="1" Grid.Column="0" />
+            <Border Grid.Row="1" Grid.Column="0" BorderBrush="LightGray" BorderThickness="1" CornerRadius="6" Padding="8">
+                <Grid x:Name="MapContainer"
+                      MouseLeftButtonDown="MapContainer_MouseLeftButtonDown"
+                      SizeChanged="MapContainer_SizeChanged">
+                    <Image x:Name="MapImage"
+                           Source="/Assets/Maps/world_map.png"
+                           Stretch="Uniform"
+                           SizeChanged="MapImage_SizeChanged"/>
+                    <Image x:Name="RoutesMapImage"
+                           Source="/Assets/Maps/world_map_routes.png"
+                           Stretch="Uniform"
+                           IsHitTestVisible="False"
+                           Visibility="{Binding Map.IsTradeRoutesOverlayVisible, Converter={StaticResource BooleanToVisibilityConverter}}" />
+
+                    <Canvas x:Name="MapOverlay"
+                            Background="Transparent"
+                            IsHitTestVisible="True">
+
+
+                        <ItemsControl ItemsSource="{Binding Map.DebugLoadedRoutePathVisuals}"
+                                      Visibility="{Binding Map.IsLoadedRoutePathsDebugVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <ItemsControl.ItemsPanel><ItemsPanelTemplate><Canvas/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid>
+                                        <Polyline StrokeLineJoin="Round"
+                                                  StrokeStartLineCap="Round"
+                                                  StrokeEndLineCap="Round"
+                                                  Opacity="0.62"
+                                                  ToolTip="{Binding RouteId}">
+                                            <Polyline.Style>
+                                                <Style TargetType="Polyline">
+                                                    <Setter Property="Stroke" Value="#FFDFB13D"/>
+                                                    <Setter Property="StrokeThickness" Value="2.1"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsSeaRoute}" Value="True">
+                                                            <Setter Property="Stroke" Value="#FF26B6DA"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding IsActive}" Value="True">
+                                                            <Setter Property="Stroke" Value="#FFFF4DF0"/>
+                                                            <Setter Property="StrokeThickness" Value="2.6"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Polyline.Style>
+                                            <Polyline.Points>
+                                                <MultiBinding Converter="{StaticResource TradeRoutePointsToPointCollectionConverter}">
+                                                    <Binding Path="Points"/>
+                                                    <Binding ElementName="MapContainer" Path="ActualWidth"/>
+                                                    <Binding ElementName="MapImage" Path="ActualWidth"/>
+                                                    <Binding ElementName="MapContainer" Path="ActualHeight"/>
+                                                    <Binding ElementName="MapImage" Path="ActualHeight"/>
+                                                </MultiBinding>
+                                            </Polyline.Points>
+                                        </Polyline>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <ItemsControl ItemsSource="{Binding Map.DebugLoadedRoutePathVisuals}"
+                                      IsHitTestVisible="False"
+                                      Visibility="{Binding Map.IsLoadedRoutePathsDebugVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <ItemsControl.ItemsPanel><ItemsPanelTemplate><Canvas/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemContainerStyle>
+                                <Style TargetType="ContentPresenter">
+                                    <Setter Property="Canvas.Left">
+                                        <Setter.Value><MultiBinding Converter="{StaticResource MapMarkerCanvasLeftConverter}"><Binding Path="DebugLabelPoint.X"/><Binding ElementName="MapContainer" Path="ActualWidth"/><Binding ElementName="MapImage" Path="ActualWidth"/></MultiBinding></Setter.Value>
+                                    </Setter>
+                                    <Setter Property="Canvas.Top">
+                                        <Setter.Value><MultiBinding Converter="{StaticResource MapMarkerCanvasTopConverter}"><Binding Path="DebugLabelPoint.Y"/><Binding ElementName="MapContainer" Path="ActualHeight"/><Binding ElementName="MapImage" Path="ActualHeight"/></MultiBinding></Setter.Value>
+                                    </Setter>
+                                </Style>
+                            </ItemsControl.ItemContainerStyle>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="#AA111111"
+                                            CornerRadius="3"
+                                            Padding="3,1"
+                                            Margin="4,-10,0,0">
+                                        <TextBlock Text="{Binding RouteId}"
+                                                   Foreground="White"
+                                                   FontSize="10"/>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <ItemsControl ItemsSource="{Binding Map.TradeRouteVisuals}" Visibility="Collapsed">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid IsHitTestVisible="False">
+                                        <Polyline Stroke="#CC101010" StrokeThickness="4.6" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Opacity="0.8">
+                                            <Polyline.Points>
+                                                <MultiBinding Converter="{StaticResource TradeRoutePointsToPointCollectionConverter}">
+                                                    <Binding Path="Points"/>
+                                                    <Binding ElementName="MapContainer" Path="ActualWidth"/>
+                                                    <Binding ElementName="MapImage" Path="ActualWidth"/>
+                                                    <Binding ElementName="MapContainer" Path="ActualHeight"/>
+                                                    <Binding ElementName="MapImage" Path="ActualHeight"/>
+                                                </MultiBinding>
+                                            </Polyline.Points>
+                                        </Polyline>
+                                        <Polyline StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round">
+                                            <Polyline.Style>
+                                                <Style TargetType="Polyline">
+                                                    <Setter Property="Stroke" Value="#FFE3B45A"/>
+                                                    <Setter Property="StrokeThickness" Value="2.8"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsActive}" Value="True">
+                                                            <Setter Property="Stroke" Value="#FF38D9FF"/>
+                                                            <Setter Property="StrokeThickness" Value="3.4"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Polyline.Style>
+                                            <Polyline.ToolTip>
+                                                <TextBlock TextWrapping="Wrap">
+                                                    <Run Text="Маршрут: "/><Run Text="{Binding DisplayName}"/><LineBreak/>
+                                                    <Run Text="Объём недели:"/><LineBreak/>
+                                                    <Run Text="Еда: "/><Run Text="{Binding WeeklyFoodMoved}"/><LineBreak/>
+                                                    <Run Text="Ресурсы: "/><Run Text="{Binding WeeklyResourcesMoved}"/><LineBreak/>
+                                                    <Run Text="Товары: "/><Run Text="{Binding WeeklyGoodsMoved}"/><LineBreak/>
+                                                    <Run Text="Всего: "/><Run Text="{Binding TotalWeeklyVolume}"/>
+                                                </TextBlock>
+                                            </Polyline.ToolTip>
+                                            <Polyline.Points>
+                                                <MultiBinding Converter="{StaticResource TradeRoutePointsToPointCollectionConverter}">
+                                                    <Binding Path="Points"/>
+                                                    <Binding ElementName="MapContainer" Path="ActualWidth"/>
+                                                    <Binding ElementName="MapImage" Path="ActualWidth"/>
+                                                    <Binding ElementName="MapContainer" Path="ActualHeight"/>
+                                                    <Binding ElementName="MapImage" Path="ActualHeight"/>
+                                                </MultiBinding>
+                                            </Polyline.Points>
+                                        </Polyline>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <Path Stroke="#FF00B7FF" StrokeThickness="2.5" StrokeDashArray="2,2" IsHitTestVisible="False" Visibility="{Binding TradeAuthoring.IsTradeRouteAuthoringModeEnabled, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <Path.Data>
+                                <MultiBinding Converter="{StaticResource TradeRoutePointsToSmoothPathGeometryConverter}">
+                                    <Binding Path="TradeAuthoring.EditedTradeRoutePolylinePoints"/>
+                                    <Binding ElementName="MapContainer" Path="ActualWidth"/>
+                                    <Binding ElementName="MapImage" Path="ActualWidth"/>
+                                    <Binding ElementName="MapContainer" Path="ActualHeight"/>
+                                    <Binding ElementName="MapImage" Path="ActualHeight"/>
+                                </MultiBinding>
+                            </Path.Data>
+                        </Path>
+                        <Polyline Stroke="#8800B7FF" StrokeThickness="1.5" StrokeDashArray="2,2" IsHitTestVisible="False" Visibility="{Binding TradeAuthoring.IsTradeRouteAuthoringModeEnabled, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <Polyline.Points>
+                                <MultiBinding Converter="{StaticResource TradeRoutePointsToPointCollectionConverter}">
+                                    <Binding Path="TradeAuthoring.EditedTradeRoutePolylinePoints"/>
+                                    <Binding ElementName="MapContainer" Path="ActualWidth"/>
+                                    <Binding ElementName="MapImage" Path="ActualWidth"/>
+                                    <Binding ElementName="MapContainer" Path="ActualHeight"/>
+                                    <Binding ElementName="MapImage" Path="ActualHeight"/>
+                                </MultiBinding>
+                            </Polyline.Points>
+                        </Polyline>
+
+                        <ItemsControl ItemsSource="{Binding TradeAuthoring.EditedTradeRoutePoints}" Visibility="{Binding TradeAuthoring.IsTradeRouteAuthoringModeEnabled, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <ItemsControl.ItemsPanel><ItemsPanelTemplate><Canvas/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemContainerStyle>
+                                <Style TargetType="ContentPresenter">
+                                    <Setter Property="Canvas.Left">
+                                        <Setter.Value><MultiBinding Converter="{StaticResource MapMarkerCanvasLeftConverter}"><Binding Path="X"/><Binding ElementName="MapContainer" Path="ActualWidth"/><Binding ElementName="MapImage" Path="ActualWidth"/></MultiBinding></Setter.Value>
+                                    </Setter>
+                                    <Setter Property="Canvas.Top">
+                                        <Setter.Value><MultiBinding Converter="{StaticResource MapMarkerCanvasTopConverter}"><Binding Path="Y"/><Binding ElementName="MapContainer" Path="ActualHeight"/><Binding ElementName="MapImage" Path="ActualHeight"/></MultiBinding></Setter.Value>
+                                    </Setter>
+                                </Style>
+                            </ItemsControl.ItemContainerStyle>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Ellipse Width="8" Height="8" Fill="#FF00B7FF" Stroke="#FFFFFFFF" StrokeThickness="1" ToolTip="{Binding X}"/>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <ItemsControl ItemsSource="{Binding Map.ActiveCaravanMovementMarkers}">
+                            <ItemsControl.ItemsPanel><ItemsPanelTemplate><Canvas/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemContainerStyle>
+                                <Style TargetType="ContentPresenter">
+                                    <Setter Property="Canvas.Left">
+                                        <Setter.Value>
+                                            <MultiBinding Converter="{StaticResource CaravanMarkerCanvasCoordinateConverter}" ConverterParameter="X">
+                                                <Binding Path="Points"/>
+                                                <Binding Path="Progress"/>
+                                                <Binding ElementName="MapContainer" Path="ActualWidth"/>
+                                                <Binding ElementName="MapImage" Path="ActualWidth"/>
+                                                <Binding ElementName="MapContainer" Path="ActualHeight"/>
+                                                <Binding ElementName="MapImage" Path="ActualHeight"/>
+                                            </MultiBinding>
+                                        </Setter.Value>
+                                    </Setter>
+                                    <Setter Property="Canvas.Top">
+                                        <Setter.Value>
+                                            <MultiBinding Converter="{StaticResource CaravanMarkerCanvasCoordinateConverter}" ConverterParameter="Y">
+                                                <Binding Path="Points"/>
+                                                <Binding Path="Progress"/>
+                                                <Binding ElementName="MapContainer" Path="ActualWidth"/>
+                                                <Binding ElementName="MapImage" Path="ActualWidth"/>
+                                                <Binding ElementName="MapContainer" Path="ActualHeight"/>
+                                                <Binding ElementName="MapImage" Path="ActualHeight"/>
+                                            </MultiBinding>
+                                        </Setter.Value>
+                                    </Setter>
+                                </Style>
+                            </ItemsControl.ItemContainerStyle>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Width="22" Height="22" ToolTip="{Binding DisplayName}" RenderTransformOrigin="0.5,0.5">
+                                        <Image Width="18" Height="18" Source="/Assets/Maps/caravan_icon_clean_transparent.png">
+                                            <Image.Style>
+                                                <Style TargetType="Image">
+                                                    <Setter Property="Opacity" Value="0.9"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding HasActiveFlow}" Value="True">
+                                                            <Setter Property="Opacity" Value="1"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding IsSeaRoute}" Value="True">
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Image.Style>
+                                        </Image>
+                                        <Canvas Width="22" Height="22" Visibility="Collapsed">
+                                            <Canvas.Style>
+                                                <Style TargetType="Canvas">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsSeaRoute}" Value="True">
+                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Canvas.Style>
+                                            <Path Data="M2,15 C5,18 17,18 20,15 L18,19 L5,19 Z" Fill="#FF1F6F7F" Stroke="#FF0E2525" StrokeThickness="1"/>
+                                            <Path Data="M5,9 L18,9 L16,15 L7,15 Z" Fill="#FF7A4B24" Stroke="#FF0E2525" StrokeThickness="1"/>
+                                            <Path Data="M11,3 L11,15" Stroke="#FF0E2525" StrokeThickness="1.4" StrokeStartLineCap="Round"/>
+                                            <Path Data="M12,4 C16,5 17,8 12,11 Z" Fill="#FFE8D7A6" Stroke="#FF0E2525" StrokeThickness="1"/>
+                                            <Path Data="M10,5 C7,6 7,9 10,12 Z" Fill="#FFE8D7A6" Stroke="#FF0E2525" StrokeThickness="1"/>
+                                            <Path Data="M8,9 L14,9 L14,13 L8,13 Z" Fill="#FFB57A37" Stroke="#FF0E2525" StrokeThickness="0.8"/>
+                                        </Canvas>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <ItemsControl ItemsSource="{Binding Map.SettlementMapMarkers}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <Canvas/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemContainerStyle>
+                                <Style TargetType="ContentPresenter">
+                                    <Setter Property="Canvas.Left">
+                                        <Setter.Value>
+                                            <MultiBinding Converter="{StaticResource MapMarkerCanvasLeftConverter}">
+                                                <Binding Path="X"/>
+                                                <Binding ElementName="MapContainer" Path="ActualWidth"/>
+                                                <Binding ElementName="MapImage" Path="ActualWidth"/>
+                                            </MultiBinding>
+                                        </Setter.Value>
+                                    </Setter>
+                                    <Setter Property="Canvas.Top">
+                                        <Setter.Value>
+                                            <MultiBinding Converter="{StaticResource MapMarkerCanvasTopConverter}">
+                                                <Binding Path="Y"/>
+                                                <Binding ElementName="MapContainer" Path="ActualHeight"/>
+                                                <Binding ElementName="MapImage" Path="ActualHeight"/>
+                                            </MultiBinding>
+                                        </Setter.Value>
+                                    </Setter>
+                                </Style>
+                            </ItemsControl.ItemContainerStyle>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Button Width="22"
+                                            Height="22"
+                                            Command="{Binding DataContext.SelectSettlementCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                            CommandParameter="{Binding SettlementId}"
+                                            ToolTip="{Binding DisplayName}"
+                                            Background="Transparent"
+                                            BorderThickness="0"
+                                            IsHitTestVisible="True">
+                                        <Grid>
+                                            <Ellipse Fill="#66FFAA00" Stroke="#CCFFAA00" StrokeThickness="2">
+                                                <Ellipse.Style>
+                                                    <Style TargetType="Ellipse">
+                                                        <Setter Property="Width" Value="14"/>
+                                                        <Setter Property="Height" Value="14"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                                <Setter Property="Width" Value="18"/>
+                                                                <Setter Property="Height" Value="18"/>
+                                                                <Setter Property="StrokeThickness" Value="3"/>
+                                                                <Setter Property="Fill" Value="#99FFD166"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Ellipse.Style>
+                                            </Ellipse>
+                                            <Ellipse Width="5" Height="5" Fill="#FFFFAA00"/>
+                                        </Grid>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </Canvas>
+                </Grid>
+            </Border>
 
             <StackPanel Grid.Row="1" Grid.Column="2">
-                <views:SimulationSummaryView />
-                <views:SelectedCityPanelView />
-                <views:MapDebugPanelView />
+
+                <Border BorderBrush="LightGray" BorderThickness="1" CornerRadius="6" Padding="12" Margin="0,0,0,12">
+                    <StackPanel>
+                        <TextBlock Text="{Binding SimulationSummaryTitle}" FontWeight="SemiBold" FontSize="16" Margin="0,0,0,8"/>
+                        <TextBlock Text="{Binding SimulationSummaryDayAndHour}" Margin="0,0,0,4"/>
+                        <TextBlock Text="{Binding SimulationSummaryCityState}" Margin="0,0,0,4"/>
+                        <TextBlock Text="{Binding SimulationSummaryFoodBalance}" ToolTip="{Binding FoodBalanceTooltip}" Margin="0,0,0,4"/>
+                        <TextBlock Text="{Binding SimulationSummaryActiveEvents}" Margin="0,0,0,4"/>
+                        <TextBlock Text="{Binding SimulationSummaryRandomEventsStatus}" Margin="0,0,0,4"/>
+                        <TextBlock Text="{Binding SelectedRegionName, StringFormat=Регион: {0}}" Margin="0,0,0,4"/>
+                        <TextBlock Text="{Binding SimulationSummaryLastImportantChange}" TextWrapping="Wrap"/>
+                    </StackPanel>
+                </Border>
+
+                <Border BorderBrush="LightGray"
+                        BorderThickness="1"
+                        CornerRadius="6"
+                        Padding="12"
+                        Margin="0,0,0,12"
+                        Visibility="Visible">
+                    <StackPanel>
+                        <TextBlock Text="Выбранный город" FontWeight="SemiBold" FontSize="16" Margin="0,0,0,10"/>
+                        <TextBlock Text="{Binding SelectedCityName}" FontSize="18" FontWeight="Bold" Margin="0,0,0,8"/>
+                        <TextBlock Text="Тип/профиль:" FontWeight="SemiBold"/>
+                        <TextBlock Text="{Binding SelectedCityProfile}" TextWrapping="Wrap" Margin="0,0,0,8"/>
+
+                        <TextBlock Text="Состояние города:" FontWeight="SemiBold"/>
+                        <TextBlock Text="{Binding CityStateDisplay}" Margin="0,0,0,6"/>
+
+                        <TextBlock Text="Население:" FontWeight="SemiBold"/>
+                        <TextBlock Text="{Binding Population}" Margin="0,0,0,6"/>
+
+                        <TextBlock Text="Ресурсы:" FontWeight="SemiBold" ToolTip="{Binding ResourcesTooltip}"/>
+                        <TextBlock Text="{Binding Resources}" ToolTip="{Binding ResourcesTooltip}" Margin="0,0,0,6"/>
+
+                        <TextBlock Text="Товары:" FontWeight="SemiBold" ToolTip="{Binding GoodsTooltip}"/>
+                        <TextBlock Text="{Binding Goods}" ToolTip="{Binding GoodsTooltip}" Margin="0,0,0,6"/>
+
+                        <TextBlock Text="Пища:" FontWeight="SemiBold" ToolTip="{Binding FoodBalanceTooltip}"/>
+                        <TextBlock Text="{Binding Food}" ToolTip="{Binding FoodBalanceTooltip}" Margin="0,0,0,6"/>
+
+                        <TextBlock Text="Безопасность:" FontWeight="SemiBold"/>
+                        <TextBlock Text="{Binding Security}" Margin="0,0,0,6"/>
+
+                        <TextBlock Text="Преступность:" FontWeight="SemiBold" ToolTip="{Binding CrimeFlowTooltip}"/>
+                        <TextBlock Text="{Binding Crime}" ToolTip="{Binding CrimeFlowTooltip}" Margin="0,0,0,6"/>
+
+                        <TextBlock Text="Настроение:" FontWeight="SemiBold"/>
+                        <TextBlock Text="{Binding Mood}" Margin="0,0,0,12"/>
+
+                        <WrapPanel>
+                            <Button Content="Открыть город" Width="130" Command="{Binding OpenSelectedCityCommand}" Click="OpenCityButton_Click" Margin="0,0,8,0"/>
+                            <Button Content="Открыть летопись города" Width="140" Click="OpenLogButton_Click"/>
+                        </WrapPanel>
+                    </StackPanel>
+                </Border>
+                <Border BorderBrush="LightGray" BorderThickness="1" CornerRadius="6" Padding="12" Margin="0,0,0,12">
+                    <StackPanel>
+                        <TextBlock Text="Отладка карты" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                        <Button Content="{Binding Map.MapCalibrationToggleButtonText}" Command="{Binding Map.ToggleMapCalibrationModeCommand}" Margin="0,0,0,8"/>
+                        <TextBlock Text="{Binding Map.LastMapCalibrationPointDisplay}" TextWrapping="Wrap"/>
+                    </StackPanel>
+                </Border>
             </StackPanel>
         </Grid>
     </Grid>

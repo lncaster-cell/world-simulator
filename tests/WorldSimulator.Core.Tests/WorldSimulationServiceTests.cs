@@ -92,6 +92,19 @@ public sealed class WorldSimulationServiceTests
 
 
 
+
+    [Fact]
+    public void AdvanceDay_ReturnsDeterministicExternalDailyTickResult()
+    {
+        var worldA = WorldPresets.CreateDefaultWorld();
+        var worldB = WorldPresets.CreateDefaultWorld();
+
+        var resultA = CreateService().AdvanceDay(worldA, worldA.Cities[0].Id, day: 7, randomEventsEnabled: false);
+        var resultB = CreateService().AdvanceDay(worldB, worldB.Cities[0].Id, day: 7, randomEventsEnabled: false);
+
+        ProjectDailyTickResult(resultA).Should().BeEquivalentTo(ProjectDailyTickResult(resultB));
+    }
+
     [Fact]
     public void ExportEventState_ReturnsSnapshotThatDoesNotMutateInternalState()
     {
@@ -125,6 +138,37 @@ public sealed class WorldSimulationServiceTests
         worldA.TradeShipments.Select(s => (s.CaravanId, s.RouteId, s.GoodType, s.Amount, s.DepartureDay, s.ArrivalDay, s.ReturnDay, s.Status))
             .Should().BeEquivalentTo(worldB.TradeShipments.Select(s => (s.CaravanId, s.RouteId, s.GoodType, s.Amount, s.DepartureDay, s.ArrivalDay, s.ReturnDay, s.Status)));
     }
+
+    private static object ProjectDailyTickResult(WorldDayAdvanceResult result)
+    {
+        var selected = result.SelectedCityResult;
+        return new
+        {
+            SelectedCityId = selected?.CityId,
+            SelectedCityName = selected?.CityName,
+            FoodFlow = selected?.FoodFlow,
+            Agriculture = selected?.Agriculture,
+            ResourceGathering = selected?.ResourceGathering,
+            GoodsCrafting = selected?.GoodsCrafting,
+            HouseholdConsumption = selected?.HouseholdConsumption,
+            WealthFlow = selected?.WealthFlow,
+            EventEffects = result.SelectedCityEventEffects,
+            PopulationChange = result.SelectedCityPopulationChange,
+            CrimeFlow = result.SelectedCityCrimeFlow,
+            WeeklyTradeFlow = result.WeeklyTradeFlowResult,
+            CompletedEvents = result.CompletedEvents.Select(e => (e.Name, e.StartedDay, e.DurationDays)),
+            GeneratedEvent = result.GeneratedEvent is null
+                ? null
+                : new
+                {
+                    result.GeneratedEvent.Name,
+                    result.GeneratedEvent.StartedDay,
+                    result.GeneratedEvent.DurationDays
+                },
+            result.ActiveEventNamesBeforeAdvance
+        };
+    }
+
     private static WorldSimulationService CreateService(CityEventManager? eventManager = null)
     {
         return new WorldSimulationService(
