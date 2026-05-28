@@ -75,7 +75,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     private bool _isTradeRouteAuthoringModeEnabled;
     private decimal _selectedTradeRouteDistanceDays = 1m;
     private string _selectedTradeRouteDistanceDaysInput = "1.0";
-    private bool _isTradeRoutesOverlayVisible = true;
+    private bool _isTradeRoutesOverlayVisible;
+    private bool _isLoadedRoutePathsDebugVisible;
 
     public MainWindowViewModel()
     {
@@ -234,6 +235,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     public string SimulationSummaryTitle => "Сводка симуляции";
     public ObservableCollection<CaravanMovementMarkerViewModel> ActiveCaravanMovementMarkers { get; } = [];
     public IReadOnlyList<TradeRouteVisualViewModel> TradeRouteVisuals => _tradeRouteVisuals;
+    public IReadOnlyList<TradeRouteVisualViewModel> DebugLoadedRoutePathVisuals => _tradeRouteVisuals.Where(x => x.IsLoadedPath && x.Points.Count >= 2).ToList();
     public IReadOnlyList<TradeRoute> TradeRoutes => _world.TradeRoutes;
     public IReadOnlyList<City> RouteAuthoringSettlements => _world.Cities;
     public IReadOnlyList<City> AvailableRouteAuthoringDestinations => _world.Cities;
@@ -533,6 +535,21 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
 
     public Visibility TradeRoutesOverlayVisibility =>
         IsTradeRoutesOverlayVisible ? Visibility.Visible : Visibility.Collapsed;
+
+    public bool IsLoadedRoutePathsDebugVisible
+    {
+        get => _isLoadedRoutePathsDebugVisible;
+        set
+        {
+            if (_isLoadedRoutePathsDebugVisible == value)
+            {
+                return;
+            }
+
+            _isLoadedRoutePathsDebugVisible = value;
+            OnPropertyChanged();
+        }
+    }
 
     public City? RouteAuthoringOriginSettlement
     {
@@ -1124,6 +1141,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
                 DisplayName = $"{route.FromSettlementId} → {route.ToSettlementId}",
                 Points = route.Points.Select(ToMapPoint).ToList(),
                 IsActive = volume is not null,
+                IsLoadedPath = route.HasLoadedPath,
+                IsSeaRoute = route.Type == CaravanType.Sea,
+                DebugLabelPoint = CalculateDebugLabelPoint(route.Points),
                 WeeklyFoodMoved = volume?.Food ?? 0m,
                 WeeklyResourcesMoved = volume?.Resources ?? 0m,
                 WeeklyGoodsMoved = volume?.Goods ?? 0m
@@ -1151,6 +1171,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         }
 
         OnPropertyChanged(nameof(TradeRouteVisuals));
+        OnPropertyChanged(nameof(DebugLoadedRoutePathVisuals));
         OnPropertyChanged(nameof(ActiveCaravanMovementMarkers));
     }
 
@@ -1213,6 +1234,17 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     }
 
     private static MapPointViewModel ToMapPoint(RoutePoint point) => new() { X = (double)point.X, Y = (double)point.Y };
+
+    private static MapPointViewModel CalculateDebugLabelPoint(IReadOnlyList<RoutePoint> points)
+    {
+        if (points.Count == 0)
+        {
+            return new MapPointViewModel { X = 0d, Y = 0d };
+        }
+
+        var point = points[points.Count / 2];
+        return ToMapPoint(point);
+    }
 
 
 
