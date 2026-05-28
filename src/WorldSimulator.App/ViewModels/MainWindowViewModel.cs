@@ -18,7 +18,7 @@ using WorldSimulator.Persistence.Saves;
 
 namespace WorldSimulator.App.ViewModels;
 
-public sealed class MainWindowViewModel : INotifyPropertyChanged
+public sealed class MainWindowViewModel : ViewModelBase
 {
     private static readonly TimeSpan NormalSimulationSpeed = TimeSpan.FromMinutes(5);
     private static readonly TimeSpan FastSimulationSpeed = TimeSpan.FromSeconds(10);
@@ -81,7 +81,6 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     public MainWindowViewModel()
     {
         _world = WorldPresets.CreateDefaultWorld();
-        LoadRoutePathsForWorld();
         _city = _world.SelectedCity;
         _clock = new SimulationClock();
         _dailyFoodFlowCalculator = new DailyFoodFlowCalculator();
@@ -111,13 +110,26 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         _saveService = new JsonWorldSaveService();
         _dailyFoodFlowResult = _dailyFoodFlowCalculator.Calculate(_city, BuildDailyFoodFlowInputs());
 
-        StartCommand = new RelayCommand(Start, () => !_clock.IsRunning);
-        PauseCommand = new RelayCommand(Pause, () => _clock.IsRunning);
-        ResetCommand = new RelayCommand(ResetSimulation);
-        SetNormalSpeedCommand = new RelayCommand(SetNormalSpeed);
-        SetFastSpeedCommand = new RelayCommand(SetFastSpeed);
-        SetVeryFastSpeedCommand = new RelayCommand(SetVeryFastSpeed);
-        SetTurboSpeedCommand = new RelayCommand(SetTurboSpeed);
+        Control = new SimulationControlViewModel(_clock, AddTechnicalLogEntry);
+        Control.ResetRequested += ResetSimulation;
+        Control.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName is nameof(SimulationControlViewModel.Day) or nameof(SimulationControlViewModel.Hour))
+            {
+                OnPropertyChanged(nameof(SimulationSummaryDayAndHour));
+            }
+        };
+        Journal = new SimulationJournalViewModel(_city.Id, _city.Name);
+        Map = new MapViewModel(() => _world, _clock, AddTechnicalLogEntry);
+        TradeAuthoring = new TradeRouteAuthoringViewModel(() => _world, AddTechnicalLogEntry, () => OnPropertyChanged(nameof(TradeRoutes)), () => Map.RefreshTradeRouteVisuals(null));
+
+        StartCommand = Control.StartCommand;
+        PauseCommand = Control.PauseCommand;
+        ResetCommand = Control.ResetCommand;
+        SetNormalSpeedCommand = Control.SetNormalSpeedCommand;
+        SetFastSpeedCommand = Control.SetFastSpeedCommand;
+        SetVeryFastSpeedCommand = Control.SetVeryFastSpeedCommand;
+        SetTurboSpeedCommand = Control.SetTurboSpeedCommand;
         SelectSettlementCommand = new RelayCommand<string>(SelectSettlement);
         OpenSelectedCityCommand = new RelayCommand(OpenSelectedCity, () => !string.IsNullOrWhiteSpace(_world.SelectedCityId));
         TriggerFireEventCommand = new RelayCommand(() => TryStartEvent(CityEventPresets.CreateFire));
@@ -128,13 +140,13 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         ToggleRandomEventGenerationCommand = new RelayCommand(ToggleRandomEventGeneration);
         SaveCommand = new AsyncRelayCommand(SaveStateAsync);
         LoadCommand = new AsyncRelayCommand(LoadStateAsync);
-        ToggleMapCalibrationModeCommand = new RelayCommand(ToggleMapCalibrationMode);
-        AddTradeRoutePointCommand = new RelayCommand<MapPointViewModel>(AddTradeRoutePoint);
-        UndoTradeRoutePointCommand = new RelayCommand(UndoTradeRoutePoint);
-        ClearTradeRoutePointsCommand = new RelayCommand(ClearTradeRoutePoints);
-        SaveTradeRoutePointsCommand = new RelayCommand(SaveTradeRoutePoints);
-        CopyTradeRoutePointsCommand = new RelayCommand(CopyTradeRoutePoints);
-        AddRouteAuthoringDestinationCommand = new RelayCommand(AddRouteAuthoringDestination);
+        ToggleMapCalibrationModeCommand = Map.ToggleMapCalibrationModeCommand;
+        AddTradeRoutePointCommand = TradeAuthoring.AddTradeRoutePointCommand;
+        UndoTradeRoutePointCommand = TradeAuthoring.UndoTradeRoutePointCommand;
+        ClearTradeRoutePointsCommand = TradeAuthoring.ClearTradeRoutePointsCommand;
+        SaveTradeRoutePointsCommand = TradeAuthoring.SaveTradeRoutePointsCommand;
+        CopyTradeRoutePointsCommand = TradeAuthoring.CopyTradeRoutePointsCommand;
+        AddRouteAuthoringDestinationCommand = TradeAuthoring.AddRouteAuthoringDestinationCommand;
 
         _lastTickUtc = DateTimeOffset.UtcNow;
         _timer = new DispatcherTimer
@@ -147,26 +159,23 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         };
 
         _clock.DayAdvanced += OnDayAdvanced;
-        _timer.Tick += OnTick;
-        _tradeMarkerAnimationTimer.Tick += OnTradeMarkerAnimationTick;
-        _timer.Start();
-        _tradeMarkerAnimationTimer.Start();
-
-        EditedTradeRoutePoints.CollectionChanged += (_, _) =>
-        {
-            OnPropertyChanged(nameof(EditedTradeRoutePointCount));
-            OnPropertyChanged(nameof(EditedTradeRoutePolylinePoints));
-        };
-        SelectedTradeRouteForAuthoring = _world.TradeRoutes.FirstOrDefault();
+        TradeAuthoring.InitializeForWorld();
+        Map.LoadRoutePathsForWorld();
 
         RefreshCityState();
         RefreshDailyFoodFlowPreview();
         RefreshEventEntries();
         RefreshSimulationSummary();
-        RefreshTradeRouteVisuals(null);
+        Map.RefreshTradeRouteVisuals(null);
     }
 
-    public event PropertyChangedEventHandler? PropertyChanged;
+    public SimulationControlViewModel Control { get; }
+
+    public SimulationJournalViewModel Journal { get; }
+
+    public MapViewModel Map { get; }
+
+    public TradeRouteAuthoringViewModel TradeAuthoring { get; }
 
     public ICommand StartCommand { get; }
 
@@ -203,14 +212,14 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
 
     public string SettlementCountText => $"Поселений: {_world.Cities.Count}";
 
-    public int Day => _clock.Day;
+    public int Day => Control.Day;
 
-    public int Hour => _clock.Hour;
+    public int Hour => Control.Hour;
 
-    public bool IsRunning => _clock.IsRunning;
+    public bool IsRunning => Control.IsRunning;
 
-    public string SimulationState => IsRunning ? "Запущено" : "Пауза";
-    public string CurrentSimulationSpeedDisplay => $"Текущая скорость: {GetSpeedDisplay(_clock.RealTimePerGameHour)}";
+    public string SimulationState => Control.SimulationState;
+    public string CurrentSimulationSpeedDisplay => Control.CurrentSimulationSpeedDisplay;
 
     public bool IsRandomEventGenerationEnabled
     {
@@ -236,21 +245,21 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         : "Включить случайные события";
 
     public string SimulationSummaryTitle => "Сводка симуляции";
-    public ObservableCollection<CaravanMovementMarkerViewModel> ActiveCaravanMovementMarkers { get; } = [];
-    public IReadOnlyList<TradeRouteVisualViewModel> TradeRouteVisuals => _tradeRouteVisuals;
-    public IReadOnlyList<TradeRouteVisualViewModel> DebugLoadedRoutePathVisuals => _tradeRouteVisuals.Where(x => x.IsLoadedPath && x.Points.Count >= 2).ToList();
+    public ObservableCollection<CaravanMovementMarkerViewModel> ActiveCaravanMovementMarkers => Map.ActiveCaravanMovementMarkers;
+    public IReadOnlyList<TradeRouteVisualViewModel> TradeRouteVisuals => Map.TradeRouteVisuals;
+    public IReadOnlyList<TradeRouteVisualViewModel> DebugLoadedRoutePathVisuals => Map.DebugLoadedRoutePathVisuals;
     public IReadOnlyList<TradeRoute> TradeRoutes => _world.TradeRoutes;
-    public IReadOnlyList<City> RouteAuthoringSettlements => _world.Cities;
-    public IReadOnlyList<City> AvailableRouteAuthoringDestinations => _world.Cities;
-    public ObservableCollection<City> RouteAuthoringDestinationSettlements { get; } = [];
-    public ObservableCollection<MapPointViewModel> EditedTradeRoutePoints { get; } = [];
-    public int EditedTradeRoutePointCount => EditedTradeRoutePoints.Count;
-    public int EditedTradeRouteIntermediatePointCount => EditedTradeRoutePoints.Count;
-    public int RouteAuthoringDestinationCount => RouteAuthoringDestinationSettlements.Count;
-    public bool CanAddMoreRouteAuthoringDestinations => RouteAuthoringDestinationSettlements.Count < 8;
-    public bool HasSelectedTradeRouteForAuthoring => SelectedTradeRouteForAuthoring is not null;
-    public List<RoutePoint> EditedTradeRoutePolylinePoints => BuildFullRoutePoints();
-    public string RouteAuthoringRouteIdDisplay => _routeAuthoringRouteIdDisplay;
+    public IReadOnlyList<City> RouteAuthoringSettlements => TradeAuthoring.RouteAuthoringSettlements;
+    public IReadOnlyList<City> AvailableRouteAuthoringDestinations => TradeAuthoring.AvailableRouteAuthoringDestinations;
+    public ObservableCollection<City> RouteAuthoringDestinationSettlements => TradeAuthoring.RouteAuthoringDestinationSettlements;
+    public ObservableCollection<MapPointViewModel> EditedTradeRoutePoints => TradeAuthoring.EditedTradeRoutePoints;
+    public int EditedTradeRoutePointCount => TradeAuthoring.EditedTradeRoutePointCount;
+    public int EditedTradeRouteIntermediatePointCount => TradeAuthoring.EditedTradeRouteIntermediatePointCount;
+    public int RouteAuthoringDestinationCount => TradeAuthoring.RouteAuthoringDestinationCount;
+    public bool CanAddMoreRouteAuthoringDestinations => TradeAuthoring.CanAddMoreRouteAuthoringDestinations;
+    public bool HasSelectedTradeRouteForAuthoring => TradeAuthoring.HasSelectedTradeRouteForAuthoring;
+    public List<RoutePoint> EditedTradeRoutePolylinePoints => TradeAuthoring.EditedTradeRoutePolylinePoints;
+    public string RouteAuthoringRouteIdDisplay => TradeAuthoring.RouteAuthoringRouteIdDisplay;
 
     public string SimulationSummaryDayAndHour => $"День {Day}, час {Hour}";
 
@@ -446,32 +455,21 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     public bool HasTechnicalLogEntries => TechnicalLogEntries.Count > 0;
 
     public ObservableCollection<string> ActiveEventEntries { get; } = new();
-    public ObservableCollection<SimulationJournalEntry> SimulationJournalEntries { get; } = new();
-    public ObservableCollection<SimulationJournalEntry> FilteredSimulationJournalEntries { get; } = new();
+    public ObservableCollection<SimulationJournalEntry> SimulationJournalEntries => Journal.SimulationJournalEntries;
+    public ObservableCollection<SimulationJournalEntry> FilteredSimulationJournalEntries => Journal.FilteredSimulationJournalEntries;
 
     public ObservableCollection<string> CompletedEventEntries { get; } = new();
-    public IReadOnlyList<SimulationJournalFilterOption> SimulationJournalFilters { get; } = SimulationJournalFilterOption.AllOptions;
+    public IReadOnlyList<SimulationJournalFilterOption> SimulationJournalFilters => Journal.SimulationJournalFilters;
     public SimulationJournalFilterOption SelectedSimulationJournalFilter
     {
-        get => _selectedSimulationJournalFilter;
-        set
-        {
-            if (_selectedSimulationJournalFilter == value) return;
-            _selectedSimulationJournalFilter = value;
-            OnPropertyChanged();
-            RefreshSimulationJournalFilter();
-        }
+        get => Journal.SelectedSimulationJournalFilter;
+        set => Journal.SelectedSimulationJournalFilter = value;
     }
 
     public SimulationJournalEntry? SelectedSimulationJournalEntry
     {
-        get => _selectedSimulationJournalEntry;
-        set
-        {
-            if (_selectedSimulationJournalEntry == value) return;
-            _selectedSimulationJournalEntry = value;
-            OnPropertyChanged();
-        }
+        get => Journal.SelectedSimulationJournalEntry;
+        set => Journal.SelectedSimulationJournalEntry = value;
     }
 
     public bool HasActiveEventEntries => _eventManager.ActiveEvents.Count > 0;
@@ -487,171 +485,77 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
 
     public string SelectedRegionName => _world.SelectedRegion.DisplayName;
 
-    public IReadOnlyList<SettlementMapMarkerViewModel> SettlementMapMarkers => BuildSettlementMapMarkers();
+    public IReadOnlyList<SettlementMapMarkerViewModel> SettlementMapMarkers => Map.SettlementMapMarkers;
 
-    public bool IsMapCalibrationModeEnabled
-    {
-        get => _isMapCalibrationModeEnabled;
-        private set
-        {
-            if (_isMapCalibrationModeEnabled == value)
-            {
-                return;
-            }
+    public bool IsMapCalibrationModeEnabled => Map.IsMapCalibrationModeEnabled;
 
-            _isMapCalibrationModeEnabled = value;
-            OnPropertyChanged();
-            OnPropertyChanged(nameof(MapCalibrationToggleButtonText));
-        }
-    }
-
-    public string MapCalibrationToggleButtonText => IsMapCalibrationModeEnabled
-        ? "Выключить калибровку карты"
-        : "Включить калибровку карты";
+    public string MapCalibrationToggleButtonText => Map.MapCalibrationToggleButtonText;
 
     public bool IsTradeRouteAuthoringModeEnabled
     {
-        get => _isTradeRouteAuthoringModeEnabled;
-        set
-        {
-            if (_isTradeRouteAuthoringModeEnabled == value) return;
-            _isTradeRouteAuthoringModeEnabled = value;
-            OnPropertyChanged();
-        }
+        get => TradeAuthoring.IsTradeRouteAuthoringModeEnabled;
+        set => TradeAuthoring.IsTradeRouteAuthoringModeEnabled = value;
     }
 
     public bool IsTradeRoutesOverlayVisible
     {
-        get => _isTradeRoutesOverlayVisible;
-        set
-        {
-            if (_isTradeRoutesOverlayVisible == value)
-            {
-                return;
-            }
-
-            _isTradeRoutesOverlayVisible = value;
-            OnPropertyChanged();
-            OnPropertyChanged(nameof(TradeRoutesOverlayVisibility));
-        }
+        get => Map.IsTradeRoutesOverlayVisible;
+        set => Map.IsTradeRoutesOverlayVisible = value;
     }
 
-    public Visibility TradeRoutesOverlayVisibility =>
-        IsTradeRoutesOverlayVisible ? Visibility.Visible : Visibility.Collapsed;
+    public Visibility TradeRoutesOverlayVisibility => Map.TradeRoutesOverlayVisibility;
 
     public bool IsLoadedRoutePathsDebugVisible
     {
-        get => _isLoadedRoutePathsDebugVisible;
-        set
-        {
-            if (_isLoadedRoutePathsDebugVisible == value)
-            {
-                return;
-            }
-
-            _isLoadedRoutePathsDebugVisible = value;
-            OnPropertyChanged();
-        }
+        get => Map.IsLoadedRoutePathsDebugVisible;
+        set => Map.IsLoadedRoutePathsDebugVisible = value;
     }
 
     public City? RouteAuthoringOriginSettlement
     {
-        get => _routeAuthoringOriginSettlement;
-        set
-        {
-            if (_routeAuthoringOriginSettlement == value) return;
-            _routeAuthoringOriginSettlement = value;
-            OnPropertyChanged();
-            ResetRouteAuthoringOriginState();
-        }
+        get => TradeAuthoring.RouteAuthoringOriginSettlement;
+        set => TradeAuthoring.RouteAuthoringOriginSettlement = value;
     }
 
     public City? RouteAuthoringDestinationCandidateSettlement
     {
-        get => _routeAuthoringDestinationCandidateSettlement;
-        set
-        {
-            if (_routeAuthoringDestinationCandidateSettlement == value) return;
-            _routeAuthoringDestinationCandidateSettlement = value;
-            OnPropertyChanged();
-        }
+        get => TradeAuthoring.RouteAuthoringDestinationCandidateSettlement;
+        set => TradeAuthoring.RouteAuthoringDestinationCandidateSettlement = value;
     }
 
     public City? ActiveRouteAuthoringDestinationSettlement
     {
-        get => _activeRouteAuthoringDestinationSettlement;
-        set
-        {
-            if (_activeRouteAuthoringDestinationSettlement == value) return;
-            SaveCurrentActiveDraftPoints();
-            _activeRouteAuthoringDestinationSettlement = value;
-            OnPropertyChanged();
-            LoadActiveRouteDraftOrExisting();
-        }
+        get => TradeAuthoring.ActiveRouteAuthoringDestinationSettlement;
+        set => TradeAuthoring.ActiveRouteAuthoringDestinationSettlement = value;
     }
 
     public TradeRoute? SelectedTradeRouteForAuthoring
     {
-        get => _selectedTradeRouteForAuthoring;
-        set
-        {
-            if (_selectedTradeRouteForAuthoring == value) return;
-            _selectedTradeRouteForAuthoring = value;
-            ReloadEditedTradeRoutePointsFromSelectedRoute();
-            OnPropertyChanged();
-            OnPropertyChanged(nameof(HasSelectedTradeRouteForAuthoring));
-        }
+        get => TradeAuthoring.SelectedTradeRouteForAuthoring;
+        set => TradeAuthoring.SelectedTradeRouteForAuthoring = value;
     }
 
     public decimal SelectedTradeRouteDistanceDays
     {
-        get => _selectedTradeRouteDistanceDays;
-        set
-        {
-            if (_selectedTradeRouteDistanceDays == value) return;
-            _selectedTradeRouteDistanceDays = value;
-            OnPropertyChanged();
-        }
+        get => TradeAuthoring.SelectedTradeRouteDistanceDays;
+        set => TradeAuthoring.SelectedTradeRouteDistanceDays = value;
     }
 
     public string SelectedTradeRouteDistanceDaysInput
     {
-        get => _selectedTradeRouteDistanceDaysInput;
-        set
-        {
-            if (_selectedTradeRouteDistanceDaysInput == value) return;
-            _selectedTradeRouteDistanceDaysInput = value;
-            OnPropertyChanged();
-        }
+        get => TradeAuthoring.SelectedTradeRouteDistanceDaysInput;
+        set => TradeAuthoring.SelectedTradeRouteDistanceDaysInput = value;
     }
 
-    public string LastMapCalibrationPointDisplay => _lastMapCalibrationX.HasValue && _lastMapCalibrationY.HasValue
-        ? $"Последняя точка карты: X={_lastMapCalibrationX.Value:0.0000}, Y={_lastMapCalibrationY.Value:0.0000}"
-        : "Последняя точка карты: нет";
+    public string LastMapCalibrationPointDisplay => Map.LastMapCalibrationPointDisplay;
 
     public string SelectedCityProfile => $"{_city.Name} — профиль поселения";
 
-    public string SelectedJournalCityId
-    {
-        get => _selectedJournalCityId;
-        private set
-        {
-            if (_selectedJournalCityId == value)
-            {
-                return;
-            }
+    public string SelectedJournalCityId => Journal.SelectedJournalCityId;
 
-            _selectedJournalCityId = value;
-            OnPropertyChanged();
-            OnPropertyChanged(nameof(CurrentJournalCityName));
-            OnPropertyChanged(nameof(CityJournalTitle));
-            RefreshSimulationJournalFilter();
-        }
-    }
+    public string CurrentJournalCityName => Journal.CurrentJournalCityName;
 
-    public string CurrentJournalCityName => _city.Name;
-
-    public string CityJournalTitle => $"Летопись города: {CurrentJournalCityName}";
+    public string CityJournalTitle => Journal.CityJournalTitle;
 
     public string EconomyStocksTooltip => $"{ResourcesTooltip}{Environment.NewLine}{Environment.NewLine}{GoodsTooltip}";
 
@@ -687,7 +591,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
             _world.SelectedRegionId = selectedLocation.RegionId;
         }
 
-        SelectedJournalCityId = _city.Id;
+        Journal.SelectCity(_city);
 
         RefreshAllCityProperties();
         RefreshSelectedCityProperties();
@@ -809,7 +713,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(SelectedTradeRouteForAuthoring));
         OnPropertyChanged(nameof(EditedTradeRoutePointCount));
         OnPropertyChanged(nameof(EditedTradeRoutePolylinePoints));
-        RefreshTradeRouteVisuals(null);
+        Map.RefreshTradeRouteVisuals(null);
         AddTechnicalLogEntry($"Маршрут {updatedRoute.Id}: сохранено {fullPoints.Count} точек, дней пути {SelectedTradeRouteDistanceDays:0.###}.");
     }
 
@@ -999,17 +903,16 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     private void ResetSimulation()
     {
         _world = WorldPresets.CreateDefaultWorld();
-        LoadRoutePathsForWorld();
+        Map.LoadRoutePathsForWorld();
         _city = _world.SelectedCity;
 
-        _clock.RestoreState(1, 0, false, TimeSpan.Zero, NormalSimulationSpeed);
-        _lastTickUtc = DateTimeOffset.UtcNow;
-        _lastTradeMarkerAnimationTickUtc = DateTimeOffset.UtcNow;
+        Control.ResetClock();
+        Map.ResetAnimationBaseline();
         _dailyWealthFlowResult = null;
         _eventManager.Clear();
         _worldSimulationService.ResetEventState();
         IsRandomEventGenerationEnabled = true;
-        SelectedJournalCityId = _city.Id;
+        Journal.SelectCity(_city);
         SelectedSimulationJournalFilter = SimulationJournalFilterOption.All;
         SelectedSimulationJournalEntry = null;
 
@@ -1017,7 +920,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         SetLastImportantChange("симуляция сброшена к началу.");
 
         RefreshWorldCollectionsAfterLoad();
-        ResetRouteAuthoringStateForWorldReset();
+        TradeAuthoring.ResetRouteAuthoringStateForWorldReset();
         RefreshAllCityProperties();
         RefreshClockProperties();
         RefreshSelectedCityProperties();
@@ -1180,7 +1083,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         _city = _world.SelectedCity;
         if (simulationResult.WeeklyTradeFlowResult is not null)
         {
-            RefreshTradeRouteVisuals(simulationResult.WeeklyTradeFlowResult);
+            Map.RefreshTradeRouteVisuals(simulationResult.WeeklyTradeFlowResult);
         }
         RefreshAllCityProperties();
         OnPropertyChanged(nameof(Food)); OnPropertyChanged(nameof(Resources)); OnPropertyChanged(nameof(Wealth)); OnPropertyChanged(nameof(WealthTooltip)); OnPropertyChanged(nameof(SettlementMapMarkers)); OnPropertyChanged(nameof(FoodBalanceTooltip)); OnPropertyChanged(nameof(FishingProductionTooltip)); OnPropertyChanged(nameof(ResourcesTooltip)); OnPropertyChanged(nameof(GoodsTooltip)); OnPropertyChanged(nameof(CrimeFlowTooltip)); OnPropertyChanged(nameof(EconomyStocksTooltip)); OnPropertyChanged(nameof(Resources)); OnPropertyChanged(nameof(Goods));
@@ -1515,6 +1418,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
                 loaded.Clock.AccumulatedRealTime,
                 loaded.Clock.RealTimePerGameHour);
             _lastTickUtc = DateTimeOffset.UtcNow;
+            Control.RestoreTickBaseline();
+            Journal.SelectCity(_city);
 
             _worldSimulationService.ImportEventState(loaded.EventState, _world.SelectedCityId);
             var selectedCityEventManager = loaded.EventState.GetManagerOrEmpty(_world.SelectedCityId);
@@ -1546,8 +1451,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(RouteAuthoringSettlements));
         OnPropertyChanged(nameof(AvailableRouteAuthoringDestinations));
         SelectedTradeRouteForAuthoring = _world.TradeRoutes.FirstOrDefault();
-        RefreshTradeRouteVisuals(null);
-        RefreshSimulationJournalFilter();
+        Map.RefreshTradeRouteVisuals(null);
+        Journal.RefreshSimulationJournalFilter();
     }
 
     private void RefreshClockProperties()
@@ -1829,104 +1734,31 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         IReadOnlyList<string> activeEventNamesBeforeAdvance,
         List<SimulationJournalItem> items)
     {
-        if (eventEffects.HasAnyEffect)
-        {
-            items.Add(new SimulationJournalItem
-            {
-                Category = SimulationJournalCategory.Effects,
-                Title = "Применены эффекты событий",
-                Details = $"Настроение {eventEffects.MoodDelta:+0;-0;0}, безопасность {eventEffects.SecurityDelta:+0;-0;0}, преступность {eventEffects.CrimeDelta:+0;-0;0}."
-            });
-        }
-
-        if (populationStart != populationEnd)
-        {
-            items.Add(new SimulationJournalItem
-            {
-                Category = SimulationJournalCategory.Population,
-                Title = "Изменение населения",
-                Details = $"Население {populationStart} → {populationEnd} ({populationEnd - populationStart:+0;-0;0}), причина: {_city.CityState switch { WorldSimulator.Core.Cities.CityState.Famine => "голод", _ => "состояние города" }}."
-            });
-        }
-
-        if (cityStateStart != cityStateEnd)
-        {
-            items.Add(new SimulationJournalItem
-            {
-                Category = SimulationJournalCategory.CityState,
-                Title = "Состояние города изменилось",
-                Details = $"{ToRussianCityState(cityStateStart)} → {ToRussianCityState(cityStateEnd)}."
-            });
-        }
-
-        items.Add(new SimulationJournalItem
-        {
-            Category = SimulationJournalCategory.Food,
-            Title = "Пищевой баланс дня",
-            Details = BuildFoodCalculationText(foodResult)
-        });
-
-        var summary = cityStateEnd == WorldSimulator.Core.Cities.CityState.Abandoned
-            ? "Город опустел."
-            : BuildJournalSummary(foodResult, items, populationStart, populationEnd);
-
-        var entry = new SimulationJournalEntry
-        {
-            Day = day,
-            CityId = _city.Id,
-            CityName = _city.Name,
-            CityState = ToRussianCityState(cityStateEnd),
-            PopulationStart = populationStart,
-            PopulationEnd = populationEnd,
-            PopulationDelta = populationEnd - populationStart,
-            FoodStart = foodResult.StartingFood,
-            FoodEnd = foodResult.EndingFood,
-            FoodDelta = foodResult.TotalDelta,
-            ActiveEventsCount = _eventManager.ActiveEvents.Count,
-            Summary = summary,
-            FoodCalculation = BuildFoodCalculationText(foodResult),
-            EffectsTooltip = activeEventNamesBeforeAdvance.Count == 0 ? "Событий нет." : $"События дня: {string.Join(", ", activeEventNamesBeforeAdvance)}.",
-            Items = items
-        };
-
-        SimulationJournalEntries.Add(entry);
-        if (SimulationJournalEntries.Count > MaxSimulationJournalDays)
-        {
-            SimulationJournalEntries.RemoveAt(0);
-        }
-
-        RefreshSimulationJournalFilter();
+        Journal.AppendSimulationJournalEntry(
+            _city,
+            day,
+            foodResult,
+            eventEffects,
+            populationStart,
+            populationEnd,
+            cityStateStart,
+            cityStateEnd,
+            _eventManager.ActiveEvents.Count,
+            activeEventNamesBeforeAdvance,
+            items,
+            BuildFoodCalculationText,
+            BuildJournalSummary,
+            ToRussianCityState);
     }
 
-    private void RefreshSimulationJournalFilter()
-    {
-        FilteredSimulationJournalEntries.Clear();
-        foreach (var entry in SimulationJournalEntries.Where(entry => IsEntryInSelectedJournalCity(entry) && MatchesCurrentFilter(entry)))
-        {
-            FilteredSimulationJournalEntries.Add(entry);
-        }
-    }
+    private void RefreshSimulationJournalFilter() => Journal.RefreshSimulationJournalFilter();
 
     private bool IsEntryInSelectedJournalCity(SimulationJournalEntry entry)
     {
         return string.Equals(entry.CityId, SelectedJournalCityId, StringComparison.OrdinalIgnoreCase);
     }
 
-    private bool MatchesCurrentFilter(SimulationJournalEntry entry)
-    {
-        return SelectedSimulationJournalFilter.Value switch
-        {
-            SimulationJournalFilter.All => true,
-            SimulationJournalFilter.Events => entry.Items.Any(i => i.Category is SimulationJournalCategory.Event or SimulationJournalCategory.Effects),
-            SimulationJournalFilter.Population => entry.Items.Any(i => i.Category == SimulationJournalCategory.Population),
-            SimulationJournalFilter.Food => entry.Items.Any(i => i.Category == SimulationJournalCategory.Food),
-            SimulationJournalFilter.CityState => entry.Items.Any(i => i.Category == SimulationJournalCategory.CityState),
-            SimulationJournalFilter.System => entry.Items.Any(i => i.Category == SimulationJournalCategory.System),
-            SimulationJournalFilter.Errors => entry.Items.Any(i => i.Category == SimulationJournalCategory.Error),
-            SimulationJournalFilter.MapAndDebug => entry.Items.Any(i => i.Category is SimulationJournalCategory.Map or SimulationJournalCategory.Debug),
-            _ => true
-        };
-    }
+    private bool MatchesCurrentFilter(SimulationJournalEntry entry) => Journal.MatchesCurrentFilter(entry);
 
     private static string BuildFoodCalculationText(DailyFoodFlowResult result) =>
         $"Потребление: -{result.PopulationConsumption:0.##}.{Environment.NewLine}Земледелие: {result.AgricultureIncome:+0.##;-0.##;0}.{Environment.NewLine}Рыбалка: {result.FishingIncome:+0.##;-0.##;0}.{Environment.NewLine}Охота: {result.HuntingIncome:+0.##;-0.##;0}.{Environment.NewLine}Поставки: {result.MainlandSupplyIncome:+0.##;-0.##;0}.{Environment.NewLine}События: {result.EventDelta:+0.##;-0.##;0}.";
@@ -2020,10 +1852,6 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(HasTechnicalLogEntries));
     }
 
-    private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
-    {
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-    }
 }
 
 public sealed class SimulationJournalFilterOption
