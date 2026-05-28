@@ -1,3 +1,5 @@
+using WorldSimulator.Core.Workforce;
+
 namespace WorldSimulator.Core.Cities;
 
 /// <summary>
@@ -118,6 +120,13 @@ public sealed class City
     public CityInfrastructure Infrastructure { get; }
 
     public CityPopulationDemographics Demographics { get; }
+
+    public CityWorkforceAllocation? WorkforceAllocation { get; private set; }
+
+    public void SetWorkforceAllocation(CityWorkforceAllocation allocation)
+    {
+        WorkforceAllocation = allocation ?? throw new ArgumentNullException(nameof(allocation));
+    }
 
     public const decimal DailyFoodConsumptionPerPerson = 0.2m;
 
