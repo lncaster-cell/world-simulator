@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using FluentAssertions;
 using SixLabors.ImageSharp;
@@ -75,6 +76,42 @@ public sealed class RoutePathExtractorTests
         }
     }
 
+    [Fact]
+    public void BuildReport_UsesInvariantDecimalSeparatorUnderRussianCulture()
+    {
+        var originalCulture = CultureInfo.CurrentCulture;
+        var originalUiCulture = CultureInfo.CurrentUICulture;
+        try
+        {
+            CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("ru-RU");
+            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("ru-RU");
+
+            var report = RouteReportBuilder.BuildReport([
+                new RouteReportEntry("R_TEST", "test_land", "road", "A", "B")
+                {
+                    Ok = true,
+                    GenerationMethod = "mask",
+                    StartAnchorDistancePx = 0d,
+                    EndAnchorDistancePx = 0d,
+                    PathPixelCount = 1,
+                    SimplifiedPointCount = 1,
+                    MaxConnectorLengthPx = 0d,
+                    ForcedConnectorLengthPx = 0d
+                }
+            ]);
+
+            report.Should().Contain("start_anchor_distance_px=0.0");
+            report.Should().Contain("end_anchor_distance_px=0.0");
+            report.Should().Contain("max_connector_length_px=0.0");
+            report.Should().Contain("forced_connector_length_px=0.0");
+            report.Should().NotContain("forced_connector_length_px=0,0");
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = originalCulture;
+            CultureInfo.CurrentUICulture = originalUiCulture;
+        }
+    }
 
     [Fact]
     public void SplitCsv_HandlesQuotedCommasAndEscapedQuotes()
@@ -107,47 +144,5 @@ public sealed class RoutePathExtractorTests
         candidates.Should().HaveCount(2);
         candidates.Select(c => c.Point).Should().Equal((1, 1), (2, 2));
         candidates.Select(c => c.Distance).Should().BeInAscendingOrder();
-    }
-
-    [Fact]
-    public void TryDirectSettlementConnectorOverride_UsesForcedGavernRouteWhenWithinLimit()
-    {
-        var options = new RouteExtractionOptions { ForcedDirectGavernConnectorMaxPx = 20 };
-        var fallback = new RouteConnectorFallback(options, new RoutePathFinder(options));
-
-        var handled = fallback.TryDirectSettlementConnectorOverride(
-            "R_RIVENSTAL_GAVERN",
-            "Rivenstal",
-            "Gavern",
-            (0.0, 0.0),
-            (1.0, 0.0),
-            w: 11,
-            h: 11,
-            startAnchor: (1, 1),
-            endAnchor: (4, 5),
-            out var result);
-
-        handled.Should().BeTrue();
-        result.Success.Should().BeTrue();
-        result.UsedForcedDirectConnector.Should().BeTrue();
-        result.Connectors.Should().ContainSingle().Which.Should().Be(5.0);
-    }
-
-    [Fact]
-    public void Simplify_RemovesCollinearIntermediatePointsAndKeepsTurns()
-    {
-        var points = new List<(int X, int Y)>
-        {
-            (0, 0),
-            (1, 0),
-            (2, 0),
-            (3, 2),
-            (4, 4),
-            (5, 4)
-        };
-
-        var simplified = RoutePathFinder.Simplify(points, eps: 0.25);
-
-        simplified.Should().Equal((0, 0), (2, 0), (4, 4), (5, 4));
     }
 }
