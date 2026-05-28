@@ -182,6 +182,49 @@ public sealed class SimulationClockTests
         Assert.Equal(0, clock.Hour);
         Assert.Equal(1, dayAdvancedCount);
     }
+
+    [Fact]
+    public void SetSimulationSpeed_Preserves_Partial_Hour_Progress()
+    {
+        var clock = new SimulationClock();
+        clock.Start();
+
+        clock.Advance(TimeSpan.FromMinutes(4));
+        clock.SetSimulationSpeed(TimeSpan.FromSeconds(10));
+        clock.Advance(TimeSpan.FromSeconds(1));
+
+        Assert.Equal(1, clock.Day);
+        Assert.Equal(0, clock.Hour);
+        Assert.Equal(TimeSpan.FromSeconds(9), clock.AccumulatedRealTime);
+    }
+
+    [Fact]
+    public void SetSimulationSpeed_To_Turbo_Does_Not_Convert_Normal_Backlog_To_Days()
+    {
+        var clock = new SimulationClock();
+        clock.Start();
+
+        clock.Advance(TimeSpan.FromSeconds(260));
+        clock.SetSimulationSpeed(TimeSpan.FromMilliseconds(1000d / 24d));
+
+        Assert.Equal(1, clock.Day);
+        Assert.Equal(0, clock.Hour);
+        Assert.True(clock.AccumulatedRealTime < clock.RealTimePerGameHour);
+    }
+
+    [Fact]
+    public void RestoreState_Normalizes_Accumulated_Time_For_Selected_Speed()
+    {
+        var clock = new SimulationClock();
+
+        clock.RestoreState(5, 6, true, TimeSpan.FromSeconds(260), TimeSpan.FromMilliseconds(1000d / 24d));
+        clock.Advance(TimeSpan.Zero);
+
+        Assert.Equal(5, clock.Day);
+        Assert.Equal(6, clock.Hour);
+        Assert.True(clock.AccumulatedRealTime < clock.RealTimePerGameHour);
+    }
+
     [Fact]
     public void Advance_Uses_New_Speed_After_Change()
     {
