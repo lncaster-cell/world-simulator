@@ -98,7 +98,8 @@ public sealed class WealthSimulationStep : IWorldSimulationStep
             scaledResourceGathering,
             scaledGoods,
             householdConsumption,
-            wealthFlow);
+            wealthFlow,
+            state.WorkforceAllocation);
 
         next();
     }
