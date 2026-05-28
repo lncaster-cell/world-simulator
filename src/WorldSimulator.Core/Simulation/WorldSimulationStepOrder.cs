@@ -24,6 +24,7 @@ public sealed class WorldSimulationStepOrder
     public static WorldSimulationStepOrder CreateDefault(
         TradeSimulationStep tradeSimulationStep,
         CityEventSimulationStep cityEventSimulationStep,
+        WorkforceSimulationStep workforceSimulationStep,
         FoodSimulationStep foodSimulationStep,
         WealthSimulationStep wealthSimulationStep,
         CityStateSimulationStep cityStateSimulationStep,
@@ -35,6 +36,7 @@ public sealed class WorldSimulationStepOrder
             new IWorldSimulationStep[]
             {
                 cityEventSimulationStep,
+                workforceSimulationStep,
                 foodSimulationStep,
                 wealthSimulationStep,
                 cityStateSimulationStep,
