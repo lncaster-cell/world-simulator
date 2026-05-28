@@ -33,7 +33,7 @@
 
 
                         <ItemsControl ItemsSource="{Binding DebugLoadedRoutePathVisuals}"
-                                      Visibility="{Binding IsLoadedRoutePathsDebugVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                      Visibility="{Binding TradeRouteAuthoring.IsLoadedRoutePathsDebugVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
                             <ItemsControl.ItemsPanel><ItemsPanelTemplate><Canvas/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
@@ -61,7 +61,7 @@
 
                         <ItemsControl ItemsSource="{Binding DebugLoadedRoutePathVisuals}"
                                       IsHitTestVisible="False"
-                                      Visibility="{Binding IsLoadedRoutePathsDebugVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                      Visibility="{Binding TradeRouteAuthoring.IsLoadedRoutePathsDebugVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
                             <ItemsControl.ItemsPanel><ItemsPanelTemplate><Canvas/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                             <ItemsControl.ItemContainerStyle>
                                 <Style TargetType="ContentPresenter">
@@ -128,10 +128,10 @@
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
 
-                        <Path Stroke="{StaticResource MapAuthoringRouteBrush}" StrokeThickness="2.5" StrokeDashArray="2,2" IsHitTestVisible="False" Visibility="{Binding IsTradeRouteAuthoringModeEnabled, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <Path Stroke="{StaticResource MapAuthoringRouteBrush}" StrokeThickness="2.5" StrokeDashArray="2,2" IsHitTestVisible="False" Visibility="{Binding TradeRouteAuthoring.IsTradeRouteAuthoringModeEnabled, Converter={StaticResource BooleanToVisibilityConverter}}">
                             <Path.Data>
                                 <MultiBinding Converter="{StaticResource TradeRoutePointsToSmoothPathGeometryConverter}">
-                                    <Binding Path="EditedTradeRoutePolylinePoints"/>
+                                    <Binding Path="TradeRouteAuthoring.EditedTradeRoutePolylinePoints"/>
                                     <Binding ElementName="MapContainer" Path="ActualWidth"/>
                                     <Binding ElementName="MapImage" Path="ActualWidth"/>
                                     <Binding ElementName="MapContainer" Path="ActualHeight"/>
@@ -139,10 +139,10 @@
                                 </MultiBinding>
                             </Path.Data>
                         </Path>
-                        <Polyline Stroke="{StaticResource MapAuthoringRouteOverlayBrush}" StrokeThickness="1.5" StrokeDashArray="2,2" IsHitTestVisible="False" Visibility="{Binding IsTradeRouteAuthoringModeEnabled, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <Polyline Stroke="{StaticResource MapAuthoringRouteOverlayBrush}" StrokeThickness="1.5" StrokeDashArray="2,2" IsHitTestVisible="False" Visibility="{Binding TradeRouteAuthoring.IsTradeRouteAuthoringModeEnabled, Converter={StaticResource BooleanToVisibilityConverter}}">
                             <Polyline.Points>
                                 <MultiBinding Converter="{StaticResource TradeRoutePointsToPointCollectionConverter}">
-                                    <Binding Path="EditedTradeRoutePolylinePoints"/>
+                                    <Binding Path="TradeRouteAuthoring.EditedTradeRoutePolylinePoints"/>
                                     <Binding ElementName="MapContainer" Path="ActualWidth"/>
                                     <Binding ElementName="MapImage" Path="ActualWidth"/>
                                     <Binding ElementName="MapContainer" Path="ActualHeight"/>
@@ -151,7 +151,7 @@
                             </Polyline.Points>
                         </Polyline>
 
-                        <ItemsControl ItemsSource="{Binding EditedTradeRoutePoints}" Visibility="{Binding IsTradeRouteAuthoringModeEnabled, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <ItemsControl ItemsSource="{Binding TradeRouteAuthoring.EditedTradeRoutePoints}" Visibility="{Binding TradeRouteAuthoring.IsTradeRouteAuthoringModeEnabled, Converter={StaticResource BooleanToVisibilityConverter}}">
                             <ItemsControl.ItemsPanel><ItemsPanelTemplate><Canvas/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                             <ItemsControl.ItemContainerStyle>
                                 <Style TargetType="ContentPresenter">
