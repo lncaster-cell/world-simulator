@@ -19,7 +19,7 @@ public sealed class CrimeSimulationStep : IWorldSimulationStep
 
     public void Execute(SimulationWorld world, City city, int day, WorldSimulationContext context, WorldSimulationStepDelegate next)
     {
-        if (WorldSimulationStepOrder.IsWeeklyUpdateDay(day))
+        if (context.ShouldRun(SimulationCadence.Weekly))
         {
             var state = context.GetCityState(city);
             var foodFlow = state.FoodFlow ?? throw new InvalidOperationException("Food simulation must run before crime simulation.");
