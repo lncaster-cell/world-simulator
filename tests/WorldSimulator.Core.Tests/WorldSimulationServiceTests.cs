@@ -52,7 +52,7 @@ public sealed class WorldSimulationServiceTests
     }
 
     [Fact]
-    public void AdvanceDay_AppliesPopulationChangeToNonSelectedCity()
+    public void AdvanceDay_DoesNotApplyPopulationChangeOnNonMonthlyDay()
     {
         var world = WorldPresets.CreateDefaultWorld();
         var selected = world.Cities[0];
@@ -60,20 +60,35 @@ public sealed class WorldSimulationServiceTests
         nonSelected.Food = 0m;
         var populationBefore = nonSelected.Population;
 
-        CreateService().AdvanceDay(world, selected.Id, day: 1, randomEventsEnabled: false);
+        var result = CreateService().AdvanceDay(world, selected.Id, day: 1, randomEventsEnabled: false);
+
+        nonSelected.Population.Should().Be(populationBefore);
+        result.SelectedCityPopulationChange.Should().BeNull();
+    }
+
+    [Fact]
+    public void AdvanceDay_AppliesPopulationChangeOnMonthlyDay()
+    {
+        var world = WorldPresets.CreateDefaultWorld();
+        var selected = world.Cities[0];
+        var nonSelected = world.Cities[1];
+        nonSelected.Food = 0m;
+        var populationBefore = nonSelected.Population;
+
+        CreateService().AdvanceDay(world, selected.Id, day: 30, randomEventsEnabled: false);
 
         nonSelected.Population.Should().BeLessThan(populationBefore);
     }
 
     [Fact]
-    public void AdvanceDay_SynchronizesDemographicsAfterPopulationChange()
+    public void AdvanceDay_SynchronizesDemographicsAfterMonthlyPopulationChange()
     {
         var world = WorldPresets.CreateDefaultWorld();
         var selected = world.Cities[0];
         var nonSelected = world.Cities[1];
         nonSelected.Food = 0m;
 
-        CreateService().AdvanceDay(world, selected.Id, day: 1, randomEventsEnabled: false);
+        CreateService().AdvanceDay(world, selected.Id, day: 30, randomEventsEnabled: false);
 
         nonSelected.Demographics.TotalPopulation.Should().Be(nonSelected.Population);
     }
