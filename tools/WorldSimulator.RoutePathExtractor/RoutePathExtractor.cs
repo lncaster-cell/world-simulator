@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using SixLabors.ImageSharp;
@@ -88,8 +89,8 @@ public sealed class RoutePathExtractor
             Console.WriteLine($"{logPrefix} anchors: start={start.Value.Point.X},{start.Value.Point.Y} end={end.Value.Point.X},{end.Value.Point.Y}");
             entry.StartAnchorDistancePx = start.Value.Distance;
             entry.EndAnchorDistancePx = end.Value.Distance;
-            if (start.Value.Distance > AnchorSearchRadiusSoftPx) entry.Warnings.Add($"Start anchor snapped at {start.Value.Distance:F1}px (> {AnchorSearchRadiusSoftPx}px).");
-            if (end.Value.Distance > AnchorSearchRadiusSoftPx) entry.Warnings.Add($"End anchor snapped at {end.Value.Distance:F1}px (> {AnchorSearchRadiusSoftPx}px).");
+            if (start.Value.Distance > AnchorSearchRadiusSoftPx) entry.Warnings.Add($"Start anchor snapped at {FormatFixedOne(start.Value.Distance)}px (> {AnchorSearchRadiusSoftPx}px).");
+            if (end.Value.Distance > AnchorSearchRadiusSoftPx) entry.Warnings.Add($"End anchor snapped at {FormatFixedOne(end.Value.Distance)}px (> {AnchorSearchRadiusSoftPx}px).");
 
             Console.WriteLine($"{logPrefix} pathfinding...");
             var pathResult = FindPathWithFallback(originalMask, inflatedMask, image.Width, image.Height, start.Value.Point, end.Value.Point, isSea);
@@ -100,12 +101,12 @@ public sealed class RoutePathExtractor
                     pathResult = directConnectorResult;
                     if (pathResult.UsedForcedDirectConnector)
                     {
-                        Console.WriteLine($"{logPrefix} primary path failed, using FORCED direct Gavern connector length={pathResult.DirectConnectorLengthPx:F1}px");
+                        Console.WriteLine($"{logPrefix} primary path failed, using FORCED direct Gavern connector length={FormatFixedOne(pathResult.DirectConnectorLengthPx)}px");
                         Console.WriteLine($"{logPrefix} OK with forced direct Gavern connector");
                     }
                     else
                     {
-                        Console.WriteLine($"{logPrefix} OK with direct Gavern connector length={pathResult.DirectConnectorLengthPx:F1}px");
+                        Console.WriteLine($"{logPrefix} OK with direct Gavern connector length={FormatFixedOne(pathResult.DirectConnectorLengthPx)}px");
                     }
                 }
                 else
@@ -114,7 +115,7 @@ public sealed class RoutePathExtractor
                     pathResult = TryConnectorFallback(originalMask, inflatedMask, image.Width, image.Height, from, to, start.Value.Point, end.Value.Point, isSea);
                     if (pathResult.Success)
                     {
-                        Console.WriteLine($"{logPrefix} connector fallback OK, connectors={pathResult.Connectors.Count}, max={pathResult.MaxConnectorLengthPx:F1}px");
+                        Console.WriteLine($"{logPrefix} connector fallback OK, connectors={pathResult.Connectors.Count}, max={FormatFixedOne(pathResult.MaxConnectorLengthPx)}px");
                     }
                 }
             }
@@ -134,7 +135,7 @@ public sealed class RoutePathExtractor
             entry.GenerationMethod = DetermineGenerationMethod(pathResult);
             if (pathResult.MaxConnectorLengthPx > ConnectorSoftWarningPx)
             {
-                entry.ConnectorWarning = $"Longest connector {pathResult.MaxConnectorLengthPx:F1}px (> {ConnectorSoftWarningPx}px).";
+                entry.ConnectorWarning = $"Longest connector {FormatFixedOne(pathResult.MaxConnectorLengthPx)}px (> {ConnectorSoftWarningPx}px).";
                 entry.Warnings.Add(entry.ConnectorWarning);
             }
             entry.Warnings.AddRange(pathResult.Warnings);
@@ -228,16 +229,16 @@ public sealed class RoutePathExtractor
             sb.AppendLine($"  generation_method={e.GenerationMethod}");
             sb.AppendLine($"  start_settlement={e.StartSettlement}");
             sb.AppendLine($"  end_settlement={e.EndSettlement}");
-            sb.AppendLine($"  start_anchor_distance_px={(e.StartAnchorDistancePx.HasValue ? e.StartAnchorDistancePx.Value.ToString("F1") : "n/a")}");
-            sb.AppendLine($"  end_anchor_distance_px={(e.EndAnchorDistancePx.HasValue ? e.EndAnchorDistancePx.Value.ToString("F1") : "n/a")}");
-            sb.AppendLine($"  path_pixel_count={(e.PathPixelCount.HasValue ? e.PathPixelCount.Value.ToString() : "n/a")}");
-            sb.AppendLine($"  simplified_point_count={(e.SimplifiedPointCount.HasValue ? e.SimplifiedPointCount.Value.ToString() : "n/a")}");
+            sb.AppendLine($"  start_anchor_distance_px={(e.StartAnchorDistancePx.HasValue ? FormatFixedOne(e.StartAnchorDistancePx.Value) : "n/a")}");
+            sb.AppendLine($"  end_anchor_distance_px={(e.EndAnchorDistancePx.HasValue ? FormatFixedOne(e.EndAnchorDistancePx.Value) : "n/a")}");
+            sb.AppendLine($"  path_pixel_count={(e.PathPixelCount.HasValue ? e.PathPixelCount.Value.ToString(CultureInfo.InvariantCulture) : "n/a")}");
+            sb.AppendLine($"  simplified_point_count={(e.SimplifiedPointCount.HasValue ? e.SimplifiedPointCount.Value.ToString(CultureInfo.InvariantCulture) : "n/a")}");
             sb.AppendLine($"  connector_count={e.ConnectorCount}");
-            sb.AppendLine($"  max_connector_length_px={e.MaxConnectorLengthPx:F1}");
+            sb.AppendLine($"  max_connector_length_px={FormatFixedOne(e.MaxConnectorLengthPx)}");
             sb.AppendLine($"  connector_warning={(string.IsNullOrWhiteSpace(e.ConnectorWarning) ? "none" : e.ConnectorWarning)}");
             sb.AppendLine($"  used_settlement_connector={e.UsedSettlementConnector.ToString().ToLowerInvariant()}");
             sb.AppendLine($"  used_forced_direct_connector={e.UsedForcedDirectConnector.ToString().ToLowerInvariant()}");
-            sb.AppendLine($"  forced_connector_length_px={e.ForcedConnectorLengthPx:F1}");
+            sb.AppendLine($"  forced_connector_length_px={FormatFixedOne(e.ForcedConnectorLengthPx)}");
             sb.AppendLine($"  warnings={(e.Warnings.Count == 0 ? "none" : string.Join(" | ", e.Warnings))}");
             sb.AppendLine($"  failure_reason={(string.IsNullOrWhiteSpace(e.FailureReason) ? "none" : e.FailureReason)}");
             sb.AppendLine();
@@ -245,6 +246,8 @@ public sealed class RoutePathExtractor
 
         return sb.ToString();
     }
+
+    static string FormatFixedOne(double value) => value.ToString("F1", CultureInfo.InvariantCulture);
 
     static string DetermineGenerationMethod(PathResult result)
     {
@@ -368,7 +371,7 @@ public sealed class RoutePathExtractor
         var maxConnector = connectors.Count == 0 ? 0.0 : connectors.Max();
         var pathResult = PathResult.Ok(full, connectors, usedSettlementConnector);
         if (maxConnector > ConnectorMaxDistancePx)
-            return PathResult.Failed($"Connector distance too large ({maxConnector:F1}px > {ConnectorMaxDistancePx}px).");
+            return PathResult.Failed($"Connector distance too large ({FormatFixedOne(maxConnector)}px > {ConnectorMaxDistancePx}px).");
 
         return pathResult;
     }
@@ -389,7 +392,7 @@ public sealed class RoutePathExtractor
         var connectorLength = Distance(startAnchor, endAnchor);
         if (connectorLength > ForcedDirectGavernConnectorMaxPx)
         {
-            result = PathResult.Failed($"Forced direct Gavern connector too long: {connectorLength:F1}px > {ForcedDirectGavernConnectorMaxPx}px.");
+            result = PathResult.Failed($"Forced direct Gavern connector too long: {FormatFixedOne(connectorLength)}px > {ForcedDirectGavernConnectorMaxPx}px.");
             return true;
         }
 
@@ -400,7 +403,7 @@ public sealed class RoutePathExtractor
         if (full[^1] != toPixel) full.Add(toPixel);
 
         result = PathResult.Ok(full, [connectorLength], true, connectorLength, true);
-        result.Warnings.Add($"Used FORCED direct Gavern connector override, length {connectorLength:F1}px.");
+        result.Warnings.Add($"Used FORCED direct Gavern connector override, length {FormatFixedOne(connectorLength)}px.");
         return true;
     }
 
@@ -412,7 +415,7 @@ public sealed class RoutePathExtractor
 
         var connectorLength = Distance(nearestReachable.Value, gavernAnchor);
         if (connectorLength > DirectGavernConnectorMaxPx)
-            return PathResult.Failed($"Direct Gavern connector too long: {connectorLength:F1}px > {DirectGavernConnectorMaxPx}px.");
+            return PathResult.Failed($"Direct Gavern connector too long: {FormatFixedOne(connectorLength)}px > {DirectGavernConnectorMaxPx}px.");
 
         var maskPath = FindPathWithFallback(originalMask, inflatedMask, w, h, sourceAnchor, nearestReachable.Value, isSea);
         if (!maskPath.Success)
@@ -422,7 +425,7 @@ public sealed class RoutePathExtractor
         if (full.Count == 0 || full[^1] != nearestReachable.Value) full.Add(nearestReachable.Value);
         AppendConnector(full, gavernAnchor, []);
         var outResult = PathResult.Ok(full, [connectorLength], true, connectorLength);
-        outResult.Warnings.Add($"Used direct settlement connector override for Gavern, length {connectorLength:F1}px.");
+        outResult.Warnings.Add($"Used direct settlement connector override for Gavern, length {FormatFixedOne(connectorLength)}px.");
         return outResult;
     }
 
@@ -454,8 +457,8 @@ public sealed class RoutePathExtractor
         var reanchored = FindPathWithFallback(originalMask, inflatedMask, w, h, startBest.Point, endBest.Point, isSea);
         if (reanchored.Success)
         {
-            if (startBest.Distance > ConnectorSoftWarningPx) reanchored.Warnings.Add($"Start connector length {startBest.Distance:F1}px.");
-            if (endBest.Distance > ConnectorSoftWarningPx) reanchored.Warnings.Add($"End connector length {endBest.Distance:F1}px.");
+            if (startBest.Distance > ConnectorSoftWarningPx) reanchored.Warnings.Add($"Start connector length {FormatFixedOne(startBest.Distance)}px.");
+            if (endBest.Distance > ConnectorSoftWarningPx) reanchored.Warnings.Add($"End connector length {FormatFixedOne(endBest.Distance)}px.");
             return reanchored;
         }
 
@@ -475,7 +478,7 @@ public sealed class RoutePathExtractor
         }
 
         if (bestPair.Distance > ConnectorMaxDistancePx)
-            return PathResult.Failed($"Bridge gap too large ({bestPair.Distance:F1}px > {ConnectorMaxDistancePx}px).");
+            return PathResult.Failed($"Bridge gap too large ({FormatFixedOne(bestPair.Distance)}px > {ConnectorMaxDistancePx}px).");
 
         var pathS = FindPathWithFallback(originalMask, inflatedMask, w, h, startCandidates[0].Point, bestPair.Start.Point, isSea);
         var pathT = FindPathWithFallback(originalMask, inflatedMask, w, h, bestPair.End.Point, endCandidates[0].Point, isSea);
@@ -491,7 +494,7 @@ public sealed class RoutePathExtractor
             if (joined[^1] != p) joined.Add(p);
 
         var outResult = PathResult.Ok(joined, [bestPair.Distance], usedSettlementConnector: true);
-        outResult.Warnings.Add($"Used bridge fallback, gap={bestPair.Distance:F1}px.");
+        outResult.Warnings.Add($"Used bridge fallback, gap={FormatFixedOne(bestPair.Distance)}px.");
         return outResult;
     }
 
