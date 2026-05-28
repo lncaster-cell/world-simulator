@@ -90,8 +90,18 @@ public sealed class WorldSimulationServiceTests
         secondResult.SelectedCityResult!.CityId.Should().Be(worldB.Cities[1].Id);
     }
 
+    [Fact]
+    public void AdvanceDay_ReturnsSelectedCityWorkforceAllocation()
+    {
+        var world = WorldPresets.CreateDefaultWorld();
+        var selected = world.Cities[0];
 
+        var result = CreateService().AdvanceDay(world, selected.Id, day: 1, randomEventsEnabled: false);
 
+        result.SelectedCityResult.Should().NotBeNull();
+        result.SelectedCityResult!.WorkforceAllocation.Should().NotBeNull();
+        result.SelectedCityResult.WorkforceAllocation!.Workforce.TotalWorkers.Should().BeGreaterThan(0);
+    }
 
     [Fact]
     public void AdvanceDay_ReturnsDeterministicExternalDailyTickResult()
@@ -152,6 +162,7 @@ public sealed class WorldSimulationServiceTests
             GoodsCrafting = selected?.GoodsCrafting,
             HouseholdConsumption = selected?.HouseholdConsumption,
             WealthFlow = selected?.WealthFlow,
+            WorkforceAllocation = selected?.WorkforceAllocation,
             EventEffects = result.SelectedCityEventEffects,
             PopulationChange = result.SelectedCityPopulationChange,
             CrimeFlow = result.SelectedCityCrimeFlow,
