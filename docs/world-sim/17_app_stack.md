@@ -85,6 +85,6 @@ The MVP stack does not include:
 
 ## Agent guidance
 
-Agents must not change the stack without a dedicated architecture decision document.
+Agents may change the stack when the user's request or a well-supported technical need requires it. Such changes should not be blocked by old MVP-era restrictions.
 
-If a future PR proposes Avalonia, Electron, database persistence, or NWN2 integration, it must first update the architecture docs and explain the migration reason.
+If a future PR proposes Avalonia, Electron, database persistence, or NWN2 integration, update the architecture docs in the same change and explain the migration reason.

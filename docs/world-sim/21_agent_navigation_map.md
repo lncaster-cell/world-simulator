@@ -77,10 +77,12 @@
 
 ## 5) Repository Conventions for AI Agents
 
+- Agents have full technical freedom to complete the user's requested goal; old MVP-era prohibitions are historical context, not active bans.
 - Минимальные PR: одна логическая цель на один PR.
 - Документация обновляется вместе с кодом, если поведение изменилось.
 - Не переименовывать массово файлы без необходимости.
 - Не смешивать «механику» и «косметику» в одном коммите.
+- Для NWN/NWN2-facing изменений сверяться с проектной документацией и NWN Lexicon, затем использовать встроенные или уже существующие механики там, где это возможно.
 
 ## 6) Legacy Documentation Note
 

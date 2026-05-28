@@ -12,6 +12,6 @@
 - Game log + technical log.
 - Debug panel for balancing.
 
-## Strict scope lock
+## Historical scope note
 
-MVP 0.1 must stay minimal and must not be expanded without a separate planning/approval step.
+This MVP 0.1 scope describes the original baseline. It is not an active scope lock for agents; expand or revise it when needed for the user's request, and update docs/tests with the change.
