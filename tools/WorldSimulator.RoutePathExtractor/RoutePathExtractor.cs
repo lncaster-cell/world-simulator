@@ -38,7 +38,7 @@ public sealed class RoutePathExtractor
         var inflatedLandMask = DilateMask(landMask, image.Width, image.Height, MaskInflateRadiusPx);
         var inflatedSeaMask = DilateMask(seaMask, image.Width, image.Height, MaskInflateRadiusPx);
 
-        var paths = new List<object>();
+        var paths = new List<GeneratedRoutePath>();
         var reportEntries = new List<RouteReportEntry>();
         var nonStubEdges = edges.Where(e => !e.IsStub).ToList();
 
@@ -129,6 +129,9 @@ public sealed class RoutePathExtractor
             entry.ConnectorCount = pathResult.Connectors.Count;
             entry.MaxConnectorLengthPx = pathResult.MaxConnectorLengthPx;
             entry.UsedSettlementConnector = pathResult.UsedSettlementConnector;
+            entry.UsedForcedDirectConnector = pathResult.UsedForcedDirectConnector;
+            entry.ForcedConnectorLengthPx = pathResult.UsedForcedDirectConnector ? pathResult.DirectConnectorLengthPx : 0.0;
+            entry.GenerationMethod = DetermineGenerationMethod(pathResult);
             if (pathResult.MaxConnectorLengthPx > ConnectorSoftWarningPx)
             {
                 entry.ConnectorWarning = $"Longest connector {pathResult.MaxConnectorLengthPx:F1}px (> {ConnectorSoftWarningPx}px).";
@@ -143,29 +146,48 @@ public sealed class RoutePathExtractor
             entry.SimplifiedPointCount = simplified.Count;
             entry.Ok = true;
 
-            paths.Add(new
+            paths.Add(new GeneratedRoutePath
             {
-                source_route_id = edge.RouteId,
-                trade_route_id = entry.TradeRouteId,
-                route_type = routeType,
-                points = simplified.Select(p => new
-                {
-                    x = Math.Clamp((double)p.X / (image.Width - 1), 0d, 1d),
-                    y = Math.Clamp((double)p.Y / (image.Height - 1), 0d, 1d)
-                })
+                SourceRouteId = edge.RouteId,
+                TradeRouteId = entry.TradeRouteId,
+                RouteType = routeType,
+                GenerationMethod = entry.GenerationMethod,
+                Warnings = entry.Warnings.ToList(),
+                Points = simplified.Select(p => new GeneratedRoutePoint(
+                    Math.Clamp((double)p.X / (image.Width - 1), 0d, 1d),
+                    Math.Clamp((double)p.Y / (image.Height - 1), 0d, 1d))).ToList(),
+                PixelPoints = simplified,
+                UsedForcedDirectConnector = entry.UsedForcedDirectConnector
             });
 
             Console.WriteLine($"{logPrefix} OK points={simplified.Count}");
             Console.Out.Flush();
         }
 
-        var payload = new { schema_version = "rivia_route_paths_v1", region_id = "RIVIA", paths };
+        var payload = new
+        {
+            schema_version = "rivia_route_paths_v1",
+            region_id = "RIVIA",
+            paths = paths.Select(path => new
+            {
+                source_route_id = path.SourceRouteId,
+                trade_route_id = path.TradeRouteId,
+                route_type = path.RouteType,
+                generation_method = path.GenerationMethod,
+                warnings = path.Warnings,
+                points = path.Points.Select(point => new { x = point.X, y = point.Y })
+            })
+        };
         var tempOutputPath = outputPath + ".tmp";
         File.WriteAllText(tempOutputPath, JsonSerializer.Serialize(payload, new JsonSerializerOptions { WriteIndented = true }));
         File.Move(tempOutputPath, outputPath, overwrite: true);
 
-        var reportPath = Path.Combine(Path.GetDirectoryName(outputPath) ?? string.Empty, "route_paths_report.txt");
+        var outputDirectory = Path.GetDirectoryName(outputPath) ?? string.Empty;
+        var reportPath = Path.Combine(outputDirectory, "route_paths_report.txt");
         File.WriteAllText(reportPath, BuildReport(reportEntries));
+
+        var debugImagePath = Path.Combine(outputDirectory, "route_paths_debug.png");
+        WriteDebugImage(debugImagePath, image.Width, image.Height, paths);
 
         var success = reportEntries.Count(x => x.Ok);
         var failed = reportEntries.Count - success;
@@ -175,6 +197,7 @@ public sealed class RoutePathExtractor
         Console.WriteLine($"Failed routes: {failed}");
         Console.WriteLine($"Output: {outputPath}");
         Console.WriteLine($"Report: {reportPath}");
+        Console.WriteLine($"Debug image: {debugImagePath}");
         if (failed > 0) Console.WriteLine("Open route_paths_report.txt for details.");
     }
 
@@ -202,6 +225,7 @@ public sealed class RoutePathExtractor
             sb.AppendLine($"[{(e.Ok ? "OK" : "FAILED")}] route_id={e.RouteId}");
             sb.AppendLine($"  trade_route_id={e.TradeRouteId}");
             sb.AppendLine($"  route_type={e.RouteType}");
+            sb.AppendLine($"  generation_method={e.GenerationMethod}");
             sb.AppendLine($"  start_settlement={e.StartSettlement}");
             sb.AppendLine($"  end_settlement={e.EndSettlement}");
             sb.AppendLine($"  start_anchor_distance_px={(e.StartAnchorDistancePx.HasValue ? e.StartAnchorDistancePx.Value.ToString("F1") : "n/a")}");
@@ -212,12 +236,64 @@ public sealed class RoutePathExtractor
             sb.AppendLine($"  max_connector_length_px={e.MaxConnectorLengthPx:F1}");
             sb.AppendLine($"  connector_warning={(string.IsNullOrWhiteSpace(e.ConnectorWarning) ? "none" : e.ConnectorWarning)}");
             sb.AppendLine($"  used_settlement_connector={e.UsedSettlementConnector.ToString().ToLowerInvariant()}");
+            sb.AppendLine($"  used_forced_direct_connector={e.UsedForcedDirectConnector.ToString().ToLowerInvariant()}");
+            sb.AppendLine($"  forced_connector_length_px={e.ForcedConnectorLengthPx:F1}");
             sb.AppendLine($"  warnings={(e.Warnings.Count == 0 ? "none" : string.Join(" | ", e.Warnings))}");
             sb.AppendLine($"  failure_reason={(string.IsNullOrWhiteSpace(e.FailureReason) ? "none" : e.FailureReason)}");
             sb.AppendLine();
         }
 
         return sb.ToString();
+    }
+
+    static string DetermineGenerationMethod(PathResult result)
+    {
+        if (result.UsedForcedDirectConnector) return "forced_connector";
+        if (result.UsedSettlementConnector || result.Connectors.Count > 0) return "connector";
+        return "mask";
+    }
+
+    static void WriteDebugImage(string path, int width, int height, IReadOnlyList<GeneratedRoutePath> paths)
+    {
+        using var debug = new Image<Rgba32>(width, height, new Rgba32(0, 0, 0, 0));
+        foreach (var route in paths)
+        {
+            var color = route.GenerationMethod switch
+            {
+                "forced_connector" => new Rgba32(255, 56, 56, 230),
+                "connector" => new Rgba32(255, 178, 48, 210),
+                _ when route.RouteType.Equals("sea", StringComparison.OrdinalIgnoreCase) => new Rgba32(38, 182, 218, 185),
+                _ => new Rgba32(63, 220, 95, 185)
+            };
+
+            DrawPolyline(debug, route.PixelPoints, color, route.GenerationMethod == "forced_connector" ? 3 : 2);
+        }
+
+        debug.SaveAsPng(path);
+    }
+
+    static void DrawPolyline(Image<Rgba32> image, IReadOnlyList<(int X, int Y)> points, Rgba32 color, int radius)
+    {
+        for (var i = 1; i < points.Count; i++)
+        {
+            foreach (var point in RasterLine(points[i - 1], points[i]))
+            {
+                DrawPoint(image, point.X, point.Y, color, radius);
+            }
+        }
+    }
+
+    static void DrawPoint(Image<Rgba32> image, int x, int y, Rgba32 color, int radius)
+    {
+        for (var oy = -radius; oy <= radius; oy++)
+        for (var ox = -radius; ox <= radius; ox++)
+        {
+            if ((ox * ox) + (oy * oy) > radius * radius) continue;
+            var px = x + ox;
+            var py = y + oy;
+            if (px < 0 || py < 0 || px >= image.Width || py >= image.Height) continue;
+            image[px, py] = color;
+        }
     }
 
     static bool[] BuildMask(Image<Rgba32> image, Func<Rgba32, bool> pred)
@@ -414,7 +490,7 @@ public sealed class RoutePathExtractor
         foreach (var p in pathT.Path.Skip(1))
             if (joined[^1] != p) joined.Add(p);
 
-        var outResult = PathResult.Ok(joined);
+        var outResult = PathResult.Ok(joined, [bestPair.Distance], usedSettlementConnector: true);
         outResult.Warnings.Add($"Used bridge fallback, gap={bestPair.Distance:F1}px.");
         return outResult;
     }
@@ -589,6 +665,19 @@ public sealed class RoutePathExtractor
         return Math.Abs((dy * p.X) - (dx * p.Y) + (b.X * a.Y) - (b.Y * a.X)) / Math.Sqrt((dx * dx) + (dy * dy));
     }
 
+    sealed class GeneratedRoutePath
+    {
+        public required string SourceRouteId { get; init; }
+        public required string TradeRouteId { get; init; }
+        public required string RouteType { get; init; }
+        public required string GenerationMethod { get; init; }
+        public required List<string> Warnings { get; init; }
+        public required List<GeneratedRoutePoint> Points { get; init; }
+        public required List<(int X, int Y)> PixelPoints { get; init; }
+        public bool UsedForcedDirectConnector { get; init; }
+    }
+
+    readonly record struct GeneratedRoutePoint(double X, double Y);
     record Node(string NodeId, string Name, bool IsStub);
     record Edge(string RouteId, string FromNode, string ToNode, string RouteType, bool IsStub);
     readonly record struct AnchorSearchResult((int X, int Y) Point, double Distance);
@@ -638,6 +727,9 @@ public sealed class RoutePathExtractor
         public double MaxConnectorLengthPx { get; set; }
         public string? ConnectorWarning { get; set; }
         public bool UsedSettlementConnector { get; set; }
+        public bool UsedForcedDirectConnector { get; set; }
+        public double ForcedConnectorLengthPx { get; set; }
+        public string GenerationMethod { get; set; } = "not_generated";
         public string? FailureReason { get; private set; }
         public bool Ok { get; set; }
         public void Fail(string reason) { FailureReason = reason; Ok = false; }

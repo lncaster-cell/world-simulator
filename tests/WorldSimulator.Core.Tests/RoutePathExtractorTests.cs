@@ -19,6 +19,8 @@ public sealed class RoutePathExtractorTests
             var edgesPath = Path.Combine(dir.FullName, "route_edges.csv");
             var nodesPath = Path.Combine(dir.FullName, "route_nodes.csv");
             var outputPath = Path.Combine(dir.FullName, "route_paths.json");
+            var reportPath = Path.Combine(dir.FullName, "route_paths_report.txt");
+            var debugImagePath = Path.Combine(dir.FullName, "route_paths_debug.png");
 
             using (var image = new Image<Rgba32>(10, 10))
             {
@@ -44,12 +46,22 @@ public sealed class RoutePathExtractorTests
             paths.GetArrayLength().Should().Be(1);
 
             var path = paths[0];
+            path.GetProperty("source_route_id").GetString().Should().Be("R_BRNO_RIVENSTAL");
             path.GetProperty("trade_route_id").GetString().Should().Be("brno_rivenstal_land");
+            path.GetProperty("route_type").GetString().Should().Be("road");
+            path.GetProperty("generation_method").GetString().Should().Be("mask");
+            path.GetProperty("warnings").ValueKind.Should().Be(JsonValueKind.Array);
             var points = path.GetProperty("points").EnumerateArray().ToList();
             points.Count.Should().BeGreaterOrEqualTo(2);
             points.Should().OnlyContain(p =>
                 p.GetProperty("x").GetDouble() >= 0d && p.GetProperty("x").GetDouble() <= 1d &&
                 p.GetProperty("y").GetDouble() >= 0d && p.GetProperty("y").GetDouble() <= 1d);
+
+            File.Exists(reportPath).Should().BeTrue();
+            File.ReadAllText(reportPath).Should().Contain("generation_method=mask");
+            File.ReadAllText(reportPath).Should().Contain("used_forced_direct_connector=false");
+            File.ReadAllText(reportPath).Should().Contain("forced_connector_length_px=0.0");
+            File.Exists(debugImagePath).Should().BeTrue();
 
             var routes = TradeRoutePresets.CreateDefaultRoutes();
             var result = new RoutePathLoader().TryLoadAndApply(outputPath, routes);

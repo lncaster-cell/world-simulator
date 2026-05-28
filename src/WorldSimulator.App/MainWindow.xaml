@@ -42,6 +42,10 @@
                           IsChecked="{Binding IsTradeRoutesOverlayVisible}"
                           Margin="12,0,0,0"
                           VerticalAlignment="Center"/>
+                <CheckBox Content="Debug: реальные пути караванов"
+                          IsChecked="{Binding IsLoadedRoutePathsDebugVisible}"
+                          Margin="12,0,0,0"
+                          VerticalAlignment="Center"/>
                 <ToggleButton Content="Редактор маршрутов" IsChecked="{Binding IsTradeRouteAuthoringModeEnabled}" Width="160"/>
             </StackPanel>
         </Border>
@@ -87,12 +91,6 @@
                            Source="/Assets/Maps/world_map.png"
                            Stretch="Uniform"
                            SizeChanged="MapImage_SizeChanged"/>
-                    <Image Source="/Assets/Maps/world_map_routes.png"
-                           Stretch="Uniform"
-                           IsHitTestVisible="False"
-                           Opacity="0.85"
-                           Visibility="{Binding TradeRoutesOverlayVisibility}"/>
-
                     <Image x:Name="RoutesMapImage"
                            Source="/Assets/Maps/world_map_routes.png"
                            Stretch="Uniform"
@@ -102,6 +100,77 @@
                     <Canvas x:Name="MapOverlay"
                             Background="Transparent"
                             IsHitTestVisible="True">
+
+
+                        <ItemsControl ItemsSource="{Binding DebugLoadedRoutePathVisuals}"
+                                      Visibility="{Binding IsLoadedRoutePathsDebugVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <ItemsControl.ItemsPanel><ItemsPanelTemplate><Canvas/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid>
+                                        <Polyline StrokeLineJoin="Round"
+                                                  StrokeStartLineCap="Round"
+                                                  StrokeEndLineCap="Round"
+                                                  Opacity="0.62"
+                                                  ToolTip="{Binding RouteId}">
+                                            <Polyline.Style>
+                                                <Style TargetType="Polyline">
+                                                    <Setter Property="Stroke" Value="#FFDFB13D"/>
+                                                    <Setter Property="StrokeThickness" Value="2.1"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsSeaRoute}" Value="True">
+                                                            <Setter Property="Stroke" Value="#FF26B6DA"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding IsActive}" Value="True">
+                                                            <Setter Property="Stroke" Value="#FFFF4DF0"/>
+                                                            <Setter Property="StrokeThickness" Value="2.6"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Polyline.Style>
+                                            <Polyline.Points>
+                                                <MultiBinding Converter="{StaticResource TradeRoutePointsToPointCollectionConverter}">
+                                                    <Binding Path="Points"/>
+                                                    <Binding ElementName="MapContainer" Path="ActualWidth"/>
+                                                    <Binding ElementName="MapImage" Path="ActualWidth"/>
+                                                    <Binding ElementName="MapContainer" Path="ActualHeight"/>
+                                                    <Binding ElementName="MapImage" Path="ActualHeight"/>
+                                                </MultiBinding>
+                                            </Polyline.Points>
+                                        </Polyline>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <ItemsControl ItemsSource="{Binding DebugLoadedRoutePathVisuals}"
+                                      IsHitTestVisible="False"
+                                      Visibility="{Binding IsLoadedRoutePathsDebugVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <ItemsControl.ItemsPanel><ItemsPanelTemplate><Canvas/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemContainerStyle>
+                                <Style TargetType="ContentPresenter">
+                                    <Setter Property="Canvas.Left">
+                                        <Setter.Value><MultiBinding Converter="{StaticResource MapMarkerCanvasLeftConverter}"><Binding Path="DebugLabelPoint.X"/><Binding ElementName="MapContainer" Path="ActualWidth"/><Binding ElementName="MapImage" Path="ActualWidth"/></MultiBinding></Setter.Value>
+                                    </Setter>
+                                    <Setter Property="Canvas.Top">
+                                        <Setter.Value><MultiBinding Converter="{StaticResource MapMarkerCanvasTopConverter}"><Binding Path="DebugLabelPoint.Y"/><Binding ElementName="MapContainer" Path="ActualHeight"/><Binding ElementName="MapImage" Path="ActualHeight"/></MultiBinding></Setter.Value>
+                                    </Setter>
+                                </Style>
+                            </ItemsControl.ItemContainerStyle>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="#AA111111"
+                                            CornerRadius="3"
+                                            Padding="3,1"
+                                            Margin="4,-10,0,0">
+                                        <TextBlock Text="{Binding RouteId}"
+                                                   Foreground="White"
+                                                   FontSize="10"/>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
                         <ItemsControl ItemsSource="{Binding TradeRouteVisuals}" Visibility="Collapsed">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
