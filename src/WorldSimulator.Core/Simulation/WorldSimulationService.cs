@@ -65,13 +65,14 @@ public sealed class WorldSimulationService
 
         _stepOrder.ExecuteBeforeCitySteps(world, day);
 
+        var runnableCitySteps = _stepOrder.GetRunnableCitySteps(day);
         foreach (var city in world.Cities)
         {
             var profile = world.FindSettlementEconomyProfile(city.Id);
             if (profile is null) continue;
 
             context.GetOrCreateCityState(city, profile);
-            ExecuteCitySteps(world, city, day, context);
+            ExecuteCitySteps(world, city, context, runnableCitySteps);
         }
 
         context.SetWeeklyTradeFlowResult(_stepOrder.ExecuteAfterCitySteps(world, day));
@@ -98,19 +99,19 @@ public sealed class WorldSimulationService
         _eventState.ReplaceWith(new Dictionary<string, CityEventManager>(StringComparer.Ordinal));
     }
 
-    private void ExecuteCitySteps(SimulationWorld world, City city, int day, WorldSimulationContext context)
+    private static void ExecuteCitySteps(SimulationWorld world, City city, WorldSimulationContext context, IReadOnlyList<IWorldSimulationStep> citySteps)
     {
         var stepIndex = 0;
 
         void Next()
         {
-            if (stepIndex >= _stepOrder.CitySteps.Count)
+            if (stepIndex >= citySteps.Count)
             {
                 return;
             }
 
-            var step = _stepOrder.CitySteps[stepIndex++];
-            step.Execute(world, city, day, context, Next);
+            var step = citySteps[stepIndex++];
+            step.Execute(world, city, context.CurrentDay, context, Next);
         }
 
         Next();
