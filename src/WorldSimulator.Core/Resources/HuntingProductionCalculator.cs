@@ -12,6 +12,13 @@ public sealed class HuntingProductionCalculator
     {
         ArgumentNullException.ThrowIfNull(city);
 
+        return Calculate(city, Math.Max(0, city.Population / 20));
+    }
+
+    public HuntingProductionResult Calculate(City city, int assignedWorkers)
+    {
+        ArgumentNullException.ThrowIfNull(city);
+
         var securityModifier = GetSecurityModifier(city.Security);
         var stateModifier = GetStateModifier(city.CityState);
 
@@ -31,7 +38,7 @@ public sealed class HuntingProductionCalculator
             };
         }
 
-        var assignedWorkers = Math.Max(0, city.Population / 20);
+        assignedWorkers = Math.Max(0, assignedWorkers);
         var workerCoverage = RequiredWorkers > 0
             ? Math.Min((decimal)assignedWorkers / RequiredWorkers, 1m)
             : 0m;

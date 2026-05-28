@@ -8,11 +8,18 @@ public sealed class AgricultureProductionCalculator
     public AgricultureProductionResult Calculate(City city, SettlementEconomyProfile profile)
     {
         ArgumentNullException.ThrowIfNull(city);
+
+        return Calculate(city, profile, Math.Max(0, city.Population / 12));
+    }
+
+    public AgricultureProductionResult Calculate(City city, SettlementEconomyProfile profile, int assignedWorkers)
+    {
+        ArgumentNullException.ThrowIfNull(city);
         ArgumentNullException.ThrowIfNull(profile);
 
         var naturalPotential = profile.AgriculturePotential;
         var requiredWorkers = Math.Max(5, (int)Math.Ceiling(naturalPotential * 1.5m));
-        var assignedWorkers = Math.Max(0, city.Population / 12);
+        assignedWorkers = Math.Max(0, assignedWorkers);
         var workerCoverage = requiredWorkers <= 0
             ? 0m
             : Math.Min((decimal)assignedWorkers / requiredWorkers, 1m);

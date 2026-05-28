@@ -101,6 +101,60 @@ public sealed class WorldSimulationServiceTests
         result.SelectedCityResult.Should().NotBeNull();
         result.SelectedCityResult!.WorkforceAllocation.Should().NotBeNull();
         result.SelectedCityResult.WorkforceAllocation!.Workforce.TotalWorkers.Should().BeGreaterThan(0);
+        result.SelectedCityResult.Agriculture.AssignedWorkers.Should().Be(result.SelectedCityResult.WorkforceAllocation.AgricultureWorkers);
+    }
+
+    [Fact]
+    public void AdvanceDay_UsesWorkforceAllocationForResourceAndGoodsProduction()
+    {
+        var world = WorldPresets.CreateDefaultWorld();
+        var selected = world.Cities[0];
+
+        var result = CreateService().AdvanceDay(world, selected.Id, day: 1, randomEventsEnabled: false);
+
+        result.SelectedCityResult.Should().NotBeNull();
+        var cityResult = result.SelectedCityResult!;
+        cityResult.WorkforceAllocation.Should().NotBeNull();
+        cityResult.ResourceGathering.AssignedWorkers.Should().Be(cityResult.WorkforceAllocation!.ResourceGatheringWorkers);
+        cityResult.GoodsCrafting.AssignedWorkers.Should().Be(cityResult.WorkforceAllocation.CraftingWorkers);
+    }
+
+    [Fact]
+    public void AdvanceDay_AgriculturalSettlementsOutproduceFortressAndPortAgriculture()
+    {
+        var outputsByCityId = new[]
+        {
+            RiviaSettlementPresets.MlynekId,
+            RiviaSettlementPresets.BrnoId,
+            RiviaSettlementPresets.WodenzId,
+            RiviaSettlementPresets.GothaId,
+            RiviaSettlementPresets.HighrockId
+        }.ToDictionary(
+            cityId => cityId,
+            cityId =>
+            {
+                var world = WorldPresets.CreateDefaultWorld();
+                var result = CreateService().AdvanceDay(world, cityId, day: 1, randomEventsEnabled: false);
+                return result.SelectedCityResult!.Agriculture.FinalOutput;
+            });
+
+        outputsByCityId[RiviaSettlementPresets.MlynekId].Should().BeGreaterThan(0m);
+        outputsByCityId[RiviaSettlementPresets.BrnoId].Should().BeGreaterThan(0m);
+        outputsByCityId[RiviaSettlementPresets.WodenzId].Should().BeGreaterThan(0m);
+
+        var agriculturalMinimum = new[]
+        {
+            outputsByCityId[RiviaSettlementPresets.MlynekId],
+            outputsByCityId[RiviaSettlementPresets.BrnoId],
+            outputsByCityId[RiviaSettlementPresets.WodenzId]
+        }.Min();
+        var nonAgriculturalMaximum = new[]
+        {
+            outputsByCityId[RiviaSettlementPresets.GothaId],
+            outputsByCityId[RiviaSettlementPresets.HighrockId]
+        }.Max();
+
+        agriculturalMinimum.Should().BeGreaterThan(nonAgriculturalMaximum);
     }
 
     [Fact]

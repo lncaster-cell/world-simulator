@@ -29,8 +29,10 @@ public sealed class WealthSimulationStep : IWorldSimulationStep
         var profile = state.Profile;
         var foodFlow = state.FoodFlow ?? throw new InvalidOperationException("Food simulation must run before wealth simulation.");
         var agriculture = state.Agriculture ?? throw new InvalidOperationException("Food simulation must capture agriculture before wealth simulation.");
+        var allocation = state.WorkforceAllocation
+            ?? throw new InvalidOperationException("Workforce simulation must run before wealth simulation.");
 
-        var resourceGathering = _resourceGatheringProductionCalculator.Calculate(city);
+        var resourceGathering = _resourceGatheringProductionCalculator.Calculate(city, allocation.ResourceGatheringWorkers);
         var gatheredResources = decimal.Round(resourceGathering.FinalOutput * profile.ResourceGatheringMultiplier, 2, MidpointRounding.AwayFromZero);
         city.Resources += gatheredResources;
 
@@ -40,7 +42,7 @@ public sealed class WealthSimulationStep : IWorldSimulationStep
         city.Wealth += state.EventEffects.WealthDelta;
         city.Resources += state.EventEffects.ResourcesDelta;
 
-        var goodsCrafting = _goodsCraftingProductionCalculator.Calculate(city);
+        var goodsCrafting = _goodsCraftingProductionCalculator.Calculate(city, allocation.CraftingWorkers);
         var goodsProduced = decimal.Round(goodsCrafting.GoodsProduced * profile.GoodsCraftingMultiplier, 2, MidpointRounding.AwayFromZero);
         var resourcesConsumed = decimal.Round(goodsCrafting.ResourcesConsumed * profile.GoodsCraftingMultiplier, 2, MidpointRounding.AwayFromZero);
         resourcesConsumed = Math.Min(resourcesConsumed, city.Resources);

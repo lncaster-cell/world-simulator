@@ -13,6 +13,13 @@ public sealed class GoodsCraftingProductionCalculator
     {
         ArgumentNullException.ThrowIfNull(city);
 
+        return Calculate(city, Math.Max(0, city.Population / 18));
+    }
+
+    public GoodsCraftingProductionResult Calculate(City city, int assignedWorkers)
+    {
+        ArgumentNullException.ThrowIfNull(city);
+
         var moodModifier = ProductionBalancePolicy.GetMoodModifier(city.Mood, ProductionDomain.Goods);
         var securityModifier = ProductionBalancePolicy.GetSecurityModifier(city.Security, ProductionDomain.Goods);
         var stateModifier = ProductionBalancePolicy.GetStateModifier(city.CityState, ProductionDomain.Goods);
@@ -40,7 +47,7 @@ public sealed class GoodsCraftingProductionCalculator
             };
         }
 
-        var assignedWorkers = Math.Max(0, city.Population / 18);
+        assignedWorkers = Math.Max(0, assignedWorkers);
         var workerCoverage = RequiredWorkers > 0
             ? Math.Min((decimal)assignedWorkers / RequiredWorkers, 1m)
             : 0m;

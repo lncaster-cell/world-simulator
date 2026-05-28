@@ -11,6 +11,13 @@ public sealed class ResourceGatheringProductionCalculator
     public ResourceGatheringProductionResult Calculate(City city)
     {
         ArgumentNullException.ThrowIfNull(city);
+
+        return Calculate(city, Math.Max(0, city.Population / 15));
+    }
+
+    public ResourceGatheringProductionResult Calculate(City city, int assignedWorkers)
+    {
+        ArgumentNullException.ThrowIfNull(city);
         var securityModifier = ProductionBalancePolicy.GetSecurityModifier(city.Security, ProductionDomain.Resource);
         var stateModifier = ProductionBalancePolicy.GetStateModifier(city.CityState, ProductionDomain.Resource);
 
@@ -19,7 +26,7 @@ public sealed class ResourceGatheringProductionCalculator
             return new ResourceGatheringProductionResult { NaturalPotential = NaturalPotential, RequiredWorkers = RequiredWorkers, AssignedWorkers = 0, WorkerCoverage = 0m, ExtraWorkers = 0, OverstaffBonus = 0m, SecurityModifier = securityModifier, StateModifier = stateModifier, FinalOutput = 0m };
         }
 
-        var assignedWorkers = Math.Max(0, city.Population / 15);
+        assignedWorkers = Math.Max(0, assignedWorkers);
         var workerCoverage = RequiredWorkers > 0 ? Math.Min((decimal)assignedWorkers / RequiredWorkers, 1m) : 0m;
         var extraWorkers = Math.Max(assignedWorkers - RequiredWorkers, 0);
         var overstaffBonus = WorkforceBonusCalculator.CalculateOverstaffBonus(
