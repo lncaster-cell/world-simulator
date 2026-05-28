@@ -1,4 +1,5 @@
 using WorldSimulator.Core.Cities;
+using WorldSimulator.Core.Workforce;
 
 namespace WorldSimulator.Core.World;
 
@@ -24,6 +25,7 @@ public static class RiviaSettlementPresets
             Y: 0.2322m,
             CityStart: new CityStartPreset(420, 1000m, 320m, 55, 60, 30, 260m, 140m, CityState.Stagnation),
             Economy: new SettlementEconomyPreset(8m, 1.00m, 0.50m, 1.00m, 0.60m, 1.00m),
+            SectorCapacity: new SettlementSectorCapacityPreset(18, 90, 24, 45, 130, 160, 80, 55),
             IsPort: true,
             IsFortress: false,
             IsCapital: false),
@@ -35,6 +37,7 @@ public static class RiviaSettlementPresets
             Y: 0.2179m,
             CityStart: new CityStartPreset(650, 900m, 380m, 55, 75, 8, 750m, 180m, CityState.Stable),
             Economy: new SettlementEconomyPreset(6m, 0m, 0.40m, 0m, 0.90m, 0.80m),
+            SectorCapacity: new SettlementSectorCapacityPreset(12, 0, 18, 120, 80, 70, 220, 110),
             IsPort: false,
             IsFortress: true,
             IsCapital: true),
@@ -46,6 +49,7 @@ public static class RiviaSettlementPresets
             Y: 0.2487m,
             CityStart: new CityStartPreset(320, 900m, 180m, 58, 55, 10, 420m, 100m, CityState.Stable),
             Economy: new SettlementEconomyPreset(48m, 0m, 1.10m, 0m, 0.90m, 0.35m),
+            SectorCapacity: new SettlementSectorCapacityPreset(150, 0, 45, 60, 35, 30, 35, 45),
             IsPort: false,
             IsFortress: false,
             IsCapital: false),
@@ -57,6 +61,7 @@ public static class RiviaSettlementPresets
             Y: 0.4027m,
             CityStart: new CityStartPreset(280, 650m, 170m, 50, 80, 7, 500m, 90m, CityState.Stable),
             Economy: new SettlementEconomyPreset(10m, 0m, 0.70m, 0m, 0.85m, 0.30m),
+            SectorCapacity: new SettlementSectorCapacityPreset(30, 0, 35, 80, 35, 30, 120, 55),
             IsPort: false,
             IsFortress: true,
             IsCapital: false),
@@ -68,6 +73,7 @@ public static class RiviaSettlementPresets
             Y: 0.4500m,
             CityStart: new CityStartPreset(360, 1100m, 210m, 60, 58, 9, 300m, 110m, CityState.Stable),
             Economy: new SettlementEconomyPreset(34m, 0m, 0.50m, 0m, 0.45m, 0.45m),
+            SectorCapacity: new SettlementSectorCapacityPreset(95, 0, 25, 40, 45, 45, 45, 55),
             IsPort: false,
             IsFortress: false,
             IsCapital: false),
@@ -79,6 +85,7 @@ public static class RiviaSettlementPresets
             Y: 0.5963m,
             CityStart: new CityStartPreset(520, 850m, 260m, 52, 52, 16, 800m, 180m, CityState.Stagnation),
             Economy: new SettlementEconomyPreset(12m, 0m, 0.50m, 0m, 1.15m, 0.80m),
+            SectorCapacity: new SettlementSectorCapacityPreset(28, 0, 28, 170, 95, 70, 65, 70),
             IsPort: false,
             IsFortress: false,
             IsCapital: false),
@@ -90,6 +97,7 @@ public static class RiviaSettlementPresets
             Y: 0.7448m,
             CityStart: new CityStartPreset(180, 700m, 120m, 62, 50, 8, 180m, 55m, CityState.Stable),
             Economy: new SettlementEconomyPreset(42m, 0m, 0.85m, 0m, 0.35m, 0.20m),
+            SectorCapacity: new SettlementSectorCapacityPreset(110, 0, 30, 25, 20, 25, 25, 30),
             IsPort: false,
             IsFortress: false,
             IsCapital: false),
@@ -101,6 +109,7 @@ public static class RiviaSettlementPresets
             Y: 0.9604m,
             CityStart: new CityStartPreset(340, 1150m, 160m, 57, 48, 12, 260m, 90m, CityState.Stable),
             Economy: new SettlementEconomyPreset(60m, 0m, 0.90m, 0m, 0.40m, 0.35m),
+            SectorCapacity: new SettlementSectorCapacityPreset(180, 0, 40, 45, 45, 40, 40, 50),
             IsPort: false,
             IsFortress: false,
             IsCapital: false),
@@ -112,6 +121,7 @@ public static class RiviaSettlementPresets
             Y: 0.4753m,
             CityStart: new CityStartPreset(80, 280m, 70m, 50, 35, 18, 90m, 25m, CityState.Stagnation),
             Economy: new SettlementEconomyPreset(2m, 0.70m, 0.10m, 0.20m, 0.15m, 0.10m),
+            SectorCapacity: new SettlementSectorCapacityPreset(6, 55, 8, 10, 10, 35, 12, 15),
             IsPort: true,
             IsFortress: false,
             IsCapital: false)
@@ -162,6 +172,9 @@ public static class RiviaSettlementPresets
     public static List<SettlementEconomyProfile> CreateEconomyProfiles()
         => Presets.Select(x => x.CreateEconomyProfile()).ToList();
 
+    public static List<SettlementSectorCapacityProfile> CreateSectorCapacityProfiles()
+        => Presets.Select(x => x.CreateSectorCapacityProfile()).ToList();
+
     private static City CreateCity(RiviaSettlementPreset preset) => new(
         id: preset.Id,
         name: preset.DisplayName,
@@ -184,6 +197,7 @@ public sealed record RiviaSettlementPreset(
     decimal Y,
     CityStartPreset CityStart,
     SettlementEconomyPreset Economy,
+    SettlementSectorCapacityPreset SectorCapacity,
     bool IsPort,
     bool IsFortress,
     bool IsCapital)
@@ -209,6 +223,19 @@ public sealed record RiviaSettlementPreset(
         IsFortress = IsFortress,
         IsCapital = IsCapital
     };
+
+    public SettlementSectorCapacityProfile CreateSectorCapacityProfile() => new()
+    {
+        SettlementId = Id,
+        AgricultureCapacity = SectorCapacity.AgricultureCapacity,
+        FishingCapacity = SectorCapacity.FishingCapacity,
+        HuntingCapacity = SectorCapacity.HuntingCapacity,
+        ResourceGatheringCapacity = SectorCapacity.ResourceGatheringCapacity,
+        CraftingCapacity = SectorCapacity.CraftingCapacity,
+        TradeCapacity = SectorCapacity.TradeCapacity,
+        GuardCapacity = SectorCapacity.GuardCapacity,
+        MaintenanceCapacity = SectorCapacity.MaintenanceCapacity
+    };
 }
 
 public sealed record CityStartPreset(
@@ -229,3 +256,13 @@ public sealed record SettlementEconomyPreset(
     decimal MainlandSupplyMultiplier,
     decimal ResourceGatheringMultiplier,
     decimal GoodsCraftingMultiplier);
+
+public sealed record SettlementSectorCapacityPreset(
+    int AgricultureCapacity,
+    int FishingCapacity,
+    int HuntingCapacity,
+    int ResourceGatheringCapacity,
+    int CraftingCapacity,
+    int TradeCapacity,
+    int GuardCapacity,
+    int MaintenanceCapacity);
