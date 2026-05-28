@@ -6,23 +6,40 @@ namespace WorldSimulator.Core.Simulation;
 public sealed class WorldSimulationStepOrder
 {
     // The tick order is intentionally centralized here: daily shipments are
-    // resolved before per-city simulation, city systems run as an ordered chain,
-    // and longer cadence world steps run only when the cadence resolver allows it.
+    // resolved before per-city simulation, city systems run in cadence-specific
+    // chains, and longer cadence world steps run only when the cadence resolver
+    // allows it.
     private readonly TradeSimulationStep _tradeSimulationStep;
-    private readonly IReadOnlyList<IWorldSimulationStep> _citySteps;
+    private readonly IReadOnlyList<IWorldSimulationStep> _dailyCitySteps;
+    private readonly IReadOnlyList<IWorldSimulationStep> _weeklyCitySteps;
+    private readonly IReadOnlyList<IWorldSimulationStep> _monthlyCitySteps;
+    private readonly IReadOnlyList<IWorldSimulationStep> _halfYearlyCitySteps;
+    private readonly IReadOnlyList<IWorldSimulationStep> _yearlyCitySteps;
     private readonly SimulationCadenceResolver _cadenceResolver;
 
     public WorldSimulationStepOrder(
         TradeSimulationStep tradeSimulationStep,
-        IReadOnlyList<IWorldSimulationStep> citySteps,
+        IReadOnlyList<IWorldSimulationStep> dailyCitySteps,
+        IReadOnlyList<IWorldSimulationStep> weeklyCitySteps,
+        IReadOnlyList<IWorldSimulationStep> monthlyCitySteps,
+        IReadOnlyList<IWorldSimulationStep> halfYearlyCitySteps,
+        IReadOnlyList<IWorldSimulationStep> yearlyCitySteps,
         SimulationCadenceResolver cadenceResolver)
     {
         _tradeSimulationStep = tradeSimulationStep;
-        _citySteps = citySteps;
+        _dailyCitySteps = dailyCitySteps;
+        _weeklyCitySteps = weeklyCitySteps;
+        _monthlyCitySteps = monthlyCitySteps;
+        _halfYearlyCitySteps = halfYearlyCitySteps;
+        _yearlyCitySteps = yearlyCitySteps;
         _cadenceResolver = cadenceResolver;
     }
 
-    public IReadOnlyList<IWorldSimulationStep> CitySteps => _citySteps;
+    public IReadOnlyList<IWorldSimulationStep> DailyCitySteps => _dailyCitySteps;
+    public IReadOnlyList<IWorldSimulationStep> WeeklyCitySteps => _weeklyCitySteps;
+    public IReadOnlyList<IWorldSimulationStep> MonthlyCitySteps => _monthlyCitySteps;
+    public IReadOnlyList<IWorldSimulationStep> HalfYearlyCitySteps => _halfYearlyCitySteps;
+    public IReadOnlyList<IWorldSimulationStep> YearlyCitySteps => _yearlyCitySteps;
 
     public SimulationCadenceResolver CadenceResolver => _cadenceResolver;
 
@@ -46,9 +63,15 @@ public sealed class WorldSimulationStepOrder
                 foodSimulationStep,
                 wealthSimulationStep,
                 cityStateSimulationStep,
-                crimeSimulationStep,
                 populationSimulationStep
             },
+            new IWorldSimulationStep[]
+            {
+                crimeSimulationStep
+            },
+            Array.Empty<IWorldSimulationStep>(),
+            Array.Empty<IWorldSimulationStep>(),
+            Array.Empty<IWorldSimulationStep>(),
             cadenceResolver);
     }
 
@@ -63,4 +86,35 @@ public sealed class WorldSimulationStepOrder
     }
 
     public bool ShouldRun(int day, SimulationCadence cadence) => _cadenceResolver.ShouldRun(day, cadence);
+
+    public IReadOnlyList<IWorldSimulationStep> GetCityStepsForCadence(SimulationCadence cadence) => cadence switch
+    {
+        SimulationCadence.Daily => _dailyCitySteps,
+        SimulationCadence.Weekly => _weeklyCitySteps,
+        SimulationCadence.Monthly => _monthlyCitySteps,
+        SimulationCadence.HalfYearly => _halfYearlyCitySteps,
+        SimulationCadence.Yearly => _yearlyCitySteps,
+        _ => throw new ArgumentOutOfRangeException(nameof(cadence), cadence, "Unsupported simulation cadence.")
+    };
+
+    public IReadOnlyList<IWorldSimulationStep> GetRunnableCitySteps(int day)
+    {
+        var steps = new List<IWorldSimulationStep>();
+        AddIfRunnable(steps, day, SimulationCadence.Daily);
+        AddIfRunnable(steps, day, SimulationCadence.Weekly);
+        AddIfRunnable(steps, day, SimulationCadence.Monthly);
+        AddIfRunnable(steps, day, SimulationCadence.HalfYearly);
+        AddIfRunnable(steps, day, SimulationCadence.Yearly);
+        return steps;
+    }
+
+    private void AddIfRunnable(List<IWorldSimulationStep> steps, int day, SimulationCadence cadence)
+    {
+        if (!_cadenceResolver.ShouldRun(day, cadence))
+        {
+            return;
+        }
+
+        steps.AddRange(GetCityStepsForCadence(cadence));
+    }
 }
