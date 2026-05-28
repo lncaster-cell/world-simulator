@@ -15,11 +15,12 @@ public sealed class WorldSimulationStepOrderTests
     {
         var order = CreateOrder();
 
-        Assert.Equal(6, order.DailyCitySteps.Count);
+        Assert.Equal(5, order.DailyPreCadenceCitySteps.Count);
         Assert.Single(order.WeeklyCitySteps);
         Assert.Empty(order.MonthlyCitySteps);
         Assert.Empty(order.HalfYearlyCitySteps);
         Assert.Empty(order.YearlyCitySteps);
+        Assert.Single(order.DailyPostCadenceCitySteps);
     }
 
     [Fact]
@@ -29,19 +30,21 @@ public sealed class WorldSimulationStepOrderTests
 
         var steps = order.GetRunnableCitySteps(1);
 
-        Assert.Equal(order.DailyCitySteps.Count, steps.Count);
+        Assert.Equal(order.DailyPreCadenceCitySteps.Count + order.DailyPostCadenceCitySteps.Count, steps.Count);
         Assert.DoesNotContain(steps, step => step is CrimeSimulationStep);
+        Assert.IsType<PopulationSimulationStep>(steps[^1]);
     }
 
     [Fact]
-    public void GetRunnableCitySteps_OnWeeklyDay_IncludesWeeklyStepsAfterDailySteps()
+    public void GetRunnableCitySteps_OnWeeklyDay_IncludesWeeklyStepsBeforePostDailySteps()
     {
         var order = CreateOrder();
 
         var steps = order.GetRunnableCitySteps(7);
 
-        Assert.Equal(order.DailyCitySteps.Count + order.WeeklyCitySteps.Count, steps.Count);
-        Assert.IsType<CrimeSimulationStep>(steps[^1]);
+        Assert.Equal(order.DailyPreCadenceCitySteps.Count + order.WeeklyCitySteps.Count + order.DailyPostCadenceCitySteps.Count, steps.Count);
+        Assert.IsType<CrimeSimulationStep>(steps[^2]);
+        Assert.IsType<PopulationSimulationStep>(steps[^1]);
     }
 
     [Fact]
@@ -49,7 +52,9 @@ public sealed class WorldSimulationStepOrderTests
     {
         var order = CreateOrder();
 
-        Assert.Same(order.DailyCitySteps, order.GetCityStepsForCadence(SimulationCadence.Daily));
+        Assert.Equal(
+            order.DailyPreCadenceCitySteps.Concat(order.DailyPostCadenceCitySteps),
+            order.GetCityStepsForCadence(SimulationCadence.Daily));
         Assert.Same(order.WeeklyCitySteps, order.GetCityStepsForCadence(SimulationCadence.Weekly));
         Assert.Same(order.MonthlyCitySteps, order.GetCityStepsForCadence(SimulationCadence.Monthly));
         Assert.Same(order.HalfYearlyCitySteps, order.GetCityStepsForCadence(SimulationCadence.HalfYearly));
