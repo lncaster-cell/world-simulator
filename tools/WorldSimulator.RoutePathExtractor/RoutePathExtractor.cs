@@ -16,9 +16,16 @@ public sealed class RoutePathExtractor
     private const int ConnectorMaxDistancePx = 120;
     private const int ConnectorSoftWarningPx = 40;
     private const int DirectGavernConnectorMaxPx = 320;
+    private const int ForcedDirectGavernConnectorMaxPx = 800;
     private const int MaxExpandedNodesPerRoute = 200_000;
     private const int MaxRoutePathfindingSeconds = 15;
     private static readonly HashSet<string> DirectConnectorSettlementOverrides = new(StringComparer.OrdinalIgnoreCase) { "gavern" };
+    private static readonly HashSet<string> ForcedDirectGavernRouteIds = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "R_WARDMARK_GAVERN",
+        "R_RIVENSTAL_GAVERN",
+        "R_BRNO_GAVERN"
+    };
 
     public void Generate(string maskPath, string edgesPath, string nodesPath, string outputPath)
     {
@@ -88,10 +95,18 @@ public sealed class RoutePathExtractor
             var pathResult = FindPathWithFallback(originalMask, inflatedMask, image.Width, image.Height, start.Value.Point, end.Value.Point, isSea);
             if (!pathResult.Success)
             {
-                if (TryDirectSettlementConnectorOverride(edge.RouteId, fromNode.Name, toNode.Name, from, to, originalMask, inflatedMask, image.Width, image.Height, start.Value.Point, end.Value.Point, isSea, out var directConnectorResult))
+                if (TryDirectSettlementConnectorOverride(edge.RouteId, fromNode.Name, toNode.Name, from, to, image.Width, image.Height, start.Value.Point, end.Value.Point, out var directConnectorResult))
                 {
                     pathResult = directConnectorResult;
-                    Console.WriteLine($"{logPrefix} OK with direct Gavern connector length={pathResult.DirectConnectorLengthPx:F1}px");
+                    if (pathResult.UsedForcedDirectConnector)
+                    {
+                        Console.WriteLine($"{logPrefix} primary path failed, using FORCED direct Gavern connector length={pathResult.DirectConnectorLengthPx:F1}px");
+                        Console.WriteLine($"{logPrefix} OK with forced direct Gavern connector");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"{logPrefix} OK with direct Gavern connector length={pathResult.DirectConnectorLengthPx:F1}px");
+                    }
                 }
                 else
                 {
@@ -282,37 +297,34 @@ public sealed class RoutePathExtractor
         return pathResult;
     }
 
-    static bool TryDirectSettlementConnectorOverride(string routeId, string fromSettlementName, string toSettlementName, (double X, double Y) from, (double X, double Y) to, bool[] originalMask, bool[] inflatedMask, int w, int h, (int X, int Y) startAnchor, (int X, int Y) endAnchor, bool isSea, out PathResult result)
+    static bool TryDirectSettlementConnectorOverride(string routeId, string fromSettlementName, string toSettlementName, (double X, double Y) from, (double X, double Y) to, int w, int h, (int X, int Y) startAnchor, (int X, int Y) endAnchor, out PathResult result)
     {
         result = PathResult.Failed("Direct settlement connector override not applicable.");
+        var isForcedRoute = ForcedDirectGavernRouteIds.Contains(routeId);
         var fromNormalized = NormalizeName(fromSettlementName);
         var toNormalized = NormalizeName(toSettlementName);
         var gavernIsEnd = DirectConnectorSettlementOverrides.Contains(toNormalized);
         var gavernIsStart = DirectConnectorSettlementOverrides.Contains(fromNormalized);
         if (!gavernIsEnd && !gavernIsStart) return false;
-
-        Console.WriteLine($"{routeId}: primary path failed, trying direct Gavern connector...");
-
-        if (gavernIsEnd)
-        {
-            var towardGavern = TryPathTowardTargetWithDirectConnector(originalMask, inflatedMask, w, h, startAnchor, endAnchor, isSea);
-            if (!towardGavern.Success) { result = towardGavern; return false; }
-            result = towardGavern;
-            return true;
-        }
+        if (!isForcedRoute) return false;
 
         var fromPixel = ToPixel(from, w, h);
         var toPixel = ToPixel(to, w, h);
-        var reverseTowardEnd = TryPathTowardTargetWithDirectConnector(originalMask, inflatedMask, w, h, endAnchor, startAnchor, isSea);
-        if (!reverseTowardEnd.Success) { result = reverseTowardEnd; return false; }
+        var connectorLength = Distance(startAnchor, endAnchor);
+        if (connectorLength > ForcedDirectGavernConnectorMaxPx)
+        {
+            result = PathResult.Failed($"Forced direct Gavern connector too long: {connectorLength:F1}px > {ForcedDirectGavernConnectorMaxPx}px.");
+            return true;
+        }
 
-        var reversedPath = new List<(int X, int Y)>();
-        reversedPath.Add(fromPixel);
-        foreach (var p in reverseTowardEnd.Path.AsEnumerable().Reverse().Skip(1))
-            if (reversedPath[^1] != p) reversedPath.Add(p);
-        if (reversedPath[^1] != toPixel) reversedPath.Add(toPixel);
-        result = PathResult.Ok(reversedPath, reverseTowardEnd.Connectors, true, reverseTowardEnd.DirectConnectorLengthPx);
-        result.Warnings.AddRange(reverseTowardEnd.Warnings);
+        var full = new List<(int X, int Y)> { fromPixel };
+        AppendConnector(full, startAnchor, []);
+        foreach (var p in RasterLine(startAnchor, endAnchor).Skip(1))
+            if (full[^1] != p) full.Add(p);
+        if (full[^1] != toPixel) full.Add(toPixel);
+
+        result = PathResult.Ok(full, [connectorLength], true, connectorLength, true);
+        result.Warnings.Add($"Used FORCED direct Gavern connector override, length {connectorLength:F1}px.");
         return true;
     }
 
@@ -592,7 +604,8 @@ public sealed class RoutePathExtractor
         public bool UsedSettlementConnector { get; }
         public double DirectConnectorLengthPx { get; }
         public List<string> Warnings { get; } = [];
-        PathResult(bool success, List<(int X, int Y)> path, string? failureReason, List<double>? connectors = null, bool usedSettlementConnector = false, double directConnectorLengthPx = 0)
+        public bool UsedForcedDirectConnector { get; }
+        PathResult(bool success, List<(int X, int Y)> path, string? failureReason, List<double>? connectors = null, bool usedSettlementConnector = false, double directConnectorLengthPx = 0, bool usedForcedDirectConnector = false)
         {
             Success = success;
             Path = path;
@@ -601,8 +614,9 @@ public sealed class RoutePathExtractor
             MaxConnectorLengthPx = Connectors.Count == 0 ? 0.0 : Connectors.Max();
             UsedSettlementConnector = usedSettlementConnector;
             DirectConnectorLengthPx = directConnectorLengthPx;
+            UsedForcedDirectConnector = usedForcedDirectConnector;
         }
-        public static PathResult Ok(List<(int X, int Y)> path, List<double>? connectors = null, bool usedSettlementConnector = false, double directConnectorLengthPx = 0) => new(true, path, null, connectors, usedSettlementConnector, directConnectorLengthPx);
+        public static PathResult Ok(List<(int X, int Y)> path, List<double>? connectors = null, bool usedSettlementConnector = false, double directConnectorLengthPx = 0, bool usedForcedDirectConnector = false) => new(true, path, null, connectors, usedSettlementConnector, directConnectorLengthPx, usedForcedDirectConnector);
         public static PathResult Failed(string reason) => new(false, [], reason);
     }
 
