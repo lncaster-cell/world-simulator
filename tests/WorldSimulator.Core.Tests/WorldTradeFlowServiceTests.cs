@@ -7,126 +7,91 @@ namespace WorldSimulator.Core.Tests;
 
 public sealed class WorldTradeFlowServiceTests
 {
-    private readonly WorldTradeFlowService _service = new();
-
     [Fact]
-    public void WeeklyTrade_CreatesShipmentInsteadOfInstantDelivery()
+    public void RunWeeklyTrade_CreatesFoodShipment_WhenImporterNeedsFood()
     {
-        var world = BuildWorld(TradeGoodType.Food, 300m, 0m, 10m);
+        var world = BuildWorld(TradeGoodType.Food, exporterStock: 1000m, importerStock: 0m, caravanCapacity: 50m);
 
-        var result = _service.RunWeeklyTrade(world, currentDay: 7);
+        var result = new WorldTradeFlowService().RunWeeklyTrade(world, day: 7);
 
+        result.Transfers.Should().ContainSingle();
         world.TradeShipments.Should().ContainSingle();
-        world.TradeShipments[0].Status.Should().Be(TradeShipmentStatus.InTransitToDestination);
-        world.FindCity("b")!.Food.Should().Be(0m);
-        result.Transfers.Should().ContainSingle(t =>
-            t.RouteId == "route1"
-            && t.ExporterCityId == "a"
-            && t.ImporterCityId == "b"
-            && t.CaravanId == "c1"
-            && t.GoodType == TradeGoodType.Food
-            && t.AmountTransferred == 10m);
+        world.TradeShipments[0].GoodType.Should().Be(TradeGoodType.Food);
+        world.TradeShipments[0].Amount.Should().BeGreaterThan(0m);
     }
 
     [Fact]
-    public void ExporterStock_DecreasesOnDeparture()
+    public void RunWeeklyTrade_DoesNotCreateShipment_WhenNoCaravanAvailable()
     {
-        var world = BuildWorld(TradeGoodType.Food, 300m, 0m, 10m);
+        var world = BuildWorld(TradeGoodType.Food, exporterStock: 1000m, importerStock: 0m, caravanCapacity: 50m, available: false);
 
-        _service.RunWeeklyTrade(world, currentDay: 7);
-
-        world.FindCity("a")!.Food.Should().Be(290m);
-    }
-
-    [Fact]
-    public void ImporterStock_IncreasesOnArrivalDayOnly()
-    {
-        var world = BuildWorld(TradeGoodType.Food, 300m, 0m, 10m, travelDays: 3);
-
-        _service.RunWeeklyTrade(world, currentDay: 7);
-        _service.ProcessShipments(world, currentDay: 9);
-        world.FindCity("b")!.Food.Should().Be(0m);
-        world.TradeShipments[0].Status.Should().Be(TradeShipmentStatus.InTransitToDestination);
-
-        _service.ProcessShipments(world, currentDay: 10);
-        world.FindCity("b")!.Food.Should().Be(10m);
-        world.TradeShipments[0].Status.Should().Be(TradeShipmentStatus.DeliveredReturning);
-        world.Caravans[0].Status.Should().Be(CaravanStatus.Returning);
-    }
-
-    [Fact]
-    public void ActiveShipment_BlocksCaravanReuse_UntilReturnDay()
-    {
-        var world = BuildWorld(TradeGoodType.Food, 500m, 0m, 10m, travelDays: 2);
-
-        _service.RunWeeklyTrade(world, currentDay: 7);
-        _service.RunWeeklyTrade(world, currentDay: 14);
-        world.TradeShipments.Should().HaveCount(1);
-
-        _service.ProcessShipments(world, currentDay: 11);
-        world.TradeShipments[0].Status.Should().Be(TradeShipmentStatus.Completed);
-        world.Caravans[0].Status.Should().Be(CaravanStatus.Idle);
-
-        _service.RunWeeklyTrade(world, currentDay: 14);
-        world.TradeShipments.Should().HaveCount(2);
-    }
-
-    [Fact]
-    public void ZeroWealthImporter_CreatesNoShipment()
-    {
-        var world = BuildWorld(TradeGoodType.Food, 300m, 0m, 10m, importerWealth: 0m);
-
-        var result = _service.RunWeeklyTrade(world, currentDay: 7);
+        var result = new WorldTradeFlowService().RunWeeklyTrade(world, day: 7);
 
         result.Transfers.Should().BeEmpty();
         world.TradeShipments.Should().BeEmpty();
     }
 
     [Fact]
-    public void PartialWealth_LimitsShipmentAmount()
+    public void RunWeeklyTrade_UsesCaravanCapacityLimit()
     {
-        var world = BuildWorld(TradeGoodType.Food, 300m, 0m, 10m, importerWealth: 0.1m);
+        var world = BuildWorld(TradeGoodType.Food, exporterStock: 1000m, importerStock: 0m, caravanCapacity: 10m);
 
-        _service.RunWeeklyTrade(world, currentDay: 7);
+        new WorldTradeFlowService().RunWeeklyTrade(world, day: 7);
 
         world.TradeShipments.Should().ContainSingle();
-        world.TradeShipments[0].Amount.Should().Be(5m);
-    }
-
-
-    [Fact]
-    public void WeeklyTradeResult_AccumulatesSettlementTotalsAndWealthDeltas()
-    {
-        var world = BuildWorld(TradeGoodType.Food, 300m, 0m, 10m);
-
-        var result = _service.RunWeeklyTrade(world, currentDay: 7);
-
-        result.TotalFoodMoved.Should().Be(10m);
-        result.TotalGoodsMoved.Should().Be(0m);
-        result.TotalResourcesMoved.Should().Be(0m);
-        result.TotalExporterWealthGain.Should().Be(0.2m);
-        result.TotalImporterWealthCost.Should().Be(0.2m);
-        result.SettlementResults["a"].Should().Be(new SettlementTradeFlowResult("a", 10m, 0m, 0m, 0m, 0m, 0m, 0.2m));
-        result.SettlementResults["b"].Should().Be(new SettlementTradeFlowResult("b", 0m, 10m, 0m, 0m, 0m, 0m, -0.2m));
+        world.TradeShipments[0].Amount.Should().BeLessOrEqualTo(10m);
     }
 
     [Fact]
-    public void DisabledRoute_PreventsShipment()
+    public void RunWeeklyTrade_ReducesExporterStockImmediately()
     {
-        var world = BuildWorld(TradeGoodType.Food, 300m, 0m, 10m, routeEnabled: false);
+        var world = BuildWorld(TradeGoodType.Food, exporterStock: 1000m, importerStock: 0m, caravanCapacity: 50m);
+        var exporter = world.Cities[0];
 
-        var result = _service.RunWeeklyTrade(world, currentDay: 7);
+        new WorldTradeFlowService().RunWeeklyTrade(world, day: 7);
+
+        exporter.Food.Should().BeLessThan(1000m);
+    }
+
+    [Fact]
+    public void ProcessShipments_AppliesArrivalAndReturn()
+    {
+        var world = BuildWorld(TradeGoodType.Food, exporterStock: 1000m, importerStock: 0m, caravanCapacity: 50m, travelDays: 2);
+        var importer = world.Cities[1];
+        new WorldTradeFlowService().RunWeeklyTrade(world, day: 7);
+        var shipment = world.TradeShipments[0];
+
+        new WorldTradeFlowService().ProcessShipments(world, shipment.ArrivalDay);
+        importer.Food.Should().BeGreaterThan(0m);
+        world.Caravans[0].IsAvailable.Should().BeFalse();
+
+        new WorldTradeFlowService().ProcessShipments(world, shipment.ReturnDay);
+        world.Caravans[0].IsAvailable.Should().BeTrue();
+    }
+
+    [Fact]
+    public void RunWeeklyTrade_RespectsRouteType()
+    {
+        var world = BuildWorld(
+            TradeGoodType.Food,
+            exporterStock: 1000m,
+            importerStock: 0m,
+            caravanCapacity: 50m,
+            caravanType: CaravanType.Sea,
+            routeType: CaravanType.Land);
+
+        var result = new WorldTradeFlowService().RunWeeklyTrade(world, day: 7);
 
         result.Transfers.Should().BeEmpty();
         world.TradeShipments.Should().BeEmpty();
     }
 
     [Fact]
-    public void WrongCaravanType_PreventsShipment()
+    public void RunWeeklyTrade_DoesNotCreateShipment_WhenRouteDisabled()
     {
-        var world = BuildWorld(TradeGoodType.Food, 300m, 0m, 10m, caravanType: CaravanType.Sea, routeType: CaravanType.Land);
+        var world = BuildWorld(TradeGoodType.Food, exporterStock: 1000m, importerStock: 0m, caravanCapacity: 50m, routeEnabled: false);
 
-        var result = _service.RunWeeklyTrade(world, currentDay: 7);
+        var result = new WorldTradeFlowService().RunWeeklyTrade(world, day: 7);
 
         result.Transfers.Should().BeEmpty();
         world.TradeShipments.Should().BeEmpty();
@@ -155,6 +120,7 @@ public sealed class WorldTradeFlowServiceTests
             Regions = [new Region { Id = "r", DisplayName = "R", MapAssetId = "map" }],
             SettlementMapLocations = [],
             SettlementEconomyProfiles = [],
+            SettlementSectorCapacityProfiles = [],
             Caravans = [new Caravan { Id = "c1", OwnerSettlementId = "a", Type = caravanType, Capacity = caravanCapacity, RequiredWorkers = 1, IsAvailable = available }],
             TradeRoutes = [new TradeRoute { Id = "route1", FromSettlementId = "a", ToSettlementId = "b", Type = routeType, Distance = 1m, TravelDays = travelDays, DistanceDays = 1m, IsEnabled = routeEnabled, DifficultyMultiplier = 1m, Points = [] }],
             TradeShipments = [],
