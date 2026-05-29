@@ -25,7 +25,7 @@
                            Source="/Assets/Maps/world_map_routes.png"
                            Stretch="Uniform"
                            IsHitTestVisible="False"
-                           Visibility="{Binding Map.IsTradeRoutesOverlayVisible, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                           Visibility="{Binding IsTradeRoutesOverlayVisible, Converter={StaticResource BooleanToVisibilityConverter}}" />
 
                     <Canvas x:Name="MapOverlay"
                             Background="Transparent"
@@ -59,7 +59,7 @@
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
 
-                        <ItemsControl ItemsSource="{Binding Map.DebugLoadedRoutePathVisuals}"
+                        <ItemsControl ItemsSource="{Binding DebugLoadedRoutePathVisuals}"
                                       IsHitTestVisible="False"
                                       Visibility="{Binding IsLoadedRoutePathsDebugVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
                             <ItemsControl.ItemsPanel><ItemsPanelTemplate><Canvas/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
@@ -87,7 +87,7 @@
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
 
-                        <ItemsControl ItemsSource="{Binding Map.TradeRouteVisuals}" Visibility="Collapsed">
+                        <ItemsControl ItemsSource="{Binding TradeRouteVisuals}" Visibility="Collapsed">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <Grid IsHitTestVisible="False">
@@ -170,7 +170,7 @@
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
 
-                        <ItemsControl ItemsSource="{Binding Map.ActiveCaravanMovementMarkers}">
+                        <ItemsControl ItemsSource="{Binding ActiveCaravanMovementMarkers}">
                             <ItemsControl.ItemsPanel><ItemsPanelTemplate><Canvas/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                             <ItemsControl.ItemContainerStyle>
                                 <Style TargetType="ContentPresenter">
@@ -240,7 +240,7 @@
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
 
-                        <ItemsControl ItemsSource="{Binding Map.SettlementMapMarkers}">
+                        <ItemsControl ItemsSource="{Binding SettlementMapMarkers}">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
                                     <Canvas/>
