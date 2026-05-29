@@ -113,6 +113,24 @@ public sealed class WorldSimulationServiceTests
     }
 
     [Fact]
+    public void AdvanceDay_ReturnsCompletedEventsOnlyOnCompletionDay_AndKeepsCompletedHistory()
+    {
+        var world = WorldPresets.CreateDefaultWorld();
+        var selected = world.Cities[0];
+        var eventManager = new CityEventManager();
+        eventManager.AddEvent(new CityEvent("one-day", "One Day Event", "Completes after one day.", startedDay: 1, durationDays: 1));
+        var service = CreateService(eventManager);
+
+        var completionDayResult = service.AdvanceDay(world, selected.Id, day: 1, randomEventsEnabled: false);
+        var nextDayResult = service.AdvanceDay(world, selected.Id, day: 2, randomEventsEnabled: false);
+        var selectedCityEventHistory = service.ExportEventState().GetManagerOrEmpty(selected.Id).CompletedEvents;
+
+        completionDayResult.CompletedEvents.Should().ContainSingle(e => e.Id == "one-day");
+        nextDayResult.CompletedEvents.Should().BeEmpty();
+        selectedCityEventHistory.Should().ContainSingle(e => e.Id == "one-day");
+    }
+
+    [Fact]
     public void AdvanceDay_SelectedCityIdChangesOnlyReturnedSelection()
     {
         var worldA = WorldPresets.CreateDefaultWorld();
