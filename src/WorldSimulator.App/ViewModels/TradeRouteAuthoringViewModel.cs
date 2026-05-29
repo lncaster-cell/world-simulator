@@ -26,7 +26,6 @@ public sealed class TradeRouteAuthoringViewModel : INotifyPropertyChanged
     private string? _currentDraftDestinationId;
     private readonly Dictionary<string, List<MapPointViewModel>> _routeAuthoringDraftPointsByDestinationId = [];
     private bool _isTradeRouteAuthoringModeEnabled;
-    private bool _isLoadedRoutePathsDebugVisible;
     private decimal _selectedTradeRouteDistanceDays = 1m;
     private string _selectedTradeRouteDistanceDaysInput = "1.0";
 
@@ -86,17 +85,6 @@ public sealed class TradeRouteAuthoringViewModel : INotifyPropertyChanged
         {
             if (_isTradeRouteAuthoringModeEnabled == value) return;
             _isTradeRouteAuthoringModeEnabled = value;
-            OnPropertyChanged();
-        }
-    }
-
-    public bool IsLoadedRoutePathsDebugVisible
-    {
-        get => _isLoadedRoutePathsDebugVisible;
-        set
-        {
-            if (_isLoadedRoutePathsDebugVisible == value) return;
-            _isLoadedRoutePathsDebugVisible = value;
             OnPropertyChanged();
         }
     }

@@ -43,7 +43,7 @@
                           Margin="12,0,0,0"
                           VerticalAlignment="Center"/>
                 <CheckBox Content="Debug: реальные пути караванов"
-                          IsChecked="{Binding TradeRouteAuthoring.IsLoadedRoutePathsDebugVisible}"
+                          IsChecked="{Binding Map.IsLoadedRoutePathsDebugVisible}"
                           Margin="12,0,0,0"
                           VerticalAlignment="Center"/>
                 <ToggleButton Content="Редактор маршрутов" IsChecked="{Binding TradeRouteAuthoring.IsTradeRouteAuthoringModeEnabled}" Width="160"/>
@@ -61,25 +61,25 @@
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
             <Border Grid.Row="0" Grid.ColumnSpan="3" BorderBrush="LightGray" BorderThickness="1" CornerRadius="6" Padding="10" Margin="0,0,0,10"
-                    Visibility="{Binding TradeAuthoring.IsTradeRouteAuthoringModeEnabled, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    Visibility="{Binding TradeRouteAuthoring.IsTradeRouteAuthoringModeEnabled, Converter={StaticResource BooleanToVisibilityConverter}}">
                 <WrapPanel VerticalAlignment="Center">
                     <TextBlock Text="Редактор маршрутов" FontWeight="SemiBold" Margin="0,0,12,0" VerticalAlignment="Center"/>
                     <TextBlock Text="Откуда:" VerticalAlignment="Center"/>
-                    <ComboBox Width="170" Margin="6,0,8,0" ItemsSource="{Binding TradeAuthoring.RouteAuthoringSettlements}" SelectedItem="{Binding TradeAuthoring.RouteAuthoringOriginSettlement}" DisplayMemberPath="Name"/>
+                    <ComboBox Width="170" Margin="6,0,8,0" ItemsSource="{Binding TradeRouteAuthoring.RouteAuthoringSettlements}" SelectedItem="{Binding TradeRouteAuthoring.RouteAuthoringOriginSettlement}" DisplayMemberPath="Name"/>
                     <TextBlock Text="Добавить пункт:" VerticalAlignment="Center"/>
-                    <ComboBox Width="170" Margin="6,0,8,0" ItemsSource="{Binding TradeAuthoring.AvailableRouteAuthoringDestinations}" SelectedItem="{Binding TradeAuthoring.RouteAuthoringDestinationCandidateSettlement}" DisplayMemberPath="Name"/>
-                    <Button Content="Добавить" Command="{Binding TradeAuthoring.AddRouteAuthoringDestinationCommand}" Margin="0,0,8,0"/>
+                    <ComboBox Width="170" Margin="6,0,8,0" ItemsSource="{Binding TradeRouteAuthoring.AvailableRouteAuthoringDestinations}" SelectedItem="{Binding TradeRouteAuthoring.RouteAuthoringDestinationCandidateSettlement}" DisplayMemberPath="Name"/>
+                    <Button Content="Добавить" Command="{Binding TradeRouteAuthoring.AddRouteAuthoringDestinationCommand}" Margin="0,0,8,0"/>
                     <TextBlock Text="Активное назначение:" VerticalAlignment="Center"/>
-                    <ComboBox Width="170" Margin="6,0,8,0" ItemsSource="{Binding TradeAuthoring.RouteAuthoringDestinationSettlements}" SelectedItem="{Binding TradeAuthoring.ActiveRouteAuthoringDestinationSettlement}" DisplayMemberPath="Name"/>
+                    <ComboBox Width="170" Margin="6,0,8,0" ItemsSource="{Binding TradeRouteAuthoring.RouteAuthoringDestinationSettlements}" SelectedItem="{Binding TradeRouteAuthoring.ActiveRouteAuthoringDestinationSettlement}" DisplayMemberPath="Name"/>
                     <TextBlock Text="Дней:" VerticalAlignment="Center"/>
-                    <TextBox Width="70" Margin="6,0,8,0" Text="{Binding TradeAuthoring.SelectedTradeRouteDistanceDaysInput, UpdateSourceTrigger=PropertyChanged}"/>
-                    <TextBlock Text="{Binding TradeAuthoring.EditedTradeRouteIntermediatePointCount, StringFormat=Точек: {0}}" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                    <TextBlock Text="{Binding TradeAuthoring.RouteAuthoringDestinationCount, StringFormat=Назначений: {0}/8}" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                    <TextBlock Text="{Binding TradeAuthoring.RouteAuthoringRouteIdDisplay}" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                    <Button Content="Отменить" Command="{Binding TradeAuthoring.UndoTradeRoutePointCommand}" Margin="0,0,8,0"/>
-                    <Button Content="Очистить" Command="{Binding TradeAuthoring.ClearTradeRoutePointsCommand}" Margin="0,0,8,0"/>
-                    <Button Content="Сохранить" Command="{Binding TradeAuthoring.SaveTradeRoutePointsCommand}" Margin="0,0,8,0"/>
-                    <Button Content="Скопировать Points" Command="{Binding TradeAuthoring.CopyTradeRoutePointsCommand}"/>
+                    <TextBox Width="70" Margin="6,0,8,0" Text="{Binding TradeRouteAuthoring.SelectedTradeRouteDistanceDaysInput, UpdateSourceTrigger=PropertyChanged}"/>
+                    <TextBlock Text="{Binding TradeRouteAuthoring.EditedTradeRouteIntermediatePointCount, StringFormat=Точек: {0}}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <TextBlock Text="{Binding TradeRouteAuthoring.RouteAuthoringDestinationCount, StringFormat=Назначений: {0}/8}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <TextBlock Text="{Binding TradeRouteAuthoring.RouteAuthoringRouteIdDisplay}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <Button Content="Отменить" Command="{Binding TradeRouteAuthoring.UndoTradeRoutePointCommand}" Margin="0,0,8,0"/>
+                    <Button Content="Очистить" Command="{Binding TradeRouteAuthoring.ClearTradeRoutePointsCommand}" Margin="0,0,8,0"/>
+                    <Button Content="Сохранить" Command="{Binding TradeRouteAuthoring.SaveTradeRoutePointsCommand}" Margin="0,0,8,0"/>
+                    <Button Content="Скопировать Points" Command="{Binding TradeRouteAuthoring.CopyTradeRoutePointsCommand}"/>
                 </WrapPanel>
             </Border>
 
@@ -224,10 +224,10 @@
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
 
-                        <Path Stroke="#FF00B7FF" StrokeThickness="2.5" StrokeDashArray="2,2" IsHitTestVisible="False" Visibility="{Binding TradeAuthoring.IsTradeRouteAuthoringModeEnabled, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <Path Stroke="#FF00B7FF" StrokeThickness="2.5" StrokeDashArray="2,2" IsHitTestVisible="False" Visibility="{Binding TradeRouteAuthoring.IsTradeRouteAuthoringModeEnabled, Converter={StaticResource BooleanToVisibilityConverter}}">
                             <Path.Data>
                                 <MultiBinding Converter="{StaticResource TradeRoutePointsToSmoothPathGeometryConverter}">
-                                    <Binding Path="TradeAuthoring.EditedTradeRoutePolylinePoints"/>
+                                    <Binding Path="TradeRouteAuthoring.EditedTradeRoutePolylinePoints"/>
                                     <Binding ElementName="MapContainer" Path="ActualWidth"/>
                                     <Binding ElementName="MapImage" Path="ActualWidth"/>
                                     <Binding ElementName="MapContainer" Path="ActualHeight"/>
@@ -235,10 +235,10 @@
                                 </MultiBinding>
                             </Path.Data>
                         </Path>
-                        <Polyline Stroke="#8800B7FF" StrokeThickness="1.5" StrokeDashArray="2,2" IsHitTestVisible="False" Visibility="{Binding TradeAuthoring.IsTradeRouteAuthoringModeEnabled, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <Polyline Stroke="#8800B7FF" StrokeThickness="1.5" StrokeDashArray="2,2" IsHitTestVisible="False" Visibility="{Binding TradeRouteAuthoring.IsTradeRouteAuthoringModeEnabled, Converter={StaticResource BooleanToVisibilityConverter}}">
                             <Polyline.Points>
                                 <MultiBinding Converter="{StaticResource TradeRoutePointsToPointCollectionConverter}">
-                                    <Binding Path="TradeAuthoring.EditedTradeRoutePolylinePoints"/>
+                                    <Binding Path="TradeRouteAuthoring.EditedTradeRoutePolylinePoints"/>
                                     <Binding ElementName="MapContainer" Path="ActualWidth"/>
                                     <Binding ElementName="MapImage" Path="ActualWidth"/>
                                     <Binding ElementName="MapContainer" Path="ActualHeight"/>
@@ -247,7 +247,7 @@
                             </Polyline.Points>
                         </Polyline>
 
-                        <ItemsControl ItemsSource="{Binding TradeAuthoring.EditedTradeRoutePoints}" Visibility="{Binding TradeAuthoring.IsTradeRouteAuthoringModeEnabled, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <ItemsControl ItemsSource="{Binding TradeRouteAuthoring.EditedTradeRoutePoints}" Visibility="{Binding TradeRouteAuthoring.IsTradeRouteAuthoringModeEnabled, Converter={StaticResource BooleanToVisibilityConverter}}">
                             <ItemsControl.ItemsPanel><ItemsPanelTemplate><Canvas/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                             <ItemsControl.ItemContainerStyle>
                                 <Style TargetType="ContentPresenter">

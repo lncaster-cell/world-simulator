@@ -59,9 +59,9 @@ public partial class MainWindow : System.Windows.Window
             viewModel.Map.RegisterMapCalibrationPoint(relativeX, relativeY);
         }
 
-        if (viewModel.TradeAuthoring.IsTradeRouteAuthoringModeEnabled)
+        if (viewModel.TradeRouteAuthoring.IsTradeRouteAuthoringModeEnabled)
         {
-            viewModel.TradeAuthoring.RegisterTradeRouteAuthoringPoint(relativeX, relativeY);
+            viewModel.TradeRouteAuthoring.RegisterTradeRouteAuthoringPoint(relativeX, relativeY);
         }
     }
 
