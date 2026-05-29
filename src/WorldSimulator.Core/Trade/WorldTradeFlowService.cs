@@ -67,11 +67,15 @@ public sealed class WorldTradeFlowService
 
             var routes = cities
                 .Where(c => c.Id != exporter.Id)
-                .Select(c => TradeRouteValidation.FindEnabledRoute(world, exporter.Id, c.Id, caravan.Type))
-                .Where(r => r is not null)
-                .Cast<TradeRoute>()
-                .DistinctBy(r => r.Id)
-                .OrderBy(r => r.Id, StringComparer.Ordinal)
+                .Select(c => new
+                {
+                    Route = TradeRouteValidation.FindEnabledRoute(world, exporter.Id, c.Id, caravan.Type),
+                    Importer = c
+                })
+                .Where(x => x.Route is not null)
+                .Select(x => new { Route = x.Route!, x.Importer })
+                .DistinctBy(x => x.Route.Id)
+                .OrderBy(x => x.Route.Id, StringComparer.Ordinal)
                 .ToList();
 
             foreach (var good in Enum.GetValues<TradeGoodType>())
@@ -83,9 +87,7 @@ public sealed class WorldTradeFlowService
                 }
 
                 var importerCandidate = routes
-                    .Select(r => new { Route = r, City = cities.FirstOrDefault(c => c.Id == r.ToSettlementId) })
-                    .Where(x => x.City is not null)
-                    .Select(x => new { x.Route, City = x.City!, Deficit = TradeDemandPolicy.CalculateDeficit(x.City!, good) })
+                    .Select(x => new { x.Route, City = x.Importer, Deficit = TradeDemandPolicy.CalculateDeficit(x.Importer, good) })
                     .Where(x => x.Deficit > 0m)
                     .OrderByDescending(x => x.Deficit)
                     .ThenBy(x => x.City.Id, StringComparer.Ordinal)
