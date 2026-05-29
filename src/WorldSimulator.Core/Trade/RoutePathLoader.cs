@@ -110,6 +110,13 @@ public sealed class RoutePathLoader
         if (pointsByRouteId.TryGetValue(direct, out points!)) return true;
 
         var reverse = $"{route.ToSettlementId}_{route.FromSettlementId}";
-        return pointsByRouteId.TryGetValue(reverse, out points!);
+        if (pointsByRouteId.TryGetValue(reverse, out var matched))
+        {
+            points = matched.AsEnumerable().Reverse().ToList();
+            return true;
+        }
+
+        points = [];
+        return false;
     }
 }

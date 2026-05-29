@@ -76,13 +76,13 @@ public sealed class City
     public decimal Food
     {
         get => _food;
-        set => _food = Math.Max(0m, value);
+        set => _food = NormalizeEconomyValue(value);
     }
 
     public decimal Wealth
     {
         get => _wealth;
-        set => _wealth = Math.Max(0m, value);
+        set => _wealth = NormalizeEconomyValue(value);
     }
 
     public int Mood
@@ -106,13 +106,13 @@ public sealed class City
     public decimal Resources
     {
         get => _resources;
-        set => _resources = Math.Max(0m, value);
+        set => _resources = NormalizeEconomyValue(value);
     }
 
     public decimal Goods
     {
         get => _goods;
-        set => _goods = Math.Max(0m, value);
+        set => _goods = NormalizeEconomyValue(value);
     }
 
     public CityState CityState { get; set; }
@@ -131,4 +131,9 @@ public sealed class City
     public const decimal DailyFoodConsumptionPerPerson = 0.2m;
 
     public decimal CalculateDailyFoodConsumption() => Population * DailyFoodConsumptionPerPerson;
+
+    private static decimal NormalizeEconomyValue(decimal value)
+    {
+        return Math.Round(Math.Max(0m, value), 1, MidpointRounding.AwayFromZero);
+    }
 }

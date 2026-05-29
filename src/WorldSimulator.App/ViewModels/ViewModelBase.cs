@@ -68,6 +68,10 @@ public abstract class ViewModelBase : INotifyPropertyChanged
     public int Crime => CurrentCity?.Crime ?? 0;
     public decimal Resources => CurrentCity?.Resources ?? 0m;
     public decimal Goods => CurrentCity?.Goods ?? 0m;
+    public string FoodDisplay => FormatOneDecimal(Food);
+    public string WealthDisplay => FormatOneDecimal(Wealth);
+    public string ResourcesDisplay => FormatOneDecimal(Resources);
+    public string GoodsDisplay => FormatOneDecimal(Goods);
     public decimal DailyFoodConsumption => CurrentCity?.CalculateDailyFoodConsumption() ?? 0m;
     public IReadOnlyList<TradeRoute> TradeRoutes => CurrentWorld?.TradeRoutes is IReadOnlyList<TradeRoute> routes
         ? routes
@@ -98,7 +102,7 @@ public abstract class ViewModelBase : INotifyPropertyChanged
     public decimal DailyFoodTotalDelta => DailyFoodResult.TotalDelta;
     public decimal DailyFoodEndingFood => DailyFoodResult.EndingFood;
 
-    public string DailyFoodPopulationConsumptionDisplay => $"-{DailyFoodPopulationConsumption:0.##}";
+    public string DailyFoodPopulationConsumptionDisplay => $"-{FormatOneDecimal(DailyFoodPopulationConsumption)}";
     public string DailyFoodAgricultureIncomeDisplay => FormatSigned(DailyFoodAgricultureIncome);
     public string DailyFoodFishingIncomeDisplay => FormatSigned(DailyFoodFishingIncome);
     public string DailyFoodHuntingIncomeDisplay => FormatSigned(DailyFoodHuntingIncome);
@@ -108,8 +112,8 @@ public abstract class ViewModelBase : INotifyPropertyChanged
 
     public string FoodBalanceTooltip =>
         $"Пищевой баланс:{Environment.NewLine}" +
-        $"Начало дня: {DailyFoodStartingFood:0.##}{Environment.NewLine}" +
-        $"Потребление: -{DailyFoodPopulationConsumption:0.##}{Environment.NewLine}" +
+        $"Начало дня: {FormatOneDecimal(DailyFoodStartingFood)}{Environment.NewLine}" +
+        $"Потребление: -{FormatOneDecimal(DailyFoodPopulationConsumption)}{Environment.NewLine}" +
         $"Земледелие: {FormatSigned(DailyFoodAgricultureIncome)}{Environment.NewLine}" +
         $"Рыбалка: {FormatSigned(DailyFoodFishingIncome)}{Environment.NewLine}" +
         $"Охота: {FormatSigned(DailyFoodHuntingIncome)}{Environment.NewLine}" +
@@ -118,14 +122,14 @@ public abstract class ViewModelBase : INotifyPropertyChanged
         $"Итог: {FormatSigned(DailyFoodTotalDelta)}";
 
     public string FishingProductionTooltip => "Рыбалка зависит от локального профиля поселения, работников сектора и текущих модификаторов.";
-    public string ResourcesTooltip => $"Ресурсы: {Resources:0.##}";
-    public string GoodsTooltip => $"Товары: {Goods:0.##}";
+    public string ResourcesTooltip => $"Ресурсы: {ResourcesDisplay}";
+    public string GoodsTooltip => $"Товары: {GoodsDisplay}";
     public string CrimeFlowTooltip => "Преступность пересчитывается недельным шагом симуляции.";
     public string WealthTooltip => BuildWealthTooltipFallback();
 
     public string SimulationSummaryDayAndHour => $"День {GetPublicProperty<int>("Day")}, час {GetPublicProperty<int>("Hour")}";
     public string SimulationSummaryCityState => $"Состояние: {CityStateDisplay}";
-    public string SimulationSummaryFoodBalance => $"Пища: {Food:0.##} ({FormatSigned(DailyFoodTotalDelta)}/день)";
+    public string SimulationSummaryFoodBalance => $"Пища: {FoodDisplay} ({FormatSigned(DailyFoodTotalDelta)}/день)";
     public string SimulationSummaryActiveEvents => $"Активных событий: {ActiveEventEntries.Count}";
     public string SimulationSummaryRandomEventsStatus => GetPublicProperty<bool>("IsRandomEventGenerationEnabled")
         ? "Случайные события: включены"
@@ -158,13 +162,13 @@ public abstract class ViewModelBase : INotifyPropertyChanged
         var flow = GetPrivateField<DailyWealthFlowResult>("_dailyWealthFlowResult");
         if (flow is null)
         {
-            return $"Благосостояние: {Wealth:0.##}";
+            return $"Благосостояние: {WealthDisplay}";
         }
 
         return $"Благосостояние:{Environment.NewLine}" +
-               $"Текущее значение: {Wealth:0.##}{Environment.NewLine}" +
+               $"Текущее значение: {WealthDisplay}{Environment.NewLine}" +
                $"Итоговый баланс: {FormatSigned(flow.TotalDelta)}{Environment.NewLine}" +
-               $"Ожидаемое благосостояние после дня: {flow.EndingWealth:0.##}";
+               $"Ожидаемое благосостояние после дня: {FormatOneDecimal(flow.EndingWealth)}";
     }
 
     private T? GetPrivateField<T>(string name)
@@ -189,7 +193,13 @@ public abstract class ViewModelBase : INotifyPropertyChanged
         return default!;
     }
 
-    private static string FormatSigned(decimal value) => value.ToString("+0.##;-0.##;0");
+    private static string FormatOneDecimal(decimal value) => Math.Round(value, 1, MidpointRounding.AwayFromZero).ToString("0.#");
+
+    private static string FormatSigned(decimal value)
+    {
+        var rounded = Math.Round(value, 1, MidpointRounding.AwayFromZero);
+        return rounded.ToString("+0.#;-0.#;0");
+    }
 
     private static string ToRussianCityState(CityState cityState) => cityState switch
     {

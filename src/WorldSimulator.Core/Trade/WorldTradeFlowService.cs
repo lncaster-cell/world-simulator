@@ -68,11 +68,15 @@ public sealed class WorldTradeFlowService
 
             var routes = cities
                 .Where(c => c.Id != exporter.Id)
-                .Select(c => TradeRouteValidation.FindEnabledRoute(world, exporter.Id, c.Id, caravan.Type))
-                .Where(r => r is not null)
-                .Cast<TradeRoute>()
-                .DistinctBy(r => r.Id)
-                .OrderBy(r => r.Id, StringComparer.Ordinal)
+                .Select(c => new
+                {
+                    Route = TradeRouteValidation.FindEnabledRoute(world, exporter.Id, c.Id, caravan.Type),
+                    Importer = c
+                })
+                .Where(x => x.Route is not null)
+                .Select(x => new { Route = x.Route!, x.Importer })
+                .DistinctBy(x => x.Route.Id)
+                .OrderBy(x => x.Route.Id, StringComparer.Ordinal)
                 .ToList();
 
             foreach (var good in Enum.GetValues<TradeGoodType>())
