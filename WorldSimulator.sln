@@ -12,6 +12,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorldSimulator.Core.Tests",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorldSimulator.Persistence.Tests", "tests\WorldSimulator.Persistence.Tests\WorldSimulator.Persistence.Tests.csproj", "{6C398A30-9A74-4BF2-B43E-137ED67AA8F2}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorldSimulator.App.Tests", "tests\WorldSimulator.App.Tests\WorldSimulator.App.Tests.csproj", "{B7E18B22-1F6A-4B98-8E48-A2BA7BB6E76C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -38,6 +40,10 @@ Global
 		{6C398A30-9A74-4BF2-B43E-137ED67AA8F2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6C398A30-9A74-4BF2-B43E-137ED67AA8F2}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6C398A30-9A74-4BF2-B43E-137ED67AA8F2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B7E18B22-1F6A-4B98-8E48-A2BA7BB6E76C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B7E18B22-1F6A-4B98-8E48-A2BA7BB6E76C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B7E18B22-1F6A-4B98-8E48-A2BA7BB6E76C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B7E18B22-1F6A-4B98-8E48-A2BA7BB6E76C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

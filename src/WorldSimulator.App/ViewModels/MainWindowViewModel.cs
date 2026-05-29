@@ -242,9 +242,14 @@ public sealed class MainWindowViewModel : ViewModelBase
             _world.SelectedRegionId = selectedLocation.RegionId;
         }
 
+        var eventState = _worldSimulationService.ExportEventState();
+        var selectedEventManager = eventState.GetManagerOrEmpty(_world.SelectedCityId);
+        _eventManager.Restore(selectedEventManager.ActiveEvents, selectedEventManager.CompletedEvents);
+
         Journal.SelectCity(_city.Id, _city.Name);
 
         RefreshAllCityProperties();
+        RefreshEventEntries();
         Map.RefreshSelectedCityProperties();
         RefreshSelectedCityPanelProperties();
         RefreshDailyFoodFlowPreview();
