@@ -1,3 +1,4 @@
+using WorldSimulator.Core.Workforce;
 using WorldSimulator.Core.World;
 
 namespace WorldSimulator.Persistence.Saves;
