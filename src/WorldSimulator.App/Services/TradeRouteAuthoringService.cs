@@ -1,5 +1,3 @@
-using System.Globalization;
-using System.Windows;
 using WorldSimulator.Core.Cities;
 using WorldSimulator.Core.Trade;
 using WorldSimulator.Core.World;
@@ -15,7 +13,7 @@ public sealed class TradeRouteAuthoringService
         decimal distanceDays,
         IReadOnlyList<RoutePoint> points)
     {
-        var existingRoute = FindRouteBetween(world, origin, destination);
+        var existingRoute = TradeRouteSelectionService.FindRouteBetween(world, origin, destination);
         var updatedRoute = new TradeRoute
         {
             Id = existingRoute?.Id ?? $"{origin.Id}_{destination.Id}",
@@ -41,38 +39,6 @@ public sealed class TradeRouteAuthoringService
         }
 
         return updatedRoute;
-    }
-
-    public void CopyRoutePoints(
-        string routeId,
-        string originId,
-        string destinationId,
-        decimal distanceDays,
-        IReadOnlyList<RoutePoint> points)
-    {
-        Clipboard.SetText(FormatRoutePoints(routeId, originId, destinationId, distanceDays, points));
-    }
-
-    public static TradeRoute? FindRouteBetween(SimulationWorld world, City from, City to) => world.TradeRoutes.FirstOrDefault(route =>
-        (route.FromSettlementId == from.Id && route.ToSettlementId == to.Id)
-        || (route.FromSettlementId == to.Id && route.ToSettlementId == from.Id));
-
-    private static string FormatRoutePoints(
-        string routeId,
-        string originId,
-        string destinationId,
-        decimal distanceDays,
-        IReadOnlyList<RoutePoint> points)
-    {
-        var lines = points.Select(x =>
-            $"    new RoutePoint {{ X = {Math.Clamp(x.X, 0m, 1m).ToString("0.0000", CultureInfo.InvariantCulture)}m, Y = {Math.Clamp(x.Y, 0m, 1m).ToString("0.0000", CultureInfo.InvariantCulture)}m }}");
-
-        return $"RouteId: {routeId}{Environment.NewLine}" +
-               $"From: {originId}{Environment.NewLine}" +
-               $"To: {destinationId}{Environment.NewLine}" +
-               $"DistanceDays: {distanceDays.ToString("0.0###", CultureInfo.InvariantCulture)}{Environment.NewLine}{Environment.NewLine}" +
-               $"Points ={Environment.NewLine}" +
-               $"[{Environment.NewLine}{string.Join($",{Environment.NewLine}", lines)}{Environment.NewLine}]";
     }
 
     private static CaravanType InferRouteType(string fromId, string toId)
