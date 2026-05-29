@@ -98,7 +98,7 @@
         "city_state": "Stable"
       },
       "economy": {
-        "agriculture_potential": 48,
+        "agriculture_potential": 96,
         "fishing_multiplier": 0,
         "hunting_multiplier": 1.10,
         "mainland_supply_multiplier": 0,
@@ -254,7 +254,7 @@
         "city_state": "Stable"
       },
       "economy": {
-        "agriculture_potential": 42,
+        "agriculture_potential": 84,
         "fishing_multiplier": 0,
         "hunting_multiplier": 0.85,
         "mainland_supply_multiplier": 0,
@@ -293,7 +293,7 @@
         "city_state": "Stable"
       },
       "economy": {
-        "agriculture_potential": 60,
+        "agriculture_potential": 120,
         "fishing_multiplier": 0,
         "hunting_multiplier": 0.90,
         "mainland_supply_multiplier": 0,
