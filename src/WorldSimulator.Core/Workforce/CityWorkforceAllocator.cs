@@ -81,26 +81,37 @@ public sealed class CityWorkforceAllocator
         SettlementSectorCapacityProfile capacityProfile)
     {
         var assignments = ToDictionary(currentAllocation);
-        NormalizeTotal(assignments, totalWorkers, capacityProfile);
+        ReduceAssignmentsToTotal(assignments, totalWorkers);
 
         var reallocationLimit = _reallocationSettings.CalculateDailyReallocationLimit(totalWorkers);
         for (var i = 0; i < reallocationLimit; i++)
         {
-            var source = FindBestSourceSector(assignments, desiredAssignments);
             var target = FindBestTargetSector(assignments, desiredAssignments, capacityProfile);
-            if (source is null || target is null)
+            if (target is null)
             {
                 break;
             }
 
-            assignments[source.Value]--;
+            var source = FindBestSourceSector(assignments, desiredAssignments);
+            if (source is not null)
+            {
+                assignments[source.Value]--;
+                assignments[target.Value]++;
+                continue;
+            }
+
+            if (assignments.Values.Sum() >= totalWorkers)
+            {
+                break;
+            }
+
             assignments[target.Value]++;
         }
 
         return assignments;
     }
 
-    private static void NormalizeTotal(Dictionary<WorkforceSector, int> assignments, int totalWorkers, SettlementSectorCapacityProfile capacityProfile)
+    private static void ReduceAssignmentsToTotal(Dictionary<WorkforceSector, int> assignments, int totalWorkers)
     {
         var assignedWorkers = assignments.Values.Sum();
         while (assignedWorkers > totalWorkers)
@@ -111,22 +122,6 @@ public sealed class CityWorkforceAllocator
                 .First().Key;
             assignments[source]--;
             assignedWorkers--;
-        }
-
-        while (assignedWorkers < totalWorkers)
-        {
-            var target = assignments
-                .Where(pair => pair.Value < capacityProfile.GetCapacity(pair.Key))
-                .OrderByDescending(pair => capacityProfile.GetCapacity(pair.Key) - pair.Value)
-                .Select(pair => (WorkforceSector?)pair.Key)
-                .FirstOrDefault();
-            if (target is null)
-            {
-                break;
-            }
-
-            assignments[target.Value]++;
-            assignedWorkers++;
         }
     }
 
