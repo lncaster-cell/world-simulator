@@ -27,7 +27,11 @@ public sealed class CityEventSimulationStep : IWorldSimulationStep
 
         next();
 
-        eventManager.AdvanceDay();
+        var newlyCompleted = eventManager.AdvanceDay();
+        if (context.IsSelectedCity(city))
+        {
+            context.CaptureCompletedEvents(city, newlyCompleted);
+        }
 
         if (context.RandomEventsEnabled && city.Population > 0 && city.CityState != CityState.Abandoned)
         {

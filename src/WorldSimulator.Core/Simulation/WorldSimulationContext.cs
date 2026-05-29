@@ -41,6 +41,7 @@ public sealed class WorldSimulationContext
     public WeeklyCrimeFlowResult? SelectedCityCrimeFlow { get; private set; }
     public WorldTradeFlowResult? WeeklyTradeFlowResult { get; private set; }
     public IReadOnlyList<string> ActiveEventNamesBeforeAdvance { get; private set; } = Array.Empty<string>();
+    public IReadOnlyList<CityEvent> SelectedCityCompletedEventsToday { get; private set; } = Array.Empty<CityEvent>();
 
     public bool IsSelectedCity(City city) => city.Id == SelectedCityId;
 
@@ -106,6 +107,19 @@ public sealed class WorldSimulationContext
         SelectedCityPopulationChange = state.PopulationChange;
     }
 
+    public void CaptureCompletedEvents(City city, IReadOnlyList<CityEvent> newlyCompleted)
+    {
+        ArgumentNullException.ThrowIfNull(city);
+        ArgumentNullException.ThrowIfNull(newlyCompleted);
+
+        if (!IsSelectedCity(city))
+        {
+            return;
+        }
+
+        SelectedCityCompletedEventsToday = newlyCompleted.ToList();
+    }
+
     public void CaptureCrimeFlow(City city, WeeklyCrimeFlowResult crimeFlow)
     {
         if (IsSelectedCity(city))
@@ -122,7 +136,6 @@ public sealed class WorldSimulationContext
     public WorldDayAdvanceResult CreateResult()
     {
         var selectedCityEventManager = GetOrCreateCityEventManager(SelectedCityId);
-        var completedEvents = selectedCityEventManager.CompletedEvents;
         var generatedEvent = selectedCityEventManager.ActiveEvents
             .OrderByDescending(e => e.StartedDay)
             .FirstOrDefault(e => e.StartedDay == CurrentDay);
@@ -133,7 +146,7 @@ public sealed class WorldSimulationContext
             SelectedCityPopulationChange,
             SelectedCityCrimeFlow,
             WeeklyTradeFlowResult,
-            completedEvents,
+            SelectedCityCompletedEventsToday,
             generatedEvent,
             ActiveEventNamesBeforeAdvance);
     }
