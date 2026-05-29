@@ -134,6 +134,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         RefreshDailyFoodFlowPreview();
         RefreshEventEntries();
         RefreshSimulationSummary();
+        Map.LoadRoutePathsForWorld();
         Map.RefreshTradeRouteVisuals(null);
     }
 
@@ -275,7 +276,6 @@ public sealed class MainWindowViewModel : ViewModelBase
     private void ResetSimulation()
     {
         _world = WorldPresets.CreateDefaultWorld();
-        Map.LoadRoutePathsForWorld();
         _city = _world.SelectedCity;
 
         Control.ResetClock();
@@ -585,6 +585,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         OnPropertyChanged(nameof(SettlementCountText));
         NotifyTradeRoutesChanged();
         TradeRouteAuthoring.RefreshWorldCollections();
+        Map.LoadRoutePathsForWorld();
         Map.RefreshTradeRouteVisuals(null);
         Journal.RefreshSimulationJournalFilter();
     }
