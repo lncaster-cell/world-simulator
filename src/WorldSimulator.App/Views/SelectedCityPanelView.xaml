@@ -14,11 +14,11 @@
         </ResourceDictionary>
     </UserControl.Resources>
     <Border BorderBrush="LightGray"
-                        BorderThickness="1"
-                        CornerRadius="6"
-                        Padding="12"
-                        Margin="0,0,0,12"
-                        Visibility="Visible">
+                         BorderThickness="1"
+                         CornerRadius="6"
+                         Padding="12"
+                         Margin="0,0,0,12"
+                         Visibility="Visible">
                     <StackPanel>
                         <TextBlock Text="Выбранный город" FontWeight="SemiBold" FontSize="16" Margin="0,0,0,10"/>
                         <TextBlock Text="{Binding SelectedCityName}" FontSize="18" FontWeight="Bold" Margin="0,0,0,8"/>
@@ -32,13 +32,13 @@
                         <TextBlock Text="{Binding Population}" Margin="0,0,0,6"/>
 
                         <TextBlock Text="Ресурсы:" FontWeight="SemiBold" ToolTip="{Binding ResourcesTooltip}"/>
-                        <TextBlock Text="{Binding Resources}" ToolTip="{Binding ResourcesTooltip}" Margin="0,0,0,6"/>
+                        <TextBlock Text="{Binding ResourcesDisplay}" ToolTip="{Binding ResourcesTooltip}" Margin="0,0,0,6"/>
 
                         <TextBlock Text="Товары:" FontWeight="SemiBold" ToolTip="{Binding GoodsTooltip}"/>
-                        <TextBlock Text="{Binding Goods}" ToolTip="{Binding GoodsTooltip}" Margin="0,0,0,6"/>
+                        <TextBlock Text="{Binding GoodsDisplay}" ToolTip="{Binding GoodsTooltip}" Margin="0,0,0,6"/>
 
                         <TextBlock Text="Пища:" FontWeight="SemiBold" ToolTip="{Binding FoodBalanceTooltip}"/>
-                        <TextBlock Text="{Binding Food}" ToolTip="{Binding FoodBalanceTooltip}" Margin="0,0,0,6"/>
+                        <TextBlock Text="{Binding FoodDisplay}" ToolTip="{Binding FoodBalanceTooltip}" Margin="0,0,0,6"/>
 
                         <TextBlock Text="Безопасность:" FontWeight="SemiBold"/>
                         <TextBlock Text="{Binding Security}" Margin="0,0,0,6"/>
