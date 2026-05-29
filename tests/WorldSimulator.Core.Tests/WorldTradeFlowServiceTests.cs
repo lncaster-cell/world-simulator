@@ -63,10 +63,10 @@ public sealed class WorldTradeFlowServiceTests
 
         new WorldTradeFlowService().ProcessShipments(world, shipment.ArrivalDay);
         importer.Food.Should().BeGreaterThan(0m);
-        world.Caravans[0].IsAvailable.Should().BeFalse();
+        world.Caravans[0].Status.Should().Be(CaravanStatus.Returning);
 
         new WorldTradeFlowService().ProcessShipments(world, shipment.ReturnDay);
-        world.Caravans[0].IsAvailable.Should().BeTrue();
+        world.Caravans[0].Status.Should().Be(CaravanStatus.Idle);
     }
 
     [Fact]

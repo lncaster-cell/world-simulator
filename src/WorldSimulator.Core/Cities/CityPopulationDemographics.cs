@@ -34,8 +34,10 @@ public sealed class CityPopulationDemographics
     public void ReplaceWith(IEnumerable<RacePopulationGroup> raceGroups)
     {
         ArgumentNullException.ThrowIfNull(raceGroups);
+
+        var snapshot = raceGroups.Select(Clone).ToList();
         RaceGroups.Clear();
-        RaceGroups.AddRange(raceGroups.Select(Clone));
+        RaceGroups.AddRange(snapshot);
     }
 
     private static RacePopulationGroup Clone(RacePopulationGroup source) => new()
