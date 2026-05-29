@@ -1,8 +1,5 @@
 using System.Collections.ObjectModel;
-using System.ComponentModel;
 using System.IO;
-using System.Runtime.CompilerServices;
-using System.Windows;
 using System.Windows.Input;
 using System.Windows.Threading;
 using WorldSimulator.App.Infrastructure;
@@ -27,8 +24,6 @@ public sealed class MainWindowViewModel : ViewModelBase
 
     private const string SaveFilePath = "data/save/world_save.json";
     private const int MaxTechnicalLogEntries = 500;
-    private const int MaxVisibleCaravanMovementMarkers = 12;
-    private const string GothaCityId = "gotha";
     private SimulationWorld _world;
     private City _city;
     private readonly SimulationClock _clock;
@@ -55,14 +50,6 @@ public sealed class MainWindowViewModel : ViewModelBase
     private DailyWealthFlowResult? _dailyWealthFlowResult;
     private bool _isRandomEventGenerationEnabled = true;
     private string _lastImportantChange = "пока нет.";
-    private bool _isMapCalibrationModeEnabled;
-    private double? _lastMapCalibrationX;
-    private double? _lastMapCalibrationY;
-    private readonly List<TradeRouteVisualViewModel> _tradeRouteVisuals = [];
-    private readonly DispatcherTimer _tradeMarkerAnimationTimer;
-    private DateTimeOffset _lastTradeMarkerAnimationTickUtc;
-    private readonly HashSet<string> _loadedCaravanPathRouteIds = new(StringComparer.OrdinalIgnoreCase);
-    private bool _isTradeRoutesOverlayVisible;
 
     public MainWindowViewModel()
     {
@@ -108,8 +95,6 @@ public sealed class MainWindowViewModel : ViewModelBase
             }
         };
         Map = new MapViewModel(() => _world, _clock, AddTechnicalLogEntry);
-        TradeAuthoring = new TradeRouteAuthoringViewModel(() => _world, AddTechnicalLogEntry, () => OnPropertyChanged(nameof(TradeRoutes)), () => Map.RefreshTradeRouteVisuals(null));
-
         StartCommand = Control.StartCommand;
         PauseCommand = Control.PauseCommand;
         ResetCommand = Control.ResetCommand;
@@ -127,12 +112,11 @@ public sealed class MainWindowViewModel : ViewModelBase
         ToggleRandomEventGenerationCommand = new RelayCommand(ToggleRandomEventGeneration);
         SaveCommand = new AsyncRelayCommand(SaveStateAsync);
         LoadCommand = new AsyncRelayCommand(LoadStateAsync);
-        ToggleMapCalibrationModeCommand = new RelayCommand(ToggleMapCalibrationMode);
         TradeRouteAuthoring = new TradeRouteAuthoringViewModel(
             () => _world,
             AddTechnicalLogEntry,
             NotifyTradeRoutesChanged,
-            () => RefreshTradeRouteVisuals(null),
+            () => Map.RefreshTradeRouteVisuals(null),
             new TradeRouteAuthoringService());
 
         _lastTickUtc = DateTimeOffset.UtcNow;
@@ -140,16 +124,9 @@ public sealed class MainWindowViewModel : ViewModelBase
         {
             Interval = TimeSpan.FromMilliseconds(250)
         };
-        _tradeMarkerAnimationTimer = new DispatcherTimer
-        {
-            Interval = TimeSpan.FromMilliseconds(100)
-        };
-
         _clock.DayAdvanced += OnDayAdvanced;
         _timer.Tick += OnTick;
-        _tradeMarkerAnimationTimer.Tick += OnTradeMarkerAnimationTick;
         _timer.Start();
-        _tradeMarkerAnimationTimer.Start();
 
         TradeRouteAuthoring.SelectedTradeRouteForAuthoring = _world.TradeRoutes.FirstOrDefault();
 
@@ -165,8 +142,6 @@ public sealed class MainWindowViewModel : ViewModelBase
     public SimulationJournalViewModel Journal { get; }
 
     public MapViewModel Map { get; }
-
-    public TradeRouteAuthoringViewModel TradeAuthoring { get; }
 
     public ICommand StartCommand { get; }
 
@@ -191,7 +166,6 @@ public sealed class MainWindowViewModel : ViewModelBase
     public ICommand ToggleRandomEventGenerationCommand { get; }
     public ICommand SaveCommand { get; }
     public ICommand LoadCommand { get; }
-    public ICommand ToggleMapCalibrationModeCommand { get; }
     public TradeRouteAuthoringViewModel TradeRouteAuthoring { get; }
 
     public IReadOnlyList<City> Cities => _world.Cities;
@@ -231,246 +205,6 @@ public sealed class MainWindowViewModel : ViewModelBase
         : "Включить случайные события";
 
     public string SimulationSummaryTitle => "Сводка симуляции";
-    public ObservableCollection<CaravanMovementMarkerViewModel> ActiveCaravanMovementMarkers => Map.ActiveCaravanMovementMarkers;
-    public IReadOnlyList<TradeRouteVisualViewModel> TradeRouteVisuals => Map.TradeRouteVisuals;
-    public IReadOnlyList<TradeRouteVisualViewModel> DebugLoadedRoutePathVisuals => Map.DebugLoadedRoutePathVisuals;
-    public IReadOnlyList<TradeRoute> TradeRoutes => _world.TradeRoutes;
-
-    public string SimulationSummaryDayAndHour => $"День {Day}, час {Hour}";
-
-    public string SimulationSummaryCityState => $"{CityName}: {CityStateDisplay}";
-
-    public string SimulationSummaryFoodBalance => $"Пищевой баланс: {DailyFoodTotalDelta:+0.##;-0.##;0}/день, запас {Food:0.##}";
-
-    public string SimulationSummaryActiveEvents => $"Активные события: {_eventManager.ActiveEvents.Count}";
-
-    public string SimulationSummaryRandomEventsStatus => $"Случайные события: {RandomEventGenerationStatusDisplay}";
-
-    public string SimulationSummaryLastImportantChange => $"Последнее изменение: {_lastImportantChange}";
-
-    public string CityName => _city.Name;
-
-    public IReadOnlyList<CityInfrastructureRowViewModel> CityInfrastructureRows =>
-    [
-        new("Жилая инфраструктура", _city.Infrastructure.HousingLevel, "Жильё, районы проживания, базовая вместимость населения."),
-        new("Городская инфраструктура", _city.Infrastructure.UrbanLevel, "Дороги, склады, рынки, городские службы."),
-        new("Производственная инфраструктура", _city.Infrastructure.ProductionLevel, "Мастерские, производственные площадки, ремесленные мощности."),
-        new("Военная инфраструктура", _city.Infrastructure.MilitaryLevel, "Казармы, укрепления, стража, оборонные объекты.")
-    ];
-
-    public string CityState => _city.CityState.ToString();
-
-    public string CityStateDisplay => ToRussianCityState(_city.CityState);
-
-    public int Population => _city.Population;
-
-    public decimal Food => _city.Food;
-
-    public decimal Wealth => _city.Wealth;
-
-    public string WealthTooltip => BuildWealthTooltip();
-
-    public int Mood => _city.Mood;
-
-    public int Security => _city.Security;
-
-    public int Crime => _city.Crime;
-
-    public decimal Resources => _city.Resources;
-
-    public decimal Goods => _city.Goods;
-
-    public decimal DailyFoodConsumption => _city.CalculateDailyFoodConsumption();
-
-    public decimal DailyFoodStartingFood => _dailyFoodFlowResult.StartingFood;
-
-    public decimal DailyFoodPopulationConsumption => _dailyFoodFlowResult.PopulationConsumption;
-
-    public decimal DailyFoodAgricultureIncome => _dailyFoodFlowResult.AgricultureIncome;
-
-    public decimal DailyFoodFishingIncome => _dailyFoodFlowResult.FishingIncome;
-
-    public decimal DailyFoodHuntingIncome => _dailyFoodFlowResult.HuntingIncome;
-
-    public decimal DailyFoodMainlandSupplyIncome => _dailyFoodFlowResult.MainlandSupplyIncome;
-
-    public decimal DailyFoodEventDelta => _dailyFoodFlowResult.EventDelta;
-
-    public decimal DailyFoodTotalDelta => _dailyFoodFlowResult.TotalDelta;
-
-    public decimal DailyFoodEndingFood => _dailyFoodFlowResult.EndingFood;
-
-    public string DailyFoodPopulationConsumptionDisplay => $"-{DailyFoodPopulationConsumption:0.##}";
-
-    public string DailyFoodAgricultureIncomeDisplay => FormatSigned(DailyFoodAgricultureIncome);
-
-    public string DailyFoodFishingIncomeDisplay => FormatSigned(DailyFoodFishingIncome);
-
-    public string DailyFoodHuntingIncomeDisplay => FormatSigned(DailyFoodHuntingIncome);
-
-    public string DailyFoodMainlandSupplyIncomeDisplay => FormatSigned(DailyFoodMainlandSupplyIncome);
-
-    public string DailyFoodEventDeltaDisplay => FormatSigned(DailyFoodEventDelta);
-
-    public string DailyFoodTotalDeltaDisplay => FormatSigned(DailyFoodTotalDelta);
-
-    public string FoodBalanceTooltip =>
-        _dailyFoodFlowResult is null
-            ? "Пищевой баланс ещё не рассчитан."
-            : $"Пища сейчас: {Food:0.##}{Environment.NewLine}{Environment.NewLine}" +
-              $"Прогноз на день:{Environment.NewLine}" +
-              $"Начальная пища: {DailyFoodStartingFood:0.##}{Environment.NewLine}" +
-              $"Потребление населения: {DailyFoodPopulationConsumptionDisplay}{Environment.NewLine}" +
-              $"Земледелие: {DailyFoodAgricultureIncomeDisplay}{Environment.NewLine}" +
-              $"Рыбалка: {DailyFoodFishingIncomeDisplay}{Environment.NewLine}" +
-              $"Охота: {DailyFoodHuntingIncomeDisplay}{Environment.NewLine}" +
-              $"Поставки с материка: {DailyFoodMainlandSupplyIncomeDisplay}{Environment.NewLine}" +
-              $"События: {DailyFoodEventDeltaDisplay}{Environment.NewLine}{Environment.NewLine}" +
-              $"Дневной баланс: {DailyFoodTotalDeltaDisplay}{Environment.NewLine}" +
-              $"Ожидаемая пища после дня: {DailyFoodEndingFood:0.##}";
-
-    public string GoodsTooltip
-    {
-        get
-        {
-            var resourceGathering = _resourceGatheringProductionCalculator.Calculate(_city);
-            var previewCity = CreatePreviewCity();
-            previewCity.Resources += resourceGathering.FinalOutput;
-
-            var goodsCrafting = _goodsCraftingProductionCalculator.Calculate(previewCity);
-            previewCity.Resources -= goodsCrafting.ResourcesConsumed;
-            previewCity.Goods += goodsCrafting.GoodsProduced;
-
-            var householdConsumption = _householdConsumptionCalculator.Calculate(previewCity);
-            var expectedBalance = goodsCrafting.GoodsProduced - householdConsumption.GoodsConsumed;
-
-            return $"Товары:{Environment.NewLine}" +
-                   $"Текущий запас: {Goods:0.##}{Environment.NewLine}{Environment.NewLine}" +
-                   $"Производство:{Environment.NewLine}" +
-                   $"Производство товаров: +{goodsCrafting.GoodsProduced:0.##}{Environment.NewLine}" +
-                   $"Расход ресурсов на производство: -{goodsCrafting.ResourcesConsumed:0.##}{Environment.NewLine}{Environment.NewLine}" +
-                   $"Бытовое потребление:{Environment.NewLine}" +
-                   $"Потребность населения: -{householdConsumption.RequiredGoods:0.##}{Environment.NewLine}" +
-                   $"Фактически потреблено: -{householdConsumption.GoodsConsumed:0.##}{Environment.NewLine}" +
-                   $"Дефицит: {householdConsumption.GoodsShortage:0.##}{Environment.NewLine}{Environment.NewLine}" +
-                   $"Итог:{Environment.NewLine}" +
-                   $"Ожидаемый баланс товаров за день: {expectedBalance:+0.##;-0.##;0}";
-        }
-    }
-
-
-    public string CrimeFlowTooltip
-    {
-        get
-        {
-            var foodFlow = _dailyFoodFlowCalculator.Calculate(_city, BuildDailyFoodFlowInputs());
-            var householdConsumption = _householdConsumptionCalculator.Calculate(_city);
-            var crimeFlow = _weeklyCrimeFlowCalculator.Calculate(_city, foodFlow, householdConsumption);
-
-            return $"Преступность:{Environment.NewLine}" +
-                   $"Текущее значение: {Crime}{Environment.NewLine}{Environment.NewLine}" +
-                   $"Недельные причины роста/снижения:{Environment.NewLine}" +
-                   $"Пища: {FormatSigned(crimeFlow.FoodPressure)}{Environment.NewLine}" +
-                   $"Товары: {FormatSigned(crimeFlow.GoodsShortagePressure)}{Environment.NewLine}" +
-                   $"Ресурсы: {FormatSigned(crimeFlow.ResourcesShortagePressure)}{Environment.NewLine}" +
-                   $"Настроение: {FormatSigned(crimeFlow.MoodPressure)}{Environment.NewLine}" +
-                   $"Безопасность: {FormatSigned(crimeFlow.SecurityPressure)}{Environment.NewLine}" +
-                   $"Состояние города: {FormatSigned(crimeFlow.CityStatePressure)}{Environment.NewLine}" +
-                   $"Менталитет: {FormatSigned(crimeFlow.MentalityPressure)}{Environment.NewLine}" +
-                   $"Законы: {FormatSigned(crimeFlow.LawPressure)}{Environment.NewLine}" +
-                   $"Глобальные события: {FormatSigned(crimeFlow.GlobalEventsPressure)}{Environment.NewLine}" +
-                   $"Меры порядка: -{crimeFlow.FutureOrderMeasuresReduction:0}{Environment.NewLine}{Environment.NewLine}" +
-                   $"Итог недели: {FormatSigned(crimeFlow.ClampedDelta)}{Environment.NewLine}" +
-                   $"Ожидаемая преступность: {crimeFlow.EndingCrime}";
-        }
-    }
-
-    public string ResourcesTooltip
-    {
-        get
-        {
-            var resourceGathering = _resourceGatheringProductionCalculator.Calculate(_city);
-            var previewCity = CreatePreviewCity();
-            previewCity.Resources += resourceGathering.FinalOutput;
-
-            var goodsCrafting = _goodsCraftingProductionCalculator.Calculate(previewCity);
-            previewCity.Resources -= goodsCrafting.ResourcesConsumed;
-            previewCity.Goods += goodsCrafting.GoodsProduced;
-
-            var householdConsumption = _householdConsumptionCalculator.Calculate(previewCity);
-            var expectedBalance = resourceGathering.FinalOutput - goodsCrafting.ResourcesConsumed - householdConsumption.ResourcesConsumed;
-
-            return $"Ресурсы:{Environment.NewLine}" +
-                   $"Текущий запас: {Resources:0.##}{Environment.NewLine}{Environment.NewLine}" +
-                   $"Приход:{Environment.NewLine}" +
-                   $"Сбор ресурсов: +{resourceGathering.FinalOutput:0.##}{Environment.NewLine}{Environment.NewLine}" +
-                   $"Расход:{Environment.NewLine}" +
-                   $"Производство товаров: -{goodsCrafting.ResourcesConsumed:0.##}{Environment.NewLine}" +
-                   $"Бытовое потребление населения: -{householdConsumption.ResourcesConsumed:0.##}{Environment.NewLine}{Environment.NewLine}" +
-                   $"Дефицит бытовых ресурсов: {householdConsumption.ResourcesShortage:0.##}{Environment.NewLine}{Environment.NewLine}" +
-                   $"Итог:{Environment.NewLine}" +
-                   $"Ожидаемый баланс ресурсов за день: {expectedBalance:+0.##;-0.##;0}";
-        }
-    }
-
-    public string FishingProductionTooltip
-    {
-        get
-        {
-            var result = _fishingProductionCalculator.Calculate(_city, _eventManager.ActiveEvents);
-
-            return $"Рыбалка:{Environment.NewLine}" +
-                   $"Природный потенциал: {result.NaturalPotential:0.##}{Environment.NewLine}" +
-                   $"Инфраструктура: уровень {result.InfrastructureLevel}, модификатор ×{result.InfrastructureModifier:0.##}{Environment.NewLine}" +
-                   $"Мощность инфраструктуры: {result.InfrastructureCapacity:0.##}{Environment.NewLine}" +
-                   $"Рабочие: {result.AssignedWorkers} / {result.RequiredWorkers}{Environment.NewLine}" +
-                   $"Заполнение рабочих: {result.WorkerCoverage:P0}{Environment.NewLine}" +
-                   $"Сверхштатные рабочие: {result.ExtraWorkers}{Environment.NewLine}" +
-                   $"Бонус сверхштата: {result.OverstaffBonus:+0.##;-0.##;0}{Environment.NewLine}" +
-                   $"Шторм: ×{result.StormModifier:0.##}{Environment.NewLine}" +
-                   $"Состояние города: ×{result.StateModifier:0.##}{Environment.NewLine}{Environment.NewLine}" +
-                   $"Итог рыбалки: {result.FinalOutput:+0.##;-0.##;0} пищи/день";
-        }
-    }
-
-    public ObservableCollection<string> TechnicalLogEntries { get; } = new();
-
-    public bool HasTechnicalLogEntries => TechnicalLogEntries.Count > 0;
-
-    public ObservableCollection<string> ActiveEventEntries { get; } = new();
-
-    public ObservableCollection<string> CompletedEventEntries { get; } = new();
-    public bool HasActiveEventEntries => _eventManager.ActiveEvents.Count > 0;
-
-    public bool HasCompletedEventEntries => _eventManager.CompletedEvents.Count > 0;
-
-
-    public bool IsCityPanelVisible { get; private set; }
-
-    public int SelectedCityTabIndex { get; private set; }
-
-    public string SelectedCityName => _city.Name;
-
-    public string SelectedRegionName => _world.SelectedRegion.DisplayName;
-
-    public IReadOnlyList<SettlementMapMarkerViewModel> SettlementMapMarkers => Map.SettlementMapMarkers;
-
-    public bool IsMapCalibrationModeEnabled => Map.IsMapCalibrationModeEnabled;
-
-    public string MapCalibrationToggleButtonText => Map.MapCalibrationToggleButtonText;
-
-    public bool IsTradeRoutesOverlayVisible
-    {
-        get => Map.IsTradeRoutesOverlayVisible;
-        set => Map.IsTradeRoutesOverlayVisible = value;
-    }
-
-    public Visibility TradeRoutesOverlayVisibility => Map.TradeRoutesOverlayVisibility;
-
-    public string LastMapCalibrationPointDisplay => _lastMapCalibrationX.HasValue && _lastMapCalibrationY.HasValue
-        ? $"Последняя точка карты: X={_lastMapCalibrationX.Value:0.0000}, Y={_lastMapCalibrationY.Value:0.0000}"
-        : "Последняя точка карты: нет";
-
     public string SelectedCityProfile => $"{_city.Name} — профиль поселения";
 
     public string EconomyStocksTooltip => $"{ResourcesTooltip}{Environment.NewLine}{Environment.NewLine}{GoodsTooltip}";
@@ -510,7 +244,8 @@ public sealed class MainWindowViewModel : ViewModelBase
         Journal.SelectCity(_city.Id, _city.Name);
 
         RefreshAllCityProperties();
-        RefreshSelectedCityProperties();
+        Map.RefreshSelectedCityProperties();
+        RefreshSelectedCityPanelProperties();
         RefreshDailyFoodFlowPreview();
         RefreshSimulationSummary();
     }
@@ -523,23 +258,6 @@ public sealed class MainWindowViewModel : ViewModelBase
         OnPropertyChanged(nameof(SelectedCityTabIndex));
     }
 
-
-    public void RegisterMapCalibrationPoint(double relativeX, double relativeY)
-    {
-        _lastMapCalibrationX = relativeX;
-        _lastMapCalibrationY = relativeY;
-
-        AddTechnicalLogEntry($"Калибровка карты: Гота X={relativeX:0.0000}, Y={relativeY:0.0000}");
-        OnPropertyChanged(nameof(LastMapCalibrationPointDisplay));
-    }
-
-    private void ToggleMapCalibrationMode()
-    {
-        IsMapCalibrationModeEnabled = !IsMapCalibrationModeEnabled;
-        AddTechnicalLogEntry(IsMapCalibrationModeEnabled
-            ? "Режим калибровки карты включен."
-            : "Режим калибровки карты выключен.");
-    }
 
     private void Start()
     {
@@ -570,14 +288,16 @@ public sealed class MainWindowViewModel : ViewModelBase
         Journal.SelectedSimulationJournalFilter = SimulationJournalFilterOption.All;
         Journal.SelectedSimulationJournalEntry = null;
 
-        ClearSimulationCollections();
+        ClearViewModelSimulationCollections();
+        Map.ClearSimulationCollections();
         SetLastImportantChange("симуляция сброшена к началу.");
 
         RefreshWorldCollectionsAfterLoad();
-        TradeAuthoring.ResetRouteAuthoringStateForWorldReset();
+        TradeRouteAuthoring.ResetForWorldReset();
         RefreshAllCityProperties();
         RefreshClockProperties();
-        RefreshSelectedCityProperties();
+        Map.RefreshSelectedCityProperties();
+        RefreshSelectedCityPanelProperties();
         RefreshDailyFoodFlowPreview();
         RefreshEventEntries();
         OnPropertyChanged(nameof(CurrentSimulationSpeedDisplay));
@@ -586,21 +306,15 @@ public sealed class MainWindowViewModel : ViewModelBase
         AddTechnicalLogEntry("Симуляция сброшена: день 1, час 0, мир возвращён к начальному состоянию.");
     }
 
-    private void ClearSimulationCollections()
+    private void ClearViewModelSimulationCollections()
     {
         TechnicalLogEntries.Clear();
-        ActiveCaravanMovementMarkers.Clear();
         ActiveEventEntries.Clear();
         CompletedEventEntries.Clear();
         Journal.Clear();
         OnPropertyChanged(nameof(HasTechnicalLogEntries));
         OnPropertyChanged(nameof(HasActiveEventEntries));
         OnPropertyChanged(nameof(HasCompletedEventEntries));
-    }
-
-    private void ResetRouteAuthoringStateForWorldReset()
-    {
-        TradeRouteAuthoring.ResetForWorldReset();
     }
 
     private void SetNormalSpeed() => SetSimulationSpeed(NormalSimulationSpeed);
@@ -720,145 +434,10 @@ public sealed class MainWindowViewModel : ViewModelBase
             Map.RefreshTradeRouteVisuals(simulationResult.WeeklyTradeFlowResult);
         }
         RefreshAllCityProperties();
-        OnPropertyChanged(nameof(Food)); OnPropertyChanged(nameof(Resources)); OnPropertyChanged(nameof(Wealth)); OnPropertyChanged(nameof(WealthTooltip)); OnPropertyChanged(nameof(SettlementMapMarkers)); OnPropertyChanged(nameof(FoodBalanceTooltip)); OnPropertyChanged(nameof(FishingProductionTooltip)); OnPropertyChanged(nameof(ResourcesTooltip)); OnPropertyChanged(nameof(GoodsTooltip)); OnPropertyChanged(nameof(CrimeFlowTooltip)); OnPropertyChanged(nameof(EconomyStocksTooltip)); OnPropertyChanged(nameof(Resources)); OnPropertyChanged(nameof(Goods));
+        OnPropertyChanged(nameof(Food)); OnPropertyChanged(nameof(Resources)); OnPropertyChanged(nameof(Wealth)); OnPropertyChanged(nameof(WealthTooltip)); Map.RefreshSelectedCityProperties(); OnPropertyChanged(nameof(FoodBalanceTooltip)); OnPropertyChanged(nameof(FishingProductionTooltip)); OnPropertyChanged(nameof(ResourcesTooltip)); OnPropertyChanged(nameof(GoodsTooltip)); OnPropertyChanged(nameof(CrimeFlowTooltip)); OnPropertyChanged(nameof(EconomyStocksTooltip)); OnPropertyChanged(nameof(Resources)); OnPropertyChanged(nameof(Goods));
         RefreshEventEntries(); RefreshDailyFoodFlowPreview(); RefreshSimulationSummary();
         AppendSimulationJournalEntry(day, result, eventEffects, populationStart, populationEnd, cityStateStart, cityStateEnd, simulationResult.ActiveEventNamesBeforeAdvance, journalItems);
     }
-
-    private void RefreshTradeRouteVisuals(WorldTradeFlowResult? weeklyTradeResult)
-    {
-        var volumeByRoute = (weeklyTradeResult?.Transfers ?? [])
-            .GroupBy(x => x.RouteId, StringComparer.Ordinal)
-            .ToDictionary(
-                group => group.Key,
-                group => new
-                {
-                    Food = group.Where(x => x.GoodType == TradeGoodType.Food).Sum(x => x.AmountTransferred),
-                    Resources = group.Where(x => x.GoodType == TradeGoodType.Resources).Sum(x => x.AmountTransferred),
-                    Goods = group.Where(x => x.GoodType == TradeGoodType.Goods).Sum(x => x.AmountTransferred)
-                },
-                StringComparer.Ordinal);
-
-        _tradeRouteVisuals.Clear();
-        foreach (var route in _world.TradeRoutes)
-        {
-            var volume = volumeByRoute.GetValueOrDefault(route.Id);
-            _tradeRouteVisuals.Add(new TradeRouteVisualViewModel
-            {
-                RouteId = route.Id,
-                FromSettlementId = route.FromSettlementId,
-                ToSettlementId = route.ToSettlementId,
-                DisplayName = $"{route.FromSettlementId} → {route.ToSettlementId}",
-                Points = route.Points.Select(ToMapPoint).ToList(),
-                IsActive = volume is not null,
-                IsLoadedPath = route.HasLoadedPath,
-                IsSeaRoute = route.Type == CaravanType.Sea,
-                DebugLabelPoint = CalculateDebugLabelPoint(route.Points),
-                WeeklyFoodMoved = volume?.Food ?? 0m,
-                WeeklyResourcesMoved = volume?.Resources ?? 0m,
-                WeeklyGoodsMoved = volume?.Goods ?? 0m
-            });
-        }
-
-        ActiveCaravanMovementMarkers.Clear();
-        foreach (var routeVisual in _tradeRouteVisuals
-                     .Where(x => x.Points.Count >= 2 && _world.TradeRoutes.Any(r => string.Equals(r.Id, x.RouteId, StringComparison.Ordinal) && r.HasLoadedPath))
-                     .OrderByDescending(x => x.IsActive)
-                     .ThenByDescending(x => x.TotalWeeklyVolume)
-                     .Take(MaxVisibleCaravanMovementMarkers))
-        {
-            ActiveCaravanMovementMarkers.Add(new CaravanMovementMarkerViewModel
-            {
-                RouteId = routeVisual.RouteId,
-                DisplayName = routeVisual.DisplayName,
-                Points = routeVisual.Points,
-                Progress = CalculateInitialCaravanProgress(routeVisual.RouteId),
-                FoodMoved = routeVisual.WeeklyFoodMoved,
-                ResourcesMoved = routeVisual.WeeklyResourcesMoved,
-                GoodsMoved = routeVisual.WeeklyGoodsMoved,
-                HasActiveFlow = routeVisual.IsActive && routeVisual.TotalWeeklyVolume > 0m
-            });
-        }
-
-        OnPropertyChanged(nameof(TradeRouteVisuals));
-        OnPropertyChanged(nameof(DebugLoadedRoutePathVisuals));
-        OnPropertyChanged(nameof(ActiveCaravanMovementMarkers));
-    }
-
-
-    private void LoadRoutePathsForWorld()
-    {
-        _loadedCaravanPathRouteIds.Clear();
-        var path = TryFindRoutePathsJsonPath();
-        if (path is null)
-        {
-            AddTechnicalLogEntry("route_paths.json не загружен: движение караванов по карте отключено.");
-            return;
-        }
-
-        AddTechnicalLogEntry($"route_paths.json найден: {path}");
-        var loader = new RoutePathLoader();
-        var result = loader.TryLoadAndApply(path, _world.TradeRoutes);
-        if (!result.Success)
-        {
-            AddTechnicalLogEntry($"route_paths.json not applied: {result.ErrorMessage ?? "unknown error"}.");
-            AddTechnicalLogEntry("route_paths.json not applied: caravan movement markers disabled.");
-            return;
-        }
-
-        foreach (var routeId in result.AppliedRouteIds)
-        {
-            _loadedCaravanPathRouteIds.Add(routeId);
-        }
-
-        var unmatched = Math.Max(0, result.ParsedPathCount - result.AppliedRouteCount);
-        AddTechnicalLogEntry($"route_paths.json parsed paths count: {result.ParsedPathCount}; applied route count: {result.AppliedRouteCount}; unmatched: {unmatched}.");
-        if (result.AppliedRouteCount == 0)
-        {
-            AddTechnicalLogEntry("route_paths.json not applied: caravan movement markers disabled.");
-        }
-    }
-
-    private static string? TryFindRoutePathsJsonPath()
-    {
-        var relativePath = Path.Combine("data", "regions", "rivia", "routes", "v1", "route_paths.json");
-        var directPath = Path.Combine(AppContext.BaseDirectory, relativePath);
-        if (File.Exists(directPath))
-        {
-            return directPath;
-        }
-
-        var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir is not null)
-        {
-            var candidate = Path.Combine(dir.FullName, relativePath);
-            if (File.Exists(candidate))
-            {
-                return candidate;
-            }
-
-            dir = dir.Parent;
-        }
-
-        return null;
-    }
-
-    private static MapPointViewModel ToMapPoint(RoutePoint point) => new() { X = (double)point.X, Y = (double)point.Y };
-
-    private static MapPointViewModel CalculateDebugLabelPoint(IReadOnlyList<RoutePoint> points)
-    {
-        if (points.Count == 0)
-        {
-            return new MapPointViewModel { X = 0d, Y = 0d };
-        }
-
-        var point = points[points.Count / 2];
-        return ToMapPoint(point);
-    }
-
-
-
-
 
     private void TryStartEvent(Func<int, CityEvent> factory)
     {
@@ -922,90 +501,6 @@ public sealed class MainWindowViewModel : ViewModelBase
         RefreshClockProperties();
     }
 
-    private void OnTradeMarkerAnimationTick(object? sender, EventArgs e)
-    {
-        if (ActiveCaravanMovementMarkers.Count == 0)
-        {
-            _lastTradeMarkerAnimationTickUtc = DateTimeOffset.UtcNow;
-            return;
-        }
-
-        var now = DateTimeOffset.UtcNow;
-        if (_lastTradeMarkerAnimationTickUtc == default)
-        {
-            _lastTradeMarkerAnimationTickUtc = now;
-        }
-
-        var deltaSeconds = (now - _lastTradeMarkerAnimationTickUtc).TotalSeconds;
-        _lastTradeMarkerAnimationTickUtc = now;
-        if (!_clock.IsRunning)
-        {
-            return;
-        }
-
-        var progressDelta = deltaSeconds * 0.08d;
-
-        foreach (var marker in ActiveCaravanMovementMarkers)
-        {
-            marker.Progress += progressDelta;
-        }
-    }
-
-    private static double CalculateInitialCaravanProgress(string routeId)
-    {
-        unchecked
-        {
-            var hash = 17;
-            foreach (var ch in routeId)
-            {
-                hash = (hash * 31) + ch;
-            }
-
-            var normalized = Math.Abs(hash % 1000);
-            return normalized / 1000d;
-        }
-    }
-
-    public static MapPointViewModel CalculatePointOnPolyline(IReadOnlyList<MapPointViewModel> points, double progress)
-    {
-        if (points.Count == 0) return new MapPointViewModel { X = 0d, Y = 0d };
-        if (points.Count == 1) return points[0];
-        var clamped = double.Clamp(progress, 0d, 1d);
-
-        var segmentLengths = new double[points.Count - 1];
-        var totalLength = 0d;
-        for (var i = 0; i < points.Count - 1; i++)
-        {
-            var dx = points[i + 1].X - points[i].X;
-            var dy = points[i + 1].Y - points[i].Y;
-            var length = Math.Sqrt(dx * dx + dy * dy);
-            segmentLengths[i] = length;
-            totalLength += length;
-        }
-
-        if (totalLength <= 0d) return points[0];
-        var targetLength = clamped * totalLength;
-        var walked = 0d;
-        for (var i = 0; i < segmentLengths.Length; i++)
-        {
-            var segmentLength = segmentLengths[i];
-            if (segmentLength <= 0d) continue;
-            if (walked + segmentLength >= targetLength)
-            {
-                var t = (targetLength - walked) / segmentLength;
-                return new MapPointViewModel
-                {
-                    X = points[i].X + ((points[i + 1].X - points[i].X) * t),
-                    Y = points[i].Y + ((points[i + 1].Y - points[i].Y) * t)
-                };
-            }
-
-            walked += segmentLength;
-        }
-
-        return points[^1];
-    }
-
     private async Task SaveStateAsync()
     {
         try
@@ -1067,7 +562,8 @@ public sealed class MainWindowViewModel : ViewModelBase
             RefreshWorldCollectionsAfterLoad();
             RefreshAllCityProperties();
             RefreshClockProperties();
-            RefreshSelectedCityProperties();
+            Map.RefreshSelectedCityProperties();
+            RefreshSelectedCityPanelProperties();
             RefreshDailyFoodFlowPreview();
             OnPropertyChanged(nameof(CurrentSimulationSpeedDisplay));
             RefreshSimulationSummary();
@@ -1089,7 +585,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         OnPropertyChanged(nameof(SettlementCountText));
         NotifyTradeRoutesChanged();
         TradeRouteAuthoring.RefreshWorldCollections();
-        RefreshTradeRouteVisuals(null);
+        Map.RefreshTradeRouteVisuals(null);
         Journal.RefreshSimulationJournalFilter();
     }
 
@@ -1112,13 +608,13 @@ public sealed class MainWindowViewModel : ViewModelBase
         }
     }
 
-    private void RefreshSelectedCityProperties()
+    private void RefreshSelectedCityPanelProperties()
     {
         OnPropertyChanged(nameof(SelectedCityName));
         OnPropertyChanged(nameof(SelectedRegionName));
         OnPropertyChanged(nameof(SelectedCityProfile));
         OnPropertyChanged(nameof(CityStateDisplay));
-        OnPropertyChanged(nameof(SettlementMapMarkers));
+        Map.RefreshSelectedCityProperties();
 
         if (OpenSelectedCityCommand is RelayCommand openSelectedCityCommand)
         {
@@ -1147,7 +643,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         OnPropertyChanged(nameof(Goods));
         OnPropertyChanged(nameof(DailyFoodConsumption));
         OnPropertyChanged(nameof(WealthTooltip));
-        OnPropertyChanged(nameof(SettlementMapMarkers));
+        Map.RefreshSelectedCityProperties();
     }
 
     private void RefreshDailyFoodFlowPreview()
@@ -1178,28 +674,6 @@ public sealed class MainWindowViewModel : ViewModelBase
     }
 
 
-    private IReadOnlyList<SettlementMapMarkerViewModel> BuildSettlementMapMarkers()
-    {
-        var citiesById = _world.Cities.ToDictionary(c => c.Id, StringComparer.Ordinal);
-
-        return _world.SettlementMapLocations
-            .Where(location =>
-                location.RegionId == _world.SelectedRegionId &&
-                citiesById.ContainsKey(location.SettlementId))
-            .Select(location =>
-            {
-                var city = citiesById[location.SettlementId];
-                return new SettlementMapMarkerViewModel
-                {
-                    SettlementId = city.Id,
-                    DisplayName = city.Name,
-                    X = location.X,
-                    Y = location.Y,
-                    IsSelected = city.Id == _world.SelectedCityId
-                };
-            })
-            .ToList();
-    }
     private DailyFoodFlowInputs BuildDailyFoodFlowInputs(CityEventEffectsResult? eventEffects = null)
     {
         var effects = eventEffects ?? _eventEffectCalculator.Calculate(_city, _eventManager.ActiveEvents);
@@ -1314,7 +788,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         OnPropertyChanged(nameof(CityStateDisplay));
         OnPropertyChanged(nameof(FishingProductionTooltip));
         OnPropertyChanged(nameof(WealthTooltip));
-        OnPropertyChanged(nameof(SettlementMapMarkers));
+        Map.RefreshSelectedCityProperties();
         OnPropertyChanged(nameof(SimulationSummaryCityState));
     }
 
