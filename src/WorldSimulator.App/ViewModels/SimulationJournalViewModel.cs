@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using WorldSimulator.App.Services;
+using WorldSimulator.Core.Cities;
 
 namespace WorldSimulator.App.ViewModels;
 
@@ -92,6 +93,12 @@ public sealed class SimulationJournalViewModel : INotifyPropertyChanged
     }
 
     public string CityJournalTitle => $"Летопись города: {CurrentJournalCityName}";
+
+    public void SelectCity(City city)
+    {
+        ArgumentNullException.ThrowIfNull(city);
+        SelectCity(city.Id, city.Name);
+    }
 
     public void SelectCity(string cityId, string cityName)
     {
