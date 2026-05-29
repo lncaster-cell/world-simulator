@@ -16,26 +16,29 @@ public sealed class WorldTradeFlowServiceTests
 
         result.Transfers.Should().ContainSingle();
         world.TradeShipments.Should().ContainSingle();
+        world.TradeShipments[0].FromSettlementId.Should().Be("a");
+        world.TradeShipments[0].ToSettlementId.Should().Be("b");
         world.TradeShipments[0].GoodType.Should().Be(TradeGoodType.Food);
         world.TradeShipments[0].Amount.Should().BeGreaterThan(0m);
     }
 
     [Fact]
-    public void RunWeeklyTrade_UsesActualExporterAndImporter_WhenRouteEndpointsAreReversed()
+    public void RunWeeklyTrade_CreatesShipmentToOppositeEndpoint_WhenRouteIsStoredReversed()
     {
         var world = BuildWorld(
-            TradeGoodType.Food,
+            TradeGoodType.Resources,
             exporterStock: 1000m,
             importerStock: 0m,
             caravanCapacity: 50m,
-            routeFromSettlementId: "b",
-            routeToSettlementId: "a");
+            routeReversed: true);
 
-        new WorldTradeFlowService().RunWeeklyTrade(world, currentDay: 7);
+        var result = new WorldTradeFlowService().RunWeeklyTrade(world, currentDay: 7);
 
+        result.Transfers.Should().ContainSingle();
         world.TradeShipments.Should().ContainSingle();
         world.TradeShipments[0].FromSettlementId.Should().Be("a");
         world.TradeShipments[0].ToSettlementId.Should().Be("b");
+        world.TradeShipments[0].RouteId.Should().Be("route1");
     }
 
     [Fact]
@@ -126,13 +129,15 @@ public sealed class WorldTradeFlowServiceTests
         bool routeEnabled = true,
         CaravanType caravanType = CaravanType.Land,
         CaravanType routeType = CaravanType.Land,
-        string routeFromSettlementId = "a",
-        string routeToSettlementId = "b")
+        bool routeReversed = false)
     {
         var cityA = City("a", 100);
         var cityB = City("b", 100, importerWealth);
         SetStock(cityA, good, exporterStock);
         SetStock(cityB, good, importerStock);
+
+        var routeFromSettlementId = routeReversed ? "b" : "a";
+        var routeToSettlementId = routeReversed ? "a" : "b";
 
         return new SimulationWorld
         {

@@ -48,6 +48,7 @@ public sealed class WorldTradeFlowService
         var settlementStats = world.Cities.ToDictionary(c => c.Id, c => new SettlementTradeAccumulator());
 
         var cities = world.Cities.OrderBy(c => c.Id, StringComparer.Ordinal).ToList();
+        var cityById = cities.ToDictionary(c => c.Id, StringComparer.Ordinal);
         var activeCaravans = world.TradeShipments
             .Where(s => s.Status != TradeShipmentStatus.Completed)
             .Select(s => s.CaravanId)
@@ -87,10 +88,23 @@ public sealed class WorldTradeFlowService
                 }
 
                 var importerCandidate = routes
-                    .Select(x => new { x.Route, City = x.Importer, Deficit = TradeDemandPolicy.CalculateDeficit(x.Importer, good) })
-                    .Where(x => x.Deficit > 0m)
-                    .OrderByDescending(x => x.Deficit)
-                    .ThenBy(x => x.City.Id, StringComparer.Ordinal)
+                    .Select(route =>
+                    {
+                        var importerId = route.FromSettlementId == exporter.Id
+                            ? route.ToSettlementId
+                            : route.ToSettlementId == exporter.Id
+                                ? route.FromSettlementId
+                                : null;
+
+                        return importerId is not null && cityById.TryGetValue(importerId, out var importerCity)
+                            ? new { Route = route, City = importerCity, Deficit = TradeDemandPolicy.CalculateDeficit(importerCity, good) }
+                            : null;
+                    })
+                    .Where(candidate => candidate is not null)
+                    .Select(candidate => candidate!)
+                    .Where(candidate => candidate.Deficit > 0m)
+                    .OrderByDescending(candidate => candidate.Deficit)
+                    .ThenBy(candidate => candidate.City.Id, StringComparer.Ordinal)
                     .FirstOrDefault();
                 if (importerCandidate is null)
                 {
