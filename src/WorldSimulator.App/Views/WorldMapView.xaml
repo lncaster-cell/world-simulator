@@ -5,7 +5,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="clr-namespace:WorldSimulator.App.ViewModels"
              mc:Ignorable="d"
-             d:DataContext="{d:DesignInstance Type=vm:MainWindowViewModel, IsDesignTimeCreatable=False}">
+             d:DataContext="{d:DesignInstance Type=vm:MapViewModel, IsDesignTimeCreatable=False}">
     <UserControl.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
@@ -33,7 +33,7 @@
 
 
                         <ItemsControl ItemsSource="{Binding DebugLoadedRoutePathVisuals}"
-                                      Visibility="{Binding TradeRouteAuthoring.IsLoadedRoutePathsDebugVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                      Visibility="{Binding IsLoadedRoutePathsDebugVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
                             <ItemsControl.ItemsPanel><ItemsPanelTemplate><Canvas/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
@@ -61,7 +61,7 @@
 
                         <ItemsControl ItemsSource="{Binding DebugLoadedRoutePathVisuals}"
                                       IsHitTestVisible="False"
-                                      Visibility="{Binding TradeRouteAuthoring.IsLoadedRoutePathsDebugVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                      Visibility="{Binding IsLoadedRoutePathsDebugVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
                             <ItemsControl.ItemsPanel><ItemsPanelTemplate><Canvas/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                             <ItemsControl.ItemContainerStyle>
                                 <Style TargetType="ContentPresenter">
@@ -128,10 +128,10 @@
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
 
-                        <Path Stroke="{StaticResource MapAuthoringRouteBrush}" StrokeThickness="2.5" StrokeDashArray="2,2" IsHitTestVisible="False" Visibility="{Binding TradeRouteAuthoring.IsTradeRouteAuthoringModeEnabled, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <Path Stroke="{StaticResource MapAuthoringRouteBrush}" StrokeThickness="2.5" StrokeDashArray="2,2" IsHitTestVisible="False" Visibility="{Binding Tag.TradeRouteAuthoring.IsTradeRouteAuthoringModeEnabled, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BooleanToVisibilityConverter}}">
                             <Path.Data>
                                 <MultiBinding Converter="{StaticResource TradeRoutePointsToSmoothPathGeometryConverter}">
-                                    <Binding Path="TradeRouteAuthoring.EditedTradeRoutePolylinePoints"/>
+                                    <Binding Path="Tag.TradeRouteAuthoring.EditedTradeRoutePolylinePoints" RelativeSource="{RelativeSource AncestorType=UserControl}"/>
                                     <Binding ElementName="MapContainer" Path="ActualWidth"/>
                                     <Binding ElementName="MapImage" Path="ActualWidth"/>
                                     <Binding ElementName="MapContainer" Path="ActualHeight"/>
@@ -139,10 +139,10 @@
                                 </MultiBinding>
                             </Path.Data>
                         </Path>
-                        <Polyline Stroke="{StaticResource MapAuthoringRouteOverlayBrush}" StrokeThickness="1.5" StrokeDashArray="2,2" IsHitTestVisible="False" Visibility="{Binding TradeRouteAuthoring.IsTradeRouteAuthoringModeEnabled, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <Polyline Stroke="{StaticResource MapAuthoringRouteOverlayBrush}" StrokeThickness="1.5" StrokeDashArray="2,2" IsHitTestVisible="False" Visibility="{Binding Tag.TradeRouteAuthoring.IsTradeRouteAuthoringModeEnabled, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BooleanToVisibilityConverter}}">
                             <Polyline.Points>
                                 <MultiBinding Converter="{StaticResource TradeRoutePointsToPointCollectionConverter}">
-                                    <Binding Path="TradeRouteAuthoring.EditedTradeRoutePolylinePoints"/>
+                                    <Binding Path="Tag.TradeRouteAuthoring.EditedTradeRoutePolylinePoints" RelativeSource="{RelativeSource AncestorType=UserControl}"/>
                                     <Binding ElementName="MapContainer" Path="ActualWidth"/>
                                     <Binding ElementName="MapImage" Path="ActualWidth"/>
                                     <Binding ElementName="MapContainer" Path="ActualHeight"/>
@@ -151,7 +151,7 @@
                             </Polyline.Points>
                         </Polyline>
 
-                        <ItemsControl ItemsSource="{Binding TradeRouteAuthoring.EditedTradeRoutePoints}" Visibility="{Binding TradeRouteAuthoring.IsTradeRouteAuthoringModeEnabled, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <ItemsControl ItemsSource="{Binding Tag.TradeRouteAuthoring.EditedTradeRoutePoints, RelativeSource={RelativeSource AncestorType=UserControl}}" Visibility="{Binding Tag.TradeRouteAuthoring.IsTradeRouteAuthoringModeEnabled, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BooleanToVisibilityConverter}}">
                             <ItemsControl.ItemsPanel><ItemsPanelTemplate><Canvas/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                             <ItemsControl.ItemContainerStyle>
                                 <Style TargetType="ContentPresenter">
@@ -272,7 +272,7 @@
                                 <DataTemplate>
                                     <Button Width="22"
                                             Height="22"
-                                            Command="{Binding DataContext.SelectSettlementCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                            Command="{Binding Tag.SelectSettlementCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                             CommandParameter="{Binding SettlementId}"
                                             ToolTip="{Binding DisplayName}"
                                             Background="Transparent"

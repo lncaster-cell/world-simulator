@@ -4,7 +4,7 @@ using WorldSimulator.App.ViewModels;
 namespace WorldSimulator.App.Views;
 
 /// <summary>
-/// Expects <see cref="MainWindowViewModel" /> as its inherited DataContext.
+/// Expects <see cref="MapViewModel" /> as its DataContext.
 /// </summary>
 public partial class MapDebugPanelView : UserControl
 {
