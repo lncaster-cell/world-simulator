@@ -107,7 +107,6 @@ public sealed class MainWindowViewModel : ViewModelBase
                 OnPropertyChanged(nameof(SimulationSummaryDayAndHour));
             }
         };
-        Journal = new SimulationJournalViewModel(_city.Id, _city.Name);
         Map = new MapViewModel(() => _world, _clock, AddTechnicalLogEntry);
         TradeAuthoring = new TradeRouteAuthoringViewModel(() => _world, AddTechnicalLogEntry, () => OnPropertyChanged(nameof(TradeRoutes)), () => Map.RefreshTradeRouteVisuals(null));
 
@@ -439,8 +438,6 @@ public sealed class MainWindowViewModel : ViewModelBase
     public bool HasTechnicalLogEntries => TechnicalLogEntries.Count > 0;
 
     public ObservableCollection<string> ActiveEventEntries { get; } = new();
-
-    public SimulationJournalViewModel Journal { get; }
 
     public ObservableCollection<string> CompletedEventEntries { get; } = new();
     public bool HasActiveEventEntries => _eventManager.ActiveEvents.Count > 0;
