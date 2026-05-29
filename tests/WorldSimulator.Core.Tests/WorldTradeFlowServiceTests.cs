@@ -12,7 +12,7 @@ public sealed class WorldTradeFlowServiceTests
     {
         var world = BuildWorld(TradeGoodType.Food, exporterStock: 1000m, importerStock: 0m, caravanCapacity: 50m);
 
-        var result = new WorldTradeFlowService().RunWeeklyTrade(world, day: 7);
+        var result = new WorldTradeFlowService().RunWeeklyTrade(world, currentDay: 7);
 
         result.Transfers.Should().ContainSingle();
         world.TradeShipments.Should().ContainSingle();
@@ -25,7 +25,7 @@ public sealed class WorldTradeFlowServiceTests
     {
         var world = BuildWorld(TradeGoodType.Food, exporterStock: 1000m, importerStock: 0m, caravanCapacity: 50m, available: false);
 
-        var result = new WorldTradeFlowService().RunWeeklyTrade(world, day: 7);
+        var result = new WorldTradeFlowService().RunWeeklyTrade(world, currentDay: 7);
 
         result.Transfers.Should().BeEmpty();
         world.TradeShipments.Should().BeEmpty();
@@ -36,7 +36,7 @@ public sealed class WorldTradeFlowServiceTests
     {
         var world = BuildWorld(TradeGoodType.Food, exporterStock: 1000m, importerStock: 0m, caravanCapacity: 10m);
 
-        new WorldTradeFlowService().RunWeeklyTrade(world, day: 7);
+        new WorldTradeFlowService().RunWeeklyTrade(world, currentDay: 7);
 
         world.TradeShipments.Should().ContainSingle();
         world.TradeShipments[0].Amount.Should().BeLessOrEqualTo(10m);
@@ -48,7 +48,7 @@ public sealed class WorldTradeFlowServiceTests
         var world = BuildWorld(TradeGoodType.Food, exporterStock: 1000m, importerStock: 0m, caravanCapacity: 50m);
         var exporter = world.Cities[0];
 
-        new WorldTradeFlowService().RunWeeklyTrade(world, day: 7);
+        new WorldTradeFlowService().RunWeeklyTrade(world, currentDay: 7);
 
         exporter.Food.Should().BeLessThan(1000m);
     }
@@ -58,7 +58,7 @@ public sealed class WorldTradeFlowServiceTests
     {
         var world = BuildWorld(TradeGoodType.Food, exporterStock: 1000m, importerStock: 0m, caravanCapacity: 50m, travelDays: 2);
         var importer = world.Cities[1];
-        new WorldTradeFlowService().RunWeeklyTrade(world, day: 7);
+        new WorldTradeFlowService().RunWeeklyTrade(world, currentDay: 7);
         var shipment = world.TradeShipments[0];
 
         new WorldTradeFlowService().ProcessShipments(world, shipment.ArrivalDay);
@@ -80,7 +80,7 @@ public sealed class WorldTradeFlowServiceTests
             caravanType: CaravanType.Sea,
             routeType: CaravanType.Land);
 
-        var result = new WorldTradeFlowService().RunWeeklyTrade(world, day: 7);
+        var result = new WorldTradeFlowService().RunWeeklyTrade(world, currentDay: 7);
 
         result.Transfers.Should().BeEmpty();
         world.TradeShipments.Should().BeEmpty();
@@ -91,7 +91,7 @@ public sealed class WorldTradeFlowServiceTests
     {
         var world = BuildWorld(TradeGoodType.Food, exporterStock: 1000m, importerStock: 0m, caravanCapacity: 50m, routeEnabled: false);
 
-        var result = new WorldTradeFlowService().RunWeeklyTrade(world, day: 7);
+        var result = new WorldTradeFlowService().RunWeeklyTrade(world, currentDay: 7);
 
         result.Transfers.Should().BeEmpty();
         world.TradeShipments.Should().BeEmpty();
