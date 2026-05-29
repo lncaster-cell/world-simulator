@@ -125,6 +125,77 @@ public sealed class TradeRoutePointsTests
     }
 
     [Fact]
+    public void RoutePathLoader_ReversedSettlementIdMatch_AppliesReversedCopyWithoutMutatingSourcePath()
+    {
+        var reverseMatchedRoute = new TradeRoute
+        {
+            Id = "route_a_b",
+            FromSettlementId = "a",
+            ToSettlementId = "b",
+            Type = CaravanType.Land,
+            Distance = 10m,
+            TravelDays = 1,
+            DistanceDays = 1m,
+            IsEnabled = true,
+            Points = [new RoutePoint { X = 0m, Y = 0m }, new RoutePoint { X = 1m, Y = 1m }]
+        };
+        var directlyMatchedRoute = new TradeRoute
+        {
+            Id = "b_a",
+            FromSettlementId = "b",
+            ToSettlementId = "a",
+            Type = CaravanType.Land,
+            Distance = 10m,
+            TravelDays = 1,
+            DistanceDays = 1m,
+            IsEnabled = true,
+            Points = [new RoutePoint { X = 0m, Y = 0m }, new RoutePoint { X = 1m, Y = 1m }]
+        };
+        var routes = new List<TradeRoute> { reverseMatchedRoute, directlyMatchedRoute };
+
+        var path = Path.GetTempFileName();
+        try
+        {
+            File.WriteAllText(path, """
+            {
+              "paths": [
+                {
+                  "trade_route_id": "b_a",
+                  "points": [
+                    { "x": 0.11, "y": 0.22 },
+                    { "x": 0.33, "y": 0.44 },
+                    { "x": 0.55, "y": 0.66 }
+                  ]
+                }
+              ]
+            }
+            """);
+
+            var loader = new RoutePathLoader();
+            var result = loader.TryLoadAndApply(path, routes);
+
+            result.Success.Should().BeTrue();
+            result.AppliedRouteCount.Should().Be(2);
+
+            reverseMatchedRoute.Points.Should().HaveCount(3);
+            reverseMatchedRoute.Points[0].X.Should().Be(0.55m);
+            reverseMatchedRoute.Points[0].Y.Should().Be(0.66m);
+            reverseMatchedRoute.Points[^1].X.Should().Be(0.11m);
+            reverseMatchedRoute.Points[^1].Y.Should().Be(0.22m);
+
+            directlyMatchedRoute.Points.Should().HaveCount(3);
+            directlyMatchedRoute.Points[0].X.Should().Be(0.11m);
+            directlyMatchedRoute.Points[0].Y.Should().Be(0.22m);
+            directlyMatchedRoute.Points[^1].X.Should().Be(0.55m);
+            directlyMatchedRoute.Points[^1].Y.Should().Be(0.66m);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
     public void TradeRoute_DefaultPresetRoutes_HaveFallbackPoints_AndNotLoadedByDefault()
     {
         var routes = TradeRoutePresets.CreateDefaultRoutes();
