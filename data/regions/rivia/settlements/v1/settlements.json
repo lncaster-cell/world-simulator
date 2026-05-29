@@ -1,0 +1,357 @@
+{
+  "schema_version": "rivia_settlements_v1",
+  "region_id": "RIVIA",
+  "settlements": [
+    {
+      "id": "gotha",
+      "display_name": "Гота",
+      "route_node_id": "N_GOTHA",
+      "x": 0.6664,
+      "y": 0.2322,
+      "city_start": {
+        "population": 420,
+        "food": 1000,
+        "wealth": 320,
+        "mood": 55,
+        "security": 60,
+        "crime": 30,
+        "resources": 260,
+        "goods": 140,
+        "city_state": "Stagnation"
+      },
+      "economy": {
+        "agriculture_potential": 8,
+        "fishing_multiplier": 1.00,
+        "hunting_multiplier": 0.50,
+        "mainland_supply_multiplier": 1.00,
+        "resource_gathering_multiplier": 0.60,
+        "goods_crafting_multiplier": 1.00
+      },
+      "sector_capacity": {
+        "agriculture_capacity": 18,
+        "fishing_capacity": 90,
+        "hunting_capacity": 24,
+        "resource_gathering_capacity": 45,
+        "crafting_capacity": 130,
+        "trade_capacity": 160,
+        "guard_capacity": 80,
+        "maintenance_capacity": 55
+      },
+      "is_port": true,
+      "is_fortress": false,
+      "is_capital": false
+    },
+    {
+      "id": "highrock",
+      "display_name": "Highrock",
+      "route_node_id": "N_HIGHROCK",
+      "x": 0.1579,
+      "y": 0.2179,
+      "city_start": {
+        "population": 650,
+        "food": 900,
+        "wealth": 380,
+        "mood": 55,
+        "security": 75,
+        "crime": 8,
+        "resources": 750,
+        "goods": 180,
+        "city_state": "Stable"
+      },
+      "economy": {
+        "agriculture_potential": 6,
+        "fishing_multiplier": 0,
+        "hunting_multiplier": 0.40,
+        "mainland_supply_multiplier": 0,
+        "resource_gathering_multiplier": 0.90,
+        "goods_crafting_multiplier": 0.80
+      },
+      "sector_capacity": {
+        "agriculture_capacity": 12,
+        "fishing_capacity": 0,
+        "hunting_capacity": 18,
+        "resource_gathering_capacity": 120,
+        "crafting_capacity": 80,
+        "trade_capacity": 70,
+        "guard_capacity": 220,
+        "maintenance_capacity": 110
+      },
+      "is_port": false,
+      "is_fortress": true,
+      "is_capital": true
+    },
+    {
+      "id": "mlynek",
+      "display_name": "Mlynek",
+      "route_node_id": "N_MLYNEK",
+      "x": 0.2833,
+      "y": 0.2487,
+      "city_start": {
+        "population": 320,
+        "food": 900,
+        "wealth": 180,
+        "mood": 58,
+        "security": 55,
+        "crime": 10,
+        "resources": 420,
+        "goods": 100,
+        "city_state": "Stable"
+      },
+      "economy": {
+        "agriculture_potential": 48,
+        "fishing_multiplier": 0,
+        "hunting_multiplier": 1.10,
+        "mainland_supply_multiplier": 0,
+        "resource_gathering_multiplier": 0.90,
+        "goods_crafting_multiplier": 0.35
+      },
+      "sector_capacity": {
+        "agriculture_capacity": 150,
+        "fishing_capacity": 0,
+        "hunting_capacity": 45,
+        "resource_gathering_capacity": 60,
+        "crafting_capacity": 35,
+        "trade_capacity": 30,
+        "guard_capacity": 35,
+        "maintenance_capacity": 45
+      },
+      "is_port": false,
+      "is_fortress": false,
+      "is_capital": false
+    },
+    {
+      "id": "wardmark",
+      "display_name": "Wardmark",
+      "route_node_id": "N_WARDMARK",
+      "x": 0.0380,
+      "y": 0.4027,
+      "city_start": {
+        "population": 280,
+        "food": 650,
+        "wealth": 170,
+        "mood": 50,
+        "security": 80,
+        "crime": 7,
+        "resources": 500,
+        "goods": 90,
+        "city_state": "Stable"
+      },
+      "economy": {
+        "agriculture_potential": 10,
+        "fishing_multiplier": 0,
+        "hunting_multiplier": 0.70,
+        "mainland_supply_multiplier": 0,
+        "resource_gathering_multiplier": 0.85,
+        "goods_crafting_multiplier": 0.30
+      },
+      "sector_capacity": {
+        "agriculture_capacity": 30,
+        "fishing_capacity": 0,
+        "hunting_capacity": 35,
+        "resource_gathering_capacity": 80,
+        "crafting_capacity": 35,
+        "trade_capacity": 30,
+        "guard_capacity": 120,
+        "maintenance_capacity": 55
+      },
+      "is_port": false,
+      "is_fortress": true,
+      "is_capital": false
+    },
+    {
+      "id": "rivenstal",
+      "display_name": "Rivenstal",
+      "route_node_id": "N_RIVENSTAL",
+      "x": 0.4824,
+      "y": 0.4500,
+      "city_start": {
+        "population": 360,
+        "food": 1100,
+        "wealth": 210,
+        "mood": 60,
+        "security": 58,
+        "crime": 9,
+        "resources": 300,
+        "goods": 110,
+        "city_state": "Stable"
+      },
+      "economy": {
+        "agriculture_potential": 34,
+        "fishing_multiplier": 0,
+        "hunting_multiplier": 0.50,
+        "mainland_supply_multiplier": 0,
+        "resource_gathering_multiplier": 0.45,
+        "goods_crafting_multiplier": 0.45
+      },
+      "sector_capacity": {
+        "agriculture_capacity": 95,
+        "fishing_capacity": 0,
+        "hunting_capacity": 25,
+        "resource_gathering_capacity": 40,
+        "crafting_capacity": 45,
+        "trade_capacity": 45,
+        "guard_capacity": 45,
+        "maintenance_capacity": 55
+      },
+      "is_port": false,
+      "is_fortress": false,
+      "is_capital": false
+    },
+    {
+      "id": "gavern",
+      "display_name": "Gavern",
+      "route_node_id": "N_GAVERN",
+      "x": 0.5066,
+      "y": 0.5963,
+      "city_start": {
+        "population": 520,
+        "food": 850,
+        "wealth": 260,
+        "mood": 52,
+        "security": 52,
+        "crime": 16,
+        "resources": 800,
+        "goods": 180,
+        "city_state": "Stagnation"
+      },
+      "economy": {
+        "agriculture_potential": 12,
+        "fishing_multiplier": 0,
+        "hunting_multiplier": 0.50,
+        "mainland_supply_multiplier": 0,
+        "resource_gathering_multiplier": 1.15,
+        "goods_crafting_multiplier": 0.80
+      },
+      "sector_capacity": {
+        "agriculture_capacity": 28,
+        "fishing_capacity": 0,
+        "hunting_capacity": 28,
+        "resource_gathering_capacity": 170,
+        "crafting_capacity": 95,
+        "trade_capacity": 70,
+        "guard_capacity": 65,
+        "maintenance_capacity": 70
+      },
+      "is_port": false,
+      "is_fortress": false,
+      "is_capital": false
+    },
+    {
+      "id": "brno",
+      "display_name": "Brno",
+      "route_node_id": "N_BRNO",
+      "x": 0.4527,
+      "y": 0.7448,
+      "city_start": {
+        "population": 180,
+        "food": 700,
+        "wealth": 120,
+        "mood": 62,
+        "security": 50,
+        "crime": 8,
+        "resources": 180,
+        "goods": 55,
+        "city_state": "Stable"
+      },
+      "economy": {
+        "agriculture_potential": 42,
+        "fishing_multiplier": 0,
+        "hunting_multiplier": 0.85,
+        "mainland_supply_multiplier": 0,
+        "resource_gathering_multiplier": 0.35,
+        "goods_crafting_multiplier": 0.20
+      },
+      "sector_capacity": {
+        "agriculture_capacity": 110,
+        "fishing_capacity": 0,
+        "hunting_capacity": 30,
+        "resource_gathering_capacity": 25,
+        "crafting_capacity": 20,
+        "trade_capacity": 25,
+        "guard_capacity": 25,
+        "maintenance_capacity": 30
+      },
+      "is_port": false,
+      "is_fortress": false,
+      "is_capital": false
+    },
+    {
+      "id": "wodenz",
+      "display_name": "Wödenz",
+      "route_node_id": "N_WODENZ",
+      "x": 0.8036,
+      "y": 0.9604,
+      "city_start": {
+        "population": 340,
+        "food": 1150,
+        "wealth": 160,
+        "mood": 57,
+        "security": 48,
+        "crime": 12,
+        "resources": 260,
+        "goods": 90,
+        "city_state": "Stable"
+      },
+      "economy": {
+        "agriculture_potential": 60,
+        "fishing_multiplier": 0,
+        "hunting_multiplier": 0.90,
+        "mainland_supply_multiplier": 0,
+        "resource_gathering_multiplier": 0.40,
+        "goods_crafting_multiplier": 0.35
+      },
+      "sector_capacity": {
+        "agriculture_capacity": 180,
+        "fishing_capacity": 0,
+        "hunting_capacity": 40,
+        "resource_gathering_capacity": 45,
+        "crafting_capacity": 45,
+        "trade_capacity": 40,
+        "guard_capacity": 40,
+        "maintenance_capacity": 50
+      },
+      "is_port": false,
+      "is_fortress": false,
+      "is_capital": false
+    },
+    {
+      "id": "thokur_rus",
+      "display_name": "Thökur-Rus",
+      "route_node_id": "N_TOKRUS",
+      "x": 0.8652,
+      "y": 0.4753,
+      "city_start": {
+        "population": 80,
+        "food": 280,
+        "wealth": 70,
+        "mood": 50,
+        "security": 35,
+        "crime": 18,
+        "resources": 90,
+        "goods": 25,
+        "city_state": "Stagnation"
+      },
+      "economy": {
+        "agriculture_potential": 2,
+        "fishing_multiplier": 0.70,
+        "hunting_multiplier": 0.10,
+        "mainland_supply_multiplier": 0.20,
+        "resource_gathering_multiplier": 0.15,
+        "goods_crafting_multiplier": 0.10
+      },
+      "sector_capacity": {
+        "agriculture_capacity": 6,
+        "fishing_capacity": 55,
+        "hunting_capacity": 8,
+        "resource_gathering_capacity": 10,
+        "crafting_capacity": 10,
+        "trade_capacity": 35,
+        "guard_capacity": 12,
+        "maintenance_capacity": 15
+      },
+      "is_port": true,
+      "is_fortress": false,
+      "is_capital": false
+    }
+  ]
+}
