@@ -16,8 +16,29 @@ public sealed class WorldTradeFlowServiceTests
 
         result.Transfers.Should().ContainSingle();
         world.TradeShipments.Should().ContainSingle();
+        world.TradeShipments[0].FromSettlementId.Should().Be("a");
+        world.TradeShipments[0].ToSettlementId.Should().Be("b");
         world.TradeShipments[0].GoodType.Should().Be(TradeGoodType.Food);
         world.TradeShipments[0].Amount.Should().BeGreaterThan(0m);
+    }
+
+    [Fact]
+    public void RunWeeklyTrade_CreatesShipmentToOppositeEndpoint_WhenRouteIsStoredReversed()
+    {
+        var world = BuildWorld(
+            TradeGoodType.Resources,
+            exporterStock: 1000m,
+            importerStock: 0m,
+            caravanCapacity: 50m,
+            routeReversed: true);
+
+        var result = new WorldTradeFlowService().RunWeeklyTrade(world, currentDay: 7);
+
+        result.Transfers.Should().ContainSingle();
+        world.TradeShipments.Should().ContainSingle();
+        world.TradeShipments[0].FromSettlementId.Should().Be("a");
+        world.TradeShipments[0].ToSettlementId.Should().Be("b");
+        world.TradeShipments[0].RouteId.Should().Be("route1");
     }
 
     [Fact]
@@ -107,12 +128,16 @@ public sealed class WorldTradeFlowServiceTests
         int travelDays = 2,
         bool routeEnabled = true,
         CaravanType caravanType = CaravanType.Land,
-        CaravanType routeType = CaravanType.Land)
+        CaravanType routeType = CaravanType.Land,
+        bool routeReversed = false)
     {
         var cityA = City("a", 100);
         var cityB = City("b", 100, importerWealth);
         SetStock(cityA, good, exporterStock);
         SetStock(cityB, good, importerStock);
+
+        var routeFromSettlementId = routeReversed ? "b" : "a";
+        var routeToSettlementId = routeReversed ? "a" : "b";
 
         return new SimulationWorld
         {
@@ -122,7 +147,7 @@ public sealed class WorldTradeFlowServiceTests
             SettlementEconomyProfiles = [],
             SettlementSectorCapacityProfiles = [],
             Caravans = [new Caravan { Id = "c1", OwnerSettlementId = "a", Type = caravanType, Capacity = caravanCapacity, RequiredWorkers = 1, IsAvailable = available }],
-            TradeRoutes = [new TradeRoute { Id = "route1", FromSettlementId = "a", ToSettlementId = "b", Type = routeType, Distance = 1m, TravelDays = travelDays, DistanceDays = 1m, IsEnabled = routeEnabled, DifficultyMultiplier = 1m, Points = [] }],
+            TradeRoutes = [new TradeRoute { Id = "route1", FromSettlementId = routeFromSettlementId, ToSettlementId = routeToSettlementId, Type = routeType, Distance = 1m, TravelDays = travelDays, DistanceDays = 1m, IsEnabled = routeEnabled, DifficultyMultiplier = 1m, Points = [] }],
             TradeShipments = [],
             SelectedCityId = "a",
             SelectedRegionId = "r"
