@@ -5,7 +5,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="clr-namespace:WorldSimulator.App.ViewModels"
              mc:Ignorable="d"
-             d:DataContext="{d:DesignInstance Type=vm:MainWindowViewModel, IsDesignTimeCreatable=False}">
+             d:DataContext="{d:DesignInstance Type=vm:MapViewModel, IsDesignTimeCreatable=False}">
     <UserControl.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>

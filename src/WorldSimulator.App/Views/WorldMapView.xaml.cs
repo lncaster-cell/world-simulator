@@ -5,7 +5,7 @@ using WorldSimulator.App.ViewModels;
 namespace WorldSimulator.App.Views;
 
 /// <summary>
-/// Expects <see cref="MainWindowViewModel" /> as its inherited DataContext.
+/// Expects <see cref="MapViewModel" /> as DataContext and <see cref="MainWindowViewModel" /> in Tag.
 /// </summary>
 public partial class WorldMapView : UserControl
 {
@@ -24,7 +24,7 @@ public partial class WorldMapView : UserControl
 
     private void MapContainer_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
-        if (DataContext is not MainWindowViewModel viewModel)
+        if (DataContext is not MapViewModel mapViewModel)
         {
             return;
         }
@@ -55,12 +55,12 @@ public partial class WorldMapView : UserControl
         relativeX = Math.Clamp(relativeX, 0d, 1d);
         relativeY = Math.Clamp(relativeY, 0d, 1d);
 
-        if (viewModel.Map.IsMapCalibrationModeEnabled)
+        if (mapViewModel.IsMapCalibrationModeEnabled)
         {
-            viewModel.Map.RegisterMapCalibrationPoint(relativeX, relativeY);
+            mapViewModel.RegisterMapCalibrationPoint(relativeX, relativeY);
         }
 
-        if (viewModel.TradeRouteAuthoring.IsTradeRouteAuthoringModeEnabled)
+        if (Tag is MainWindowViewModel { TradeRouteAuthoring.IsTradeRouteAuthoringModeEnabled: true } viewModel)
         {
             viewModel.TradeRouteAuthoring.RegisterTradeRouteAuthoringPoint(relativeX, relativeY);
         }
