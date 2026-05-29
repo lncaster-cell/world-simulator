@@ -69,7 +69,9 @@ public abstract class ViewModelBase : INotifyPropertyChanged
     public decimal Resources => CurrentCity?.Resources ?? 0m;
     public decimal Goods => CurrentCity?.Goods ?? 0m;
     public decimal DailyFoodConsumption => CurrentCity?.CalculateDailyFoodConsumption() ?? 0m;
-    public IReadOnlyList<TradeRoute> TradeRoutes => CurrentWorld?.TradeRoutes ?? Array.Empty<TradeRoute>();
+    public IReadOnlyList<TradeRoute> TradeRoutes => CurrentWorld?.TradeRoutes is IReadOnlyList<TradeRoute> routes
+        ? routes
+        : Array.Empty<TradeRoute>();
 
     public IReadOnlyList<CityInfrastructureRowViewModel> CityInfrastructureRows
     {
