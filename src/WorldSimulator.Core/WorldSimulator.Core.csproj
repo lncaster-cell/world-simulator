@@ -6,5 +6,6 @@
   </PropertyGroup>
   <ItemGroup>
     <EmbeddedResource Include="..\..\data\regions\rivia\routes\v1\rivia_routes.json" Link="Data\rivia_routes.json" />
+    <EmbeddedResource Include="..\..\data\regions\rivia\settlements\v1\settlements.json" Link="Data\settlements.json" />
   </ItemGroup>
 </Project>

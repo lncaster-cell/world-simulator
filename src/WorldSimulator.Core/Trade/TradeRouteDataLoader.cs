@@ -1,5 +1,6 @@
 using System.Reflection;
 using System.Text.Json;
+using WorldSimulator.Core.World;
 
 namespace WorldSimulator.Core.Trade;
 
@@ -67,19 +68,6 @@ internal static class TradeRouteDataLoader
 
 internal static class TradeRouteIdBuilder
 {
-    private static readonly Dictionary<string, string> NodeToSettlementIdMap = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ["N_HIGHROCK"] = "highrock",
-        ["N_MLYNEK"] = "mlynek",
-        ["N_WARDMARK"] = "wardmark",
-        ["N_RIVENSTAL"] = "rivenstal",
-        ["N_GAVERN"] = "gavern",
-        ["N_BRNO"] = "brno",
-        ["N_WODENZ"] = "wodenz",
-        ["N_GOTHA"] = "gotha",
-        ["N_TOKRUS"] = "thokur_rus"
-    };
-
     public static Dictionary<string, string> BuildNodeToSettlementIdMap(JsonElement nodes)
     {
         var nodeToSettlementId = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -97,9 +85,14 @@ internal static class TradeRouteIdBuilder
                 continue;
             }
 
-            nodeToSettlementId[nodeId] = NodeToSettlementIdMap.TryGetValue(nodeId, out var mapped)
-                ? mapped
-                : ToSettlementId(name);
+            if (RiviaSettlementPresets.TryGetSettlementIdByRouteNodeId(nodeId, out var settlementId))
+            {
+                nodeToSettlementId[nodeId] = settlementId;
+            }
+            else
+            {
+                nodeToSettlementId[nodeId] = ToSettlementId(name);
+            }
         }
 
         return nodeToSettlementId;
