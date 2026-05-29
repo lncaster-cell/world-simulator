@@ -34,10 +34,7 @@ internal static partial class WorldSaveMapper
 
             if (!state.EventManagersByCity.ContainsKey(selectedCityId))
             {
-                var firstManager = state.EventManagersByCity.Values.First();
-                var selectedManager = new CityEventManager();
-                selectedManager.Restore(firstManager.ActiveEvents.ToList(), firstManager.CompletedEvents.ToList());
-                state.SetManager(selectedCityId, selectedManager);
+                state.SetManager(selectedCityId, new CityEventManager());
             }
 
             return state;
