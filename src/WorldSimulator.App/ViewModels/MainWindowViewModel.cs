@@ -1,7 +1,7 @@
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.IO;
 using System.Windows.Input;
-using System.Windows.Threading;
 using WorldSimulator.App.Infrastructure;
 using WorldSimulator.App.Services;
 using WorldSimulator.Core.Cities;
@@ -17,11 +17,6 @@ namespace WorldSimulator.App.ViewModels;
 
 public sealed class MainWindowViewModel : ViewModelBase
 {
-    private static readonly TimeSpan NormalSimulationSpeed = TimeSpan.FromMinutes(5);
-    private static readonly TimeSpan FastSimulationSpeed = TimeSpan.FromSeconds(10);
-    private static readonly TimeSpan VeryFastSimulationSpeed = TimeSpan.FromSeconds(1);
-    private static readonly TimeSpan TurboSimulationSpeed = TimeSpan.FromMilliseconds(1000d / 24d);
-
     private const string SaveFilePath = "data/save/world_save.json";
     private const int MaxTechnicalLogEntries = 500;
     private SimulationWorld _world;
@@ -44,8 +39,6 @@ public sealed class MainWindowViewModel : ViewModelBase
     private readonly WorldSimulationService _worldSimulationService;
     private readonly JsonWorldSaveService _saveService;
     private readonly SimulationJournalService _journalService;
-    private readonly DispatcherTimer _timer;
-    private DateTimeOffset _lastTickUtc;
     private DailyFoodFlowResult _dailyFoodFlowResult;
     private DailyWealthFlowResult? _dailyWealthFlowResult;
     private bool _isRandomEventGenerationEnabled = true;
@@ -87,13 +80,7 @@ public sealed class MainWindowViewModel : ViewModelBase
 
         Control = new SimulationControlViewModel(_clock, AddTechnicalLogEntry);
         Control.ResetRequested += ResetSimulation;
-        Control.PropertyChanged += (_, e) =>
-        {
-            if (e.PropertyName is nameof(SimulationControlViewModel.Day) or nameof(SimulationControlViewModel.Hour))
-            {
-                OnPropertyChanged(nameof(SimulationSummaryDayAndHour));
-            }
-        };
+        Control.PropertyChanged += OnControlPropertyChanged;
         Map = new MapViewModel(() => _world, _clock, AddTechnicalLogEntry);
         StartCommand = Control.StartCommand;
         PauseCommand = Control.PauseCommand;
@@ -119,14 +106,7 @@ public sealed class MainWindowViewModel : ViewModelBase
             () => Map.RefreshTradeRouteVisuals(null),
             new TradeRouteAuthoringService());
 
-        _lastTickUtc = DateTimeOffset.UtcNow;
-        _timer = new DispatcherTimer
-        {
-            Interval = TimeSpan.FromMilliseconds(250)
-        };
         _clock.DayAdvanced += OnDayAdvanced;
-        _timer.Tick += OnTick;
-        _timer.Start();
 
         TradeRouteAuthoring.SelectedTradeRouteForAuthoring = _world.TradeRoutes.FirstOrDefault();
 
@@ -264,20 +244,6 @@ public sealed class MainWindowViewModel : ViewModelBase
         OnPropertyChanged(nameof(SelectedCityTabIndex));
     }
 
-
-    private void Start()
-    {
-        _clock.Start();
-        _lastTickUtc = DateTimeOffset.UtcNow;
-        RefreshClockProperties();
-    }
-
-    private void Pause()
-    {
-        _clock.Pause();
-        RefreshClockProperties();
-    }
-
     private void ResetSimulation()
     {
         _world = WorldPresets.CreateDefaultWorld();
@@ -322,49 +288,26 @@ public sealed class MainWindowViewModel : ViewModelBase
         OnPropertyChanged(nameof(HasCompletedEventEntries));
     }
 
-    private void SetNormalSpeed() => SetSimulationSpeed(NormalSimulationSpeed);
-
-    private void SetFastSpeed() => SetSimulationSpeed(FastSimulationSpeed);
-
-    private void SetVeryFastSpeed() => SetSimulationSpeed(VeryFastSimulationSpeed);
-
-    private void SetTurboSpeed() => SetSimulationSpeed(TurboSimulationSpeed);
-
-    private void SetSimulationSpeed(TimeSpan realTimePerGameHour)
+    private void OnControlPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (_clock.RealTimePerGameHour == realTimePerGameHour)
+        switch (e.PropertyName)
         {
-            return;
+            case nameof(SimulationControlViewModel.Day):
+            case nameof(SimulationControlViewModel.Hour):
+                OnPropertyChanged(nameof(Day));
+                OnPropertyChanged(nameof(Hour));
+                OnPropertyChanged(nameof(SimulationSummaryDayAndHour));
+                break;
+            case nameof(SimulationControlViewModel.IsRunning):
+                OnPropertyChanged(nameof(IsRunning));
+                break;
+            case nameof(SimulationControlViewModel.SimulationState):
+                OnPropertyChanged(nameof(SimulationState));
+                break;
+            case nameof(SimulationControlViewModel.CurrentSimulationSpeedDisplay):
+                OnPropertyChanged(nameof(CurrentSimulationSpeedDisplay));
+                break;
         }
-
-        _clock.SetSimulationSpeed(realTimePerGameHour);
-        AddTechnicalLogEntry($"Скорость симуляции изменена: {GetSpeedDisplay(realTimePerGameHour)}.");
-        OnPropertyChanged(nameof(CurrentSimulationSpeedDisplay));
-    }
-
-    private static string GetSpeedDisplay(TimeSpan realTimePerGameHour)
-    {
-        if (realTimePerGameHour == NormalSimulationSpeed)
-        {
-            return "5 минут = 1 игровой час";
-        }
-
-        if (realTimePerGameHour == FastSimulationSpeed)
-        {
-            return "10 секунд = 1 игровой час";
-        }
-
-        if (realTimePerGameHour == VeryFastSimulationSpeed)
-        {
-            return "1 секунда = 1 игровой час";
-        }
-
-        if (realTimePerGameHour == TurboSimulationSpeed)
-        {
-            return "1 секунда = 1 игровой день";
-        }
-
-        return $"{realTimePerGameHour.TotalSeconds:0.##} секунд = 1 игровой час";
     }
 
     private void OnDayAdvanced(int day)
@@ -495,17 +438,6 @@ public sealed class MainWindowViewModel : ViewModelBase
         OnPropertyChanged(nameof(HasCompletedEventEntries));
     }
 
-    private void OnTick(object? sender, EventArgs e)
-    {
-        var now = DateTimeOffset.UtcNow;
-        var elapsed = now - _lastTickUtc;
-        _lastTickUtc = now;
-
-        _clock.Advance(elapsed);
-
-        RefreshClockProperties();
-    }
-
     private async Task SaveStateAsync()
     {
         try
@@ -552,7 +484,6 @@ public sealed class MainWindowViewModel : ViewModelBase
                 loaded.Clock.IsRunning,
                 loaded.Clock.AccumulatedRealTime,
                 loaded.Clock.RealTimePerGameHour);
-            _lastTickUtc = DateTimeOffset.UtcNow;
             Control.RestoreTickBaseline();
             Journal.SelectCity(_city);
 
