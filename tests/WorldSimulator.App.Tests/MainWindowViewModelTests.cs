@@ -4,6 +4,7 @@ using WorldSimulator.App.ViewModels;
 using WorldSimulator.Core.Events;
 using WorldSimulator.Core.Simulation;
 using WorldSimulator.Core.World;
+using Xunit;
 
 namespace WorldSimulator.App.Tests;
 
