@@ -5,8 +5,80 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="clr-namespace:WorldSimulator.App.ViewModels"
              mc:Ignorable="d"
-             d:DataContext="{d:DesignInstance Type=vm:SelectedCityViewModel, IsDesignTimeCreatable=False}">
+             d:DataContext="{d:DesignInstance Type=vm:CityWorkforceDiagnosticsViewModel, IsDesignTimeCreatable=False}">
     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-        <StackPanel x:Name="RootPanel" Margin="8"/>
+        <StackPanel Margin="8">
+            <TextBlock Text="Рабочая сила города"
+                       FontSize="16"
+                       FontWeight="SemiBold"
+                       Margin="0,0,0,10"/>
+
+            <ItemsControl ItemsSource="{Binding Rows}">
+                <ItemsControl.Resources>
+                    <DataTemplate x:Key="WorkforceValueRowTemplate" DataType="{x:Type vm:CityWorkforceDiagnosticsRowViewModel}">
+                        <Grid Margin="0,0,0,6">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="180"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0"
+                                       Text="{Binding Title}"
+                                       TextWrapping="Wrap"/>
+                            <TextBlock Grid.Column="1"
+                                       Text="{Binding Value}"
+                                       FontWeight="SemiBold"
+                                       Margin="12,0,0,0"/>
+                            <TextBlock Grid.Column="2"
+                                       Text="{Binding Description}"
+                                       Foreground="DimGray"
+                                       TextWrapping="Wrap"
+                                       Margin="12,0,0,0"/>
+                        </Grid>
+                    </DataTemplate>
+
+                    <DataTemplate x:Key="WorkforceSectionRowTemplate" DataType="{x:Type vm:CityWorkforceDiagnosticsRowViewModel}">
+                        <TextBlock Text="{Binding Title}"
+                                   FontSize="14"
+                                   FontWeight="SemiBold"
+                                   Margin="0,0,0,6"/>
+                    </DataTemplate>
+
+                    <DataTemplate x:Key="WorkforceMessageRowTemplate" DataType="{x:Type vm:CityWorkforceDiagnosticsRowViewModel}">
+                        <TextBlock Text="{Binding Description}"
+                                   FontStyle="Italic"
+                                   Foreground="DimGray"
+                                   TextWrapping="Wrap"
+                                   Margin="0,0,0,8"/>
+                    </DataTemplate>
+
+                    <DataTemplate x:Key="WorkforceSeparatorRowTemplate" DataType="{x:Type vm:CityWorkforceDiagnosticsRowViewModel}">
+                        <Separator Margin="0,8,0,10"/>
+                    </DataTemplate>
+                </ItemsControl.Resources>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="{x:Type vm:CityWorkforceDiagnosticsRowViewModel}">
+                        <ContentControl Content="{Binding}">
+                            <ContentControl.Style>
+                                <Style TargetType="ContentControl">
+                                    <Setter Property="ContentTemplate" Value="{StaticResource WorkforceValueRowTemplate}"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsSection}" Value="True">
+                                            <Setter Property="ContentTemplate" Value="{StaticResource WorkforceSectionRowTemplate}"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding IsMessage}" Value="True">
+                                            <Setter Property="ContentTemplate" Value="{StaticResource WorkforceMessageRowTemplate}"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding IsSeparator}" Value="True">
+                                            <Setter Property="ContentTemplate" Value="{StaticResource WorkforceSeparatorRowTemplate}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </ContentControl.Style>
+                        </ContentControl>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </StackPanel>
     </ScrollViewer>
 </UserControl>

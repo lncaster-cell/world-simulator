@@ -26,7 +26,7 @@
                 <views:CityInfrastructureView DataContext="{Binding}"/>
             </TabItem>
             <TabItem Header="Рабочая сила">
-                <views:CityWorkforceView DataContext="{Binding}"/>
+                <views:CityWorkforceView DataContext="{Binding CityWorkforceDiagnostics}"/>
             </TabItem>
             <TabItem Header="Отладка">
                 <cityWindowViews:CityDebugTabView DataContext="{Binding}"/>

@@ -189,7 +189,8 @@ public sealed class MainWindowViewModel : ViewModelBase
         : "Включить случайные события";
 
     public string SimulationSummaryTitle => "Сводка симуляции";
-    public string SelectedCityProfile => SelectedCity.SelectedCityProfile;
+    public string SelectedCityProfile => $"{_city.Name} — профиль поселения";
+    public CityWorkforceDiagnosticsViewModel CityWorkforceDiagnostics => new(_world, _city);
 
     public string EconomyStocksTooltip => SelectedCity.EconomyStocksTooltip;
 
@@ -529,7 +530,38 @@ public sealed class MainWindowViewModel : ViewModelBase
     {
         SelectedCity.RefreshSelectedCity();
         OnPropertyChanged(nameof(SelectedCityProfile));
-        OnPropertyChanged(nameof(EconomyStocksTooltip));
+        OnPropertyChanged(nameof(CityWorkforceDiagnostics));
+        OnPropertyChanged(nameof(CityStateDisplay));
+        Map.RefreshSelectedCityProperties();
+
+        if (OpenSelectedCityCommand is RelayCommand openSelectedCityCommand)
+        {
+            openSelectedCityCommand.RaiseCanExecuteChanged();
+        }
+    }
+
+    private void RefreshAllCityProperties()
+    {
+        OnPropertyChanged(nameof(CityName));
+        OnPropertyChanged(nameof(CityInfrastructureRows));
+        OnPropertyChanged(nameof(CityWorkforceDiagnostics));
+        OnPropertyChanged(nameof(CityState));
+        OnPropertyChanged(nameof(CityStateDisplay));
+        OnPropertyChanged(nameof(Population));
+        OnPropertyChanged(nameof(Food));
+        OnPropertyChanged(nameof(FoodBalanceTooltip));
+        OnPropertyChanged(nameof(FishingProductionTooltip));
+        OnPropertyChanged(nameof(ResourcesTooltip));
+        OnPropertyChanged(nameof(GoodsTooltip));
+        OnPropertyChanged(nameof(Wealth));
+        OnPropertyChanged(nameof(Mood));
+        OnPropertyChanged(nameof(Security));
+        OnPropertyChanged(nameof(Crime));
+        OnPropertyChanged(nameof(CrimeFlowTooltip));
+        OnPropertyChanged(nameof(Resources));
+        OnPropertyChanged(nameof(Goods));
+        OnPropertyChanged(nameof(DailyFoodConsumption));
+        OnPropertyChanged(nameof(WealthTooltip));
         Map.RefreshSelectedCityProperties();
     }
 
