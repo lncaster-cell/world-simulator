@@ -378,6 +378,10 @@ public sealed class MainWindowViewModel : ViewModelBase
             return;
         }
 
+        var eventState = _worldSimulationService.ExportEventState();
+        var selectedManager = eventState.GetManagerOrEmpty(_world.SelectedCityId);
+        _eventManager.Restore(selectedManager.ActiveEvents, selectedManager.CompletedEvents);
+
         var result = simulationResult.SelectedCityResult.FoodFlow;
         var resourceGathering = simulationResult.SelectedCityResult.ResourceGathering;
         var goodsCrafting = simulationResult.SelectedCityResult.GoodsCrafting;
