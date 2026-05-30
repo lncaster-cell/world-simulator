@@ -14,46 +14,45 @@
         </ResourceDictionary>
     </UserControl.Resources>
     <Border BorderBrush="LightGray"
-                         BorderThickness="1"
-                         CornerRadius="6"
-                         Padding="12"
-                         Margin="0,0,0,12"
-                         Visibility="Visible">
-                    <StackPanel>
-                        <TextBlock Text="Выбранный город" FontWeight="SemiBold" FontSize="16" Margin="0,0,0,10"/>
-                        <TextBlock Text="{Binding SelectedCity.SelectedCityName}" FontSize="18" FontWeight="Bold" Margin="0,0,0,8"/>
-                        <TextBlock Text="Тип/профиль:" FontWeight="SemiBold"/>
-                        <TextBlock Text="{Binding SelectedCity.SelectedCityProfile}" TextWrapping="Wrap" Margin="0,0,0,8"/>
+            BorderThickness="1"
+            CornerRadius="6"
+            Padding="12"
+            Margin="0,0,0,12"
+            Visibility="Visible">
+        <StackPanel>
+            <TextBlock Text="Выбранный город" FontWeight="SemiBold" FontSize="16" Margin="0,0,0,10"/>
+            <TextBlock Text="{Binding SelectedCityName}" FontSize="18" FontWeight="Bold" Margin="0,0,0,8"/>
+            <TextBlock Text="Тип/профиль:" FontWeight="SemiBold"/>
+            <TextBlock Text="{Binding SelectedCityProfile}" TextWrapping="Wrap" Margin="0,0,0,8"/>
 
-                        <TextBlock Text="Состояние города:" FontWeight="SemiBold"/>
-                        <TextBlock Text="{Binding SelectedCity.CityStateDisplay}" Margin="0,0,0,6"/>
+            <TextBlock Text="Состояние города:" FontWeight="SemiBold"/>
+            <TextBlock Text="{Binding CityStateDisplay}" Margin="0,0,0,6"/>
 
-                        <TextBlock Text="Население:" FontWeight="SemiBold"/>
-                        <TextBlock Text="{Binding SelectedCity.Population}" Margin="0,0,0,6"/>
+            <TextBlock Text="Население:" FontWeight="SemiBold"/>
+            <TextBlock Text="{Binding Population}" Margin="0,0,0,6"/>
 
-                        <TextBlock Text="Ресурсы:" FontWeight="SemiBold" ToolTip="{Binding SelectedCity.ResourcesTooltip}"/>
-                        <TextBlock Text="{Binding SelectedCity.ResourcesDisplay}" ToolTip="{Binding SelectedCity.ResourcesTooltip}" Margin="0,0,0,6"/>
+            <TextBlock Text="Ресурсы:" FontWeight="SemiBold" ToolTip="{Binding ResourcesTooltip}"/>
+            <TextBlock Text="{Binding ResourcesDisplay}" ToolTip="{Binding ResourcesTooltip}" Margin="0,0,0,6"/>
 
-                        <TextBlock Text="Товары:" FontWeight="SemiBold" ToolTip="{Binding SelectedCity.GoodsTooltip}"/>
-                        <TextBlock Text="{Binding SelectedCity.GoodsDisplay}" ToolTip="{Binding SelectedCity.GoodsTooltip}" Margin="0,0,0,6"/>
+            <TextBlock Text="Товары:" FontWeight="SemiBold" ToolTip="{Binding GoodsTooltip}"/>
+            <TextBlock Text="{Binding GoodsDisplay}" ToolTip="{Binding GoodsTooltip}" Margin="0,0,0,6"/>
 
-                        <TextBlock Text="Пища:" FontWeight="SemiBold" ToolTip="{Binding SelectedCity.FoodBalanceTooltip}"/>
-                        <TextBlock Text="{Binding SelectedCity.FoodDisplay}" ToolTip="{Binding SelectedCity.FoodBalanceTooltip}" Margin="0,0,0,6"/>
+            <TextBlock Text="Пища:" FontWeight="SemiBold" ToolTip="{Binding FoodBalanceTooltip}"/>
+            <TextBlock Text="{Binding FoodDisplay}" ToolTip="{Binding FoodBalanceTooltip}" Margin="0,0,0,6"/>
 
-                        <TextBlock Text="Безопасность:" FontWeight="SemiBold"/>
-                        <TextBlock Text="{Binding SelectedCity.Security}" Margin="0,0,0,6"/>
+            <TextBlock Text="Безопасность:" FontWeight="SemiBold"/>
+            <TextBlock Text="{Binding Security}" Margin="0,0,0,6"/>
 
-                        <TextBlock Text="Преступность:" FontWeight="SemiBold" ToolTip="{Binding SelectedCity.CrimeFlowTooltip}"/>
-                        <TextBlock Text="{Binding SelectedCity.Crime}" ToolTip="{Binding SelectedCity.CrimeFlowTooltip}" Margin="0,0,0,6"/>
+            <TextBlock Text="Преступность:" FontWeight="SemiBold" ToolTip="{Binding CrimeFlowTooltip}"/>
+            <TextBlock Text="{Binding Crime}" ToolTip="{Binding CrimeFlowTooltip}" Margin="0,0,0,6"/>
 
-                        <TextBlock Text="Настроение:" FontWeight="SemiBold"/>
-                        <TextBlock Text="{Binding SelectedCity.Mood}" Margin="0,0,0,12"/>
+            <TextBlock Text="Настроение:" FontWeight="SemiBold"/>
+            <TextBlock Text="{Binding Mood}" Margin="0,0,0,12"/>
 
-                        <WrapPanel>
-                            <Button Content="Открыть город" Width="130" Command="{Binding OpenSelectedCityCommand}" Click="OpenCityButton_Click" Margin="0,0,8,0"/>
-                            <Button Content="Открыть летопись города" Width="140" Click="OpenLogButton_Click"/>
-                        </WrapPanel>
-                    </StackPanel>
-                </Border>
-
+            <WrapPanel>
+                <Button Content="Открыть город" Width="130" Click="OpenCityButton_Click" Margin="0,0,8,0"/>
+                <Button Content="Открыть летопись города" Width="140" Click="OpenLogButton_Click"/>
+            </WrapPanel>
+        </StackPanel>
+    </Border>
 </UserControl>
