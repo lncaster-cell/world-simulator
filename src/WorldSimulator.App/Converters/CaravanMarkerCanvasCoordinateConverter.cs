@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Windows.Data;
+using WorldSimulator.App.Services;
 using WorldSimulator.App.ViewModels;
 
 namespace WorldSimulator.App.Converters;
@@ -19,7 +20,7 @@ public sealed class CaravanMarkerCanvasCoordinateConverter : IMultiValueConverte
             return 0d;
         }
 
-        var mapPoint = MapViewModel.CalculatePointOnPolyline(points, progress);
+        var mapPoint = CaravanMarkerAnimationService.CalculatePointOnPolyline(points, progress);
         var mapLeft = (containerWidth - imageWidth) / 2d;
         var mapTop = (containerHeight - imageHeight) / 2d;
         var axis = parameter as string;

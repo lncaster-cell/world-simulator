@@ -1,0 +1,320 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <ItemsPanelTemplate x:Key="WorldMapCanvasItemsPanelTemplate">
+        <Canvas />
+    </ItemsPanelTemplate>
+
+    <Style x:Key="WorldMapLayerItemsControlStyle" TargetType="ItemsControl">
+        <Setter Property="Width" Value="{Binding RelativeSource={RelativeSource AncestorType=Canvas}, Path=ActualWidth}" />
+        <Setter Property="Height" Value="{Binding RelativeSource={RelativeSource AncestorType=Canvas}, Path=ActualHeight}" />
+        <Setter Property="Tag" Value="{Binding RelativeSource={RelativeSource AncestorType=Canvas}, Path=Tag}" />
+        <Setter Property="ItemsPanel" Value="{StaticResource WorldMapCanvasItemsPanelTemplate}" />
+    </Style>
+
+    <Style x:Key="MapDebugRoutePolylineStyle" TargetType="Polyline">
+        <Setter Property="Stroke" Value="{StaticResource MapDebugRouteBrush}" />
+        <Setter Property="StrokeThickness" Value="2.1" />
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding IsSeaRoute}" Value="True">
+                <Setter Property="Stroke" Value="{StaticResource MapSeaRouteBrush}" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding IsActive}" Value="True">
+                <Setter Property="Stroke" Value="{StaticResource MapActiveDebugRouteBrush}" />
+                <Setter Property="StrokeThickness" Value="2.6" />
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="MapTradeRoutePolylineStyle" TargetType="Polyline">
+        <Setter Property="Stroke" Value="{StaticResource MapTradeRouteBrush}" />
+        <Setter Property="StrokeThickness" Value="2.8" />
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding IsActive}" Value="True">
+                <Setter Property="Stroke" Value="{StaticResource MapActiveTradeRouteBrush}" />
+                <Setter Property="StrokeThickness" Value="3.4" />
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <DataTemplate x:Key="DebugLoadedRoutePathTemplate">
+        <Grid>
+            <Polyline Style="{StaticResource MapDebugRoutePolylineStyle}"
+                      StrokeLineJoin="Round"
+                      StrokeStartLineCap="Round"
+                      StrokeEndLineCap="Round"
+                      Opacity="0.62"
+                      ToolTip="{Binding RouteId}">
+                <Polyline.Points>
+                    <MultiBinding Converter="{StaticResource TradeRoutePointsToPointCollectionConverter}">
+                        <Binding Path="Points" />
+                        <Binding RelativeSource="{RelativeSource AncestorType=ItemsControl}" Path="ActualWidth" />
+                        <Binding RelativeSource="{RelativeSource AncestorType=ItemsControl}" Path="Tag.ActualWidth" />
+                        <Binding RelativeSource="{RelativeSource AncestorType=ItemsControl}" Path="ActualHeight" />
+                        <Binding RelativeSource="{RelativeSource AncestorType=ItemsControl}" Path="Tag.ActualHeight" />
+                    </MultiBinding>
+                </Polyline.Points>
+            </Polyline>
+        </Grid>
+    </DataTemplate>
+
+    <Style x:Key="DebugRouteLabelContainerStyle" TargetType="ContentPresenter">
+        <Setter Property="Canvas.Left">
+            <Setter.Value>
+                <MultiBinding Converter="{StaticResource MapMarkerCanvasLeftConverter}">
+                    <Binding Path="DebugLabelPoint.X" />
+                    <Binding RelativeSource="{RelativeSource AncestorType=ItemsControl}" Path="ActualWidth" />
+                    <Binding RelativeSource="{RelativeSource AncestorType=ItemsControl}" Path="Tag.ActualWidth" />
+                </MultiBinding>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="Canvas.Top">
+            <Setter.Value>
+                <MultiBinding Converter="{StaticResource MapMarkerCanvasTopConverter}">
+                    <Binding Path="DebugLabelPoint.Y" />
+                    <Binding RelativeSource="{RelativeSource AncestorType=ItemsControl}" Path="ActualHeight" />
+                    <Binding RelativeSource="{RelativeSource AncestorType=ItemsControl}" Path="Tag.ActualHeight" />
+                </MultiBinding>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <DataTemplate x:Key="DebugRouteLabelTemplate">
+        <Border Background="{StaticResource MapDebugLabelBackgroundBrush}"
+                CornerRadius="3"
+                Padding="3,1"
+                Margin="4,-10,0,0">
+            <TextBlock Text="{Binding RouteId}"
+                       Foreground="{StaticResource MapDebugLabelForegroundBrush}"
+                       FontSize="10" />
+        </Border>
+    </DataTemplate>
+
+    <DataTemplate x:Key="TradeRoutePolylineTemplate">
+        <Grid IsHitTestVisible="False">
+            <Polyline Stroke="{StaticResource MapRouteShadowBrush}"
+                      StrokeThickness="4.6"
+                      StrokeLineJoin="Round"
+                      StrokeStartLineCap="Round"
+                      StrokeEndLineCap="Round"
+                      Opacity="0.8">
+                <Polyline.Points>
+                    <MultiBinding Converter="{StaticResource TradeRoutePointsToPointCollectionConverter}">
+                        <Binding Path="Points" />
+                        <Binding RelativeSource="{RelativeSource AncestorType=ItemsControl}" Path="ActualWidth" />
+                        <Binding RelativeSource="{RelativeSource AncestorType=ItemsControl}" Path="Tag.ActualWidth" />
+                        <Binding RelativeSource="{RelativeSource AncestorType=ItemsControl}" Path="ActualHeight" />
+                        <Binding RelativeSource="{RelativeSource AncestorType=ItemsControl}" Path="Tag.ActualHeight" />
+                    </MultiBinding>
+                </Polyline.Points>
+            </Polyline>
+            <Polyline Style="{StaticResource MapTradeRoutePolylineStyle}"
+                      StrokeLineJoin="Round"
+                      StrokeStartLineCap="Round"
+                      StrokeEndLineCap="Round">
+                <Polyline.ToolTip>
+                    <TextBlock TextWrapping="Wrap">
+                        <Run Text="Маршрут: " /><Run Text="{Binding DisplayName}" /><LineBreak />
+                        <Run Text="Объём недели:" /><LineBreak />
+                        <Run Text="Еда: " /><Run Text="{Binding WeeklyFoodMoved}" /><LineBreak />
+                        <Run Text="Ресурсы: " /><Run Text="{Binding WeeklyResourcesMoved}" /><LineBreak />
+                        <Run Text="Товары: " /><Run Text="{Binding WeeklyGoodsMoved}" /><LineBreak />
+                        <Run Text="Всего: " /><Run Text="{Binding TotalWeeklyVolume}" />
+                    </TextBlock>
+                </Polyline.ToolTip>
+                <Polyline.Points>
+                    <MultiBinding Converter="{StaticResource TradeRoutePointsToPointCollectionConverter}">
+                        <Binding Path="Points" />
+                        <Binding RelativeSource="{RelativeSource AncestorType=ItemsControl}" Path="ActualWidth" />
+                        <Binding RelativeSource="{RelativeSource AncestorType=ItemsControl}" Path="Tag.ActualWidth" />
+                        <Binding RelativeSource="{RelativeSource AncestorType=ItemsControl}" Path="ActualHeight" />
+                        <Binding RelativeSource="{RelativeSource AncestorType=ItemsControl}" Path="Tag.ActualHeight" />
+                    </MultiBinding>
+                </Polyline.Points>
+            </Polyline>
+        </Grid>
+    </DataTemplate>
+
+    <Style x:Key="AuthoringRoutePathStyle" TargetType="Path">
+        <Setter Property="Stroke" Value="{StaticResource MapAuthoringRouteBrush}" />
+        <Setter Property="StrokeThickness" Value="2.5" />
+        <Setter Property="StrokeDashArray" Value="2,2" />
+        <Setter Property="IsHitTestVisible" Value="False" />
+        <Setter Property="Visibility" Value="{Binding Tag.TradeRouteAuthoring.IsTradeRouteAuthoringModeEnabled, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BooleanToVisibilityConverter}}" />
+        <Setter Property="Data">
+            <Setter.Value>
+                <MultiBinding Converter="{StaticResource TradeRoutePointsToSmoothPathGeometryConverter}">
+                    <Binding Path="Tag.TradeRouteAuthoring.EditedTradeRoutePolylinePoints" RelativeSource="{RelativeSource AncestorType=UserControl}" />
+                    <Binding RelativeSource="{RelativeSource AncestorType=Canvas}" Path="ActualWidth" />
+                    <Binding RelativeSource="{RelativeSource AncestorType=Canvas}" Path="Tag.ActualWidth" />
+                    <Binding RelativeSource="{RelativeSource AncestorType=Canvas}" Path="ActualHeight" />
+                    <Binding RelativeSource="{RelativeSource AncestorType=Canvas}" Path="Tag.ActualHeight" />
+                </MultiBinding>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="AuthoringRouteOverlayPolylineStyle" TargetType="Polyline">
+        <Setter Property="Stroke" Value="{StaticResource MapAuthoringRouteOverlayBrush}" />
+        <Setter Property="StrokeThickness" Value="1.5" />
+        <Setter Property="StrokeDashArray" Value="2,2" />
+        <Setter Property="IsHitTestVisible" Value="False" />
+        <Setter Property="Visibility" Value="{Binding Tag.TradeRouteAuthoring.IsTradeRouteAuthoringModeEnabled, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BooleanToVisibilityConverter}}" />
+        <Setter Property="Points">
+            <Setter.Value>
+                <MultiBinding Converter="{StaticResource TradeRoutePointsToPointCollectionConverter}">
+                    <Binding Path="Tag.TradeRouteAuthoring.EditedTradeRoutePolylinePoints" RelativeSource="{RelativeSource AncestorType=UserControl}" />
+                    <Binding RelativeSource="{RelativeSource AncestorType=Canvas}" Path="ActualWidth" />
+                    <Binding RelativeSource="{RelativeSource AncestorType=Canvas}" Path="Tag.ActualWidth" />
+                    <Binding RelativeSource="{RelativeSource AncestorType=Canvas}" Path="ActualHeight" />
+                    <Binding RelativeSource="{RelativeSource AncestorType=Canvas}" Path="Tag.ActualHeight" />
+                </MultiBinding>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="AuthoringRoutePointContainerStyle" TargetType="ContentPresenter">
+        <Setter Property="Canvas.Left">
+            <Setter.Value>
+                <MultiBinding Converter="{StaticResource MapMarkerCanvasLeftConverter}">
+                    <Binding Path="X" />
+                    <Binding RelativeSource="{RelativeSource AncestorType=ItemsControl}" Path="ActualWidth" />
+                    <Binding RelativeSource="{RelativeSource AncestorType=ItemsControl}" Path="Tag.ActualWidth" />
+                </MultiBinding>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="Canvas.Top">
+            <Setter.Value>
+                <MultiBinding Converter="{StaticResource MapMarkerCanvasTopConverter}">
+                    <Binding Path="Y" />
+                    <Binding RelativeSource="{RelativeSource AncestorType=ItemsControl}" Path="ActualHeight" />
+                    <Binding RelativeSource="{RelativeSource AncestorType=ItemsControl}" Path="Tag.ActualHeight" />
+                </MultiBinding>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <DataTemplate x:Key="AuthoringRoutePointTemplate">
+        <Ellipse Width="8"
+                 Height="8"
+                 Fill="#FF00B7FF"
+                 Stroke="#FFFFFFFF"
+                 StrokeThickness="1"
+                 ToolTip="{Binding X}" />
+    </DataTemplate>
+
+    <Style x:Key="ActiveCaravanMarkerContainerStyle" TargetType="ContentPresenter">
+        <Setter Property="Canvas.Left">
+            <Setter.Value>
+                <MultiBinding Converter="{StaticResource CaravanMarkerCanvasCoordinateConverter}" ConverterParameter="X">
+                    <Binding Path="Points" />
+                    <Binding Path="Progress" />
+                    <Binding RelativeSource="{RelativeSource AncestorType=ItemsControl}" Path="ActualWidth" />
+                    <Binding RelativeSource="{RelativeSource AncestorType=ItemsControl}" Path="Tag.ActualWidth" />
+                    <Binding RelativeSource="{RelativeSource AncestorType=ItemsControl}" Path="ActualHeight" />
+                    <Binding RelativeSource="{RelativeSource AncestorType=ItemsControl}" Path="Tag.ActualHeight" />
+                </MultiBinding>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="Canvas.Top">
+            <Setter.Value>
+                <MultiBinding Converter="{StaticResource CaravanMarkerCanvasCoordinateConverter}" ConverterParameter="Y">
+                    <Binding Path="Points" />
+                    <Binding Path="Progress" />
+                    <Binding RelativeSource="{RelativeSource AncestorType=ItemsControl}" Path="ActualWidth" />
+                    <Binding RelativeSource="{RelativeSource AncestorType=ItemsControl}" Path="Tag.ActualWidth" />
+                    <Binding RelativeSource="{RelativeSource AncestorType=ItemsControl}" Path="ActualHeight" />
+                    <Binding RelativeSource="{RelativeSource AncestorType=ItemsControl}" Path="Tag.ActualHeight" />
+                </MultiBinding>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <DataTemplate x:Key="ActiveCaravanMarkerTemplate">
+        <Grid Width="22" Height="22" ToolTip="{Binding DisplayName}" RenderTransformOrigin="0.5,0.5">
+            <Image Width="18" Height="18" Source="/Assets/Maps/caravan_icon_clean_transparent.png">
+                <Image.Style>
+                    <Style TargetType="Image">
+                        <Setter Property="Opacity" Value="0.9" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding HasActiveFlow}" Value="True">
+                                <Setter Property="Opacity" Value="1" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding IsSeaRoute}" Value="True">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Image.Style>
+            </Image>
+            <Canvas Width="22" Height="22" Visibility="Collapsed">
+                <Canvas.Style>
+                    <Style TargetType="Canvas">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsSeaRoute}" Value="True">
+                                <Setter Property="Visibility" Value="Visible" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Canvas.Style>
+                <Path Data="M2,15 C5,18 17,18 20,15 L18,19 L5,19 Z" Fill="#FF1F6F7F" Stroke="#FF0E2525" StrokeThickness="1" />
+                <Path Data="M5,9 L18,9 L16,15 L7,15 Z" Fill="#FF7A4B24" Stroke="#FF0E2525" StrokeThickness="1" />
+                <Path Data="M11,3 L11,15" Stroke="#FF0E2525" StrokeThickness="1.4" StrokeStartLineCap="Round" />
+                <Path Data="M12,4 C16,5 17,8 12,11 Z" Fill="#FFE8D7A6" Stroke="#FF0E2525" StrokeThickness="1" />
+                <Path Data="M10,5 C7,6 7,9 10,12 Z" Fill="#FFE8D7A6" Stroke="#FF0E2525" StrokeThickness="1" />
+                <Path Data="M8,9 L14,9 L14,13 L8,13 Z" Fill="#FFB57A37" Stroke="#FF0E2525" StrokeThickness="0.8" />
+            </Canvas>
+        </Grid>
+    </DataTemplate>
+
+    <Style x:Key="SettlementMapMarkerContainerStyle" TargetType="ContentPresenter">
+        <Setter Property="Canvas.Left">
+            <Setter.Value>
+                <MultiBinding Converter="{StaticResource MapMarkerCanvasLeftConverter}">
+                    <Binding Path="X" />
+                    <Binding RelativeSource="{RelativeSource AncestorType=ItemsControl}" Path="ActualWidth" />
+                    <Binding RelativeSource="{RelativeSource AncestorType=ItemsControl}" Path="Tag.ActualWidth" />
+                </MultiBinding>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="Canvas.Top">
+            <Setter.Value>
+                <MultiBinding Converter="{StaticResource MapMarkerCanvasTopConverter}">
+                    <Binding Path="Y" />
+                    <Binding RelativeSource="{RelativeSource AncestorType=ItemsControl}" Path="ActualHeight" />
+                    <Binding RelativeSource="{RelativeSource AncestorType=ItemsControl}" Path="Tag.ActualHeight" />
+                </MultiBinding>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <DataTemplate x:Key="SettlementMapMarkerTemplate">
+        <Button Width="22"
+                Height="22"
+                Command="{Binding Tag.SelectSettlementCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                CommandParameter="{Binding SettlementId}"
+                ToolTip="{Binding DisplayName}"
+                Background="Transparent"
+                BorderThickness="0"
+                IsHitTestVisible="True">
+            <Grid>
+                <Ellipse Fill="#66FFAA00" Stroke="#CCFFAA00" StrokeThickness="2">
+                    <Ellipse.Style>
+                        <Style TargetType="Ellipse">
+                            <Setter Property="Width" Value="14" />
+                            <Setter Property="Height" Value="14" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                    <Setter Property="Width" Value="18" />
+                                    <Setter Property="Height" Value="18" />
+                                    <Setter Property="StrokeThickness" Value="3" />
+                                    <Setter Property="Fill" Value="#99FFD166" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Ellipse.Style>
+                </Ellipse>
+                <Ellipse Width="5" Height="5" Fill="#FFFFAA00" />
+            </Grid>
+        </Button>
+    </DataTemplate>
+</ResourceDictionary>

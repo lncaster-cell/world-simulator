@@ -1,0 +1,32 @@
+<UserControl x:Class="WorldSimulator.App.Views.CityWindow.CityFoodFlowTabView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:WorldSimulator.App.ViewModels"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance Type=vm:MainWindowViewModel, IsDesignTimeCreatable=False}">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Margin="8">
+            <TextBlock Text="Дневный прогноз пищевого баланса" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,10"/>
+            <TextBlock Text="Начальная пища:" FontWeight="SemiBold"/>
+            <TextBlock Text="{Binding DailyFoodStartingFood}" Margin="0,0,0,6"/>
+            <TextBlock Text="Потребление населения:" FontWeight="SemiBold"/>
+            <TextBlock Text="{Binding DailyFoodPopulationConsumptionDisplay}" Margin="0,0,0,6"/>
+            <TextBlock Text="Земледелие:" FontWeight="SemiBold"/>
+            <TextBlock Text="{Binding DailyFoodAgricultureIncomeDisplay}"/>
+            <TextBlock Text="Рыбалка:" FontWeight="SemiBold" ToolTip="{Binding FishingProductionTooltip}"/>
+            <TextBlock Text="{Binding DailyFoodFishingIncomeDisplay}" ToolTip="{Binding FishingProductionTooltip}" Margin="0,0,0,6"/>
+            <TextBlock Text="Охота:" FontWeight="SemiBold"/>
+            <TextBlock Text="{Binding DailyFoodHuntingIncomeDisplay}" Margin="0,0,0,6"/>
+            <TextBlock Text="Поставки с материка:" FontWeight="SemiBold"/>
+            <TextBlock Text="{Binding DailyFoodMainlandSupplyIncomeDisplay}" Margin="0,0,0,6"/>
+            <TextBlock Text="Влияние событий:" FontWeight="SemiBold"/>
+            <TextBlock Text="{Binding DailyFoodEventDeltaDisplay}" Margin="0,0,0,6"/>
+            <TextBlock Text="Дневной баланс:" FontWeight="SemiBold" ToolTip="{Binding FoodBalanceTooltip}"/>
+            <TextBlock Text="{Binding DailyFoodTotalDeltaDisplay}" ToolTip="{Binding FoodBalanceTooltip}" Margin="0,0,0,6"/>
+            <TextBlock Text="Ожидаемая пища после дня:" FontWeight="SemiBold"/>
+            <TextBlock Text="{Binding DailyFoodEndingFood}" Margin="0,0,0,6"/>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>
