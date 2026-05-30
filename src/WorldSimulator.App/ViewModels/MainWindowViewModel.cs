@@ -174,6 +174,7 @@ public sealed class MainWindowViewModel : ViewModelBase
     public bool HasActiveEventEntries => Log.HasActiveEventEntries;
     public bool HasCompletedEventEntries => Log.HasCompletedEventEntries;
     public decimal DailyFoodEventDelta => SelectedCity.DailyFoodEventDelta;
+    public CityWorkforceDiagnosticsViewModel CityWorkforceDiagnostics => new(_world, _city);
 
     public bool IsCityPanelVisible
     {
@@ -422,6 +423,7 @@ public sealed class MainWindowViewModel : ViewModelBase
     {
         OnPropertyChanged(nameof(Cities));
         OnPropertyChanged(nameof(SettlementCountText));
+        OnPropertyChanged(nameof(CityWorkforceDiagnostics));
         NotifyTradeRoutesChanged();
         TradeRouteAuthoring.RefreshWorldCollections();
         Map.LoadRoutePathsForWorld();
@@ -445,6 +447,7 @@ public sealed class MainWindowViewModel : ViewModelBase
     {
         SelectedCity.RefreshSelectedCityPanel();
         Map.RefreshSelectedCityProperties();
+        OnPropertyChanged(nameof(CityWorkforceDiagnostics));
         if (OpenSelectedCityCommand is RelayCommand openSelectedCityCommand) openSelectedCityCommand.RaiseCanExecuteChanged();
     }
 
@@ -453,6 +456,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         SelectedCity.RefreshAllCityProperties();
         Map.RefreshSelectedCityProperties();
         OnPropertyChanged(nameof(DailyFoodEventDelta));
+        OnPropertyChanged(nameof(CityWorkforceDiagnostics));
     }
 
     private void RefreshDailyFoodFlowPreview()
@@ -490,6 +494,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         SelectedCity.RefreshAllCityProperties();
         Map.RefreshSelectedCityProperties();
         Summary.RefreshCityState();
+        OnPropertyChanged(nameof(CityWorkforceDiagnostics));
     }
 
     private void SetLastImportantChange(string message)
