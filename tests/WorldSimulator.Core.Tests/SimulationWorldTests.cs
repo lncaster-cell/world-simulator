@@ -6,6 +6,17 @@ namespace WorldSimulator.Core.Tests;
 
 public sealed class SimulationWorldTests
 {
+    public static IEnumerable<object[]> SettlementCoordinateCases =>
+    [
+        ["rivenstal", 0.4824m, 0.4500m],
+        ["gavern", 0.5066m, 0.5963m],
+        ["mlynek", 0.2833m, 0.2487m],
+        ["brno", 0.4527m, 0.7448m],
+        ["wodenz", 0.8036m, 0.9604m],
+        ["wardmark", 0.0380m, 0.4027m],
+        ["highrock", 0.1579m, 0.2179m],
+        ["thokur_rus", 0.8652m, 0.4753m],
+    ];
 
     [Fact]
     public void DefaultWorld_HasRiviaRegion()
@@ -158,92 +169,16 @@ public sealed class SimulationWorldTests
         world.SettlementMapLocations.Should().OnlyContain(x => x.X >= 0m && x.X <= 1m && x.Y >= 0m && x.Y <= 1m);
     }
 
-    [Fact]
-    public void DefaultWorld_HasRivenstalCoordinates()
+    [Theory]
+    [MemberData(nameof(SettlementCoordinateCases))]
+    public void DefaultWorld_HasSettlementCoordinates(string settlementId, decimal expectedX, decimal expectedY)
     {
         var world = WorldPresets.CreateDefaultWorld();
-        var location = world.FindSettlementMapLocation("rivenstal");
+        var location = world.FindSettlementMapLocation(settlementId);
 
-        location.Should().NotBeNull();
-        location!.X.Should().Be(0.4824m);
-        location.Y.Should().Be(0.4500m);
-    }
-
-    [Fact]
-    public void DefaultWorld_HasGavernCoordinates()
-    {
-        var world = WorldPresets.CreateDefaultWorld();
-        var location = world.FindSettlementMapLocation("gavern");
-
-        location.Should().NotBeNull();
-        location!.X.Should().Be(0.5066m);
-        location.Y.Should().Be(0.5963m);
-    }
-
-    [Fact]
-    public void DefaultWorld_HasMlynekCoordinates()
-    {
-        var world = WorldPresets.CreateDefaultWorld();
-        var location = world.FindSettlementMapLocation("mlynek");
-
-        location.Should().NotBeNull();
-        location!.X.Should().Be(0.2833m);
-        location.Y.Should().Be(0.2487m);
-    }
-
-    [Fact]
-    public void DefaultWorld_HasBrnoCoordinates()
-    {
-        var world = WorldPresets.CreateDefaultWorld();
-        var location = world.FindSettlementMapLocation("brno");
-
-        location.Should().NotBeNull();
-        location!.X.Should().Be(0.4527m);
-        location.Y.Should().Be(0.7448m);
-    }
-
-    [Fact]
-    public void DefaultWorld_HasWodenzCoordinates()
-    {
-        var world = WorldPresets.CreateDefaultWorld();
-        var location = world.FindSettlementMapLocation("wodenz");
-
-        location.Should().NotBeNull();
-        location!.X.Should().Be(0.8036m);
-        location.Y.Should().Be(0.9604m);
-    }
-
-    [Fact]
-    public void DefaultWorld_HasWardmarkCoordinates()
-    {
-        var world = WorldPresets.CreateDefaultWorld();
-        var location = world.FindSettlementMapLocation("wardmark");
-
-        location.Should().NotBeNull();
-        location!.X.Should().Be(0.0380m);
-        location.Y.Should().Be(0.4027m);
-    }
-
-    [Fact]
-    public void DefaultWorld_HasHighrockCoordinates()
-    {
-        var world = WorldPresets.CreateDefaultWorld();
-        var location = world.FindSettlementMapLocation("highrock");
-
-        location.Should().NotBeNull();
-        location!.X.Should().Be(0.1579m);
-        location.Y.Should().Be(0.2179m);
-    }
-
-    [Fact]
-    public void DefaultWorld_HasThokurRusCoordinates()
-    {
-        var world = WorldPresets.CreateDefaultWorld();
-        var location = world.FindSettlementMapLocation("thokur_rus");
-
-        location.Should().NotBeNull();
-        location!.X.Should().Be(0.8652m);
-        location.Y.Should().Be(0.4753m);
+        location.Should().NotBeNull("settlement '{0}' should have map location", settlementId);
+        location!.X.Should().Be(expectedX, "settlement '{0}' should have expected X coordinate", settlementId);
+        location.Y.Should().Be(expectedY, "settlement '{0}' should have expected Y coordinate", settlementId);
     }
 
     [Fact]
