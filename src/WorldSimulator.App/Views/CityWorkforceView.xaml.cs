@@ -2,6 +2,7 @@ using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using WorldSimulator.App.ViewModels;
 using WorldSimulator.Core.Cities;
 using WorldSimulator.Core.Workforce;
 using WorldSimulator.Core.World;
@@ -94,6 +95,13 @@ public partial class CityWorkforceView : UserControl
         if (dataContext is null)
         {
             return false;
+        }
+
+        if (dataContext is SelectedCityViewModel selectedCity)
+        {
+            world = selectedCity.World;
+            city = selectedCity.City;
+            return true;
         }
 
         var type = dataContext.GetType();

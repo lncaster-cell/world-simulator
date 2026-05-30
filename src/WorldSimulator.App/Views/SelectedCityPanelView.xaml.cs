@@ -5,7 +5,7 @@ using WorldSimulator.App.ViewModels;
 namespace WorldSimulator.App.Views;
 
 /// <summary>
-/// Expects <see cref="MainWindowViewModel" /> as its inherited DataContext.
+/// Expects <see cref="SelectedCityViewModel" /> as its DataContext.
 /// </summary>
 public partial class SelectedCityPanelView : UserControl
 {

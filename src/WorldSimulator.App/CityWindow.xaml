@@ -33,25 +33,25 @@
                             </Grid.RowDefinitions>
 
                             <TextBlock Grid.Row="0" Grid.Column="0" Text="Город:" FontWeight="SemiBold"/>
-                            <TextBlock Grid.Row="0" Grid.Column="2" Text="{Binding CityName}"/>
+                            <TextBlock Grid.Row="0" Grid.Column="2" Text="{Binding SelectedCity.CityName}"/>
 
                             <TextBlock Grid.Row="1" Grid.Column="0" Text="Профиль города:" FontWeight="SemiBold"/>
-                            <TextBlock Grid.Row="1" Grid.Column="2" Text="{Binding SelectedCityProfile}"/>
+                            <TextBlock Grid.Row="1" Grid.Column="2" Text="{Binding SelectedCity.SelectedCityProfile}"/>
 
                             <TextBlock Grid.Row="2" Grid.Column="0" Text="Состояние города:" FontWeight="SemiBold"/>
-                            <TextBlock Grid.Row="2" Grid.Column="2" Text="{Binding CityStateDisplay}"/>
+                            <TextBlock Grid.Row="2" Grid.Column="2" Text="{Binding SelectedCity.CityStateDisplay}"/>
 
                             <TextBlock Grid.Row="3" Grid.Column="0" Text="Население:" FontWeight="SemiBold"/>
-                            <TextBlock Grid.Row="3" Grid.Column="2" Text="{Binding Population}"/>
+                            <TextBlock Grid.Row="3" Grid.Column="2" Text="{Binding SelectedCity.Population}"/>
 
                             <TextBlock Grid.Row="4" Grid.Column="0" Text="Настроение:" FontWeight="SemiBold"/>
-                            <TextBlock Grid.Row="4" Grid.Column="2" Text="{Binding Mood}"/>
+                            <TextBlock Grid.Row="4" Grid.Column="2" Text="{Binding SelectedCity.Mood}"/>
 
                             <TextBlock Grid.Row="5" Grid.Column="0" Text="Безопасность:" FontWeight="SemiBold"/>
-                            <TextBlock Grid.Row="5" Grid.Column="2" Text="{Binding Security}"/>
+                            <TextBlock Grid.Row="5" Grid.Column="2" Text="{Binding SelectedCity.Security}"/>
 
-                            <TextBlock Grid.Row="6" Grid.Column="0" Text="Преступность:" FontWeight="SemiBold" ToolTip="{Binding CrimeFlowTooltip}"/>
-                            <TextBlock Grid.Row="6" Grid.Column="2" Text="{Binding Crime}" ToolTip="{Binding CrimeFlowTooltip}"/>
+                            <TextBlock Grid.Row="6" Grid.Column="0" Text="Преступность:" FontWeight="SemiBold" ToolTip="{Binding SelectedCity.CrimeFlowTooltip}"/>
+                            <TextBlock Grid.Row="6" Grid.Column="2" Text="{Binding SelectedCity.Crime}" ToolTip="{Binding SelectedCity.CrimeFlowTooltip}"/>
 
                             <TextBlock Grid.Row="7" Grid.Column="0" Text="День:" FontWeight="SemiBold"/>
                             <TextBlock Grid.Row="7" Grid.Column="2" Text="{Binding Day}"/>
@@ -70,14 +70,14 @@
                 <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                     <StackPanel Margin="8">
                         <TextBlock Text="Текущие запасы" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,10"/>
-                        <TextBlock Text="Пища:" FontWeight="SemiBold" ToolTip="{Binding FoodBalanceTooltip}"/>
-                        <TextBlock Text="{Binding Food}" ToolTip="{Binding FoodBalanceTooltip}" Margin="0,0,0,6"/>
-                        <TextBlock Text="Благосостояние:" FontWeight="SemiBold" ToolTip="{Binding WealthTooltip}"/>
-                        <TextBlock Text="{Binding Wealth}" ToolTip="{Binding WealthTooltip}" Margin="0,0,0,6"/>
+                        <TextBlock Text="Пища:" FontWeight="SemiBold" ToolTip="{Binding SelectedCity.FoodBalanceTooltip}"/>
+                        <TextBlock Text="{Binding SelectedCity.Food}" ToolTip="{Binding SelectedCity.FoodBalanceTooltip}" Margin="0,0,0,6"/>
+                        <TextBlock Text="Благосостояние:" FontWeight="SemiBold" ToolTip="{Binding SelectedCity.WealthTooltip}"/>
+                        <TextBlock Text="{Binding SelectedCity.Wealth}" ToolTip="{Binding SelectedCity.WealthTooltip}" Margin="0,0,0,6"/>
                         <TextBlock Text="Ресурсы:" FontWeight="SemiBold"/>
-                        <TextBlock Text="{Binding Resources}" Margin="0,0,0,6"/>
+                        <TextBlock Text="{Binding SelectedCity.Resources}" Margin="0,0,0,6"/>
                         <TextBlock Text="Товары:" FontWeight="SemiBold"/>
-                        <TextBlock Text="{Binding Goods}" Margin="0,0,0,10"/>
+                        <TextBlock Text="{Binding SelectedCity.Goods}" Margin="0,0,0,10"/>
                         <TextBlock Text="Значения запасов в MVP указаны в условных единицах."
                                    FontStyle="Italic"
                                    Foreground="DimGray"
@@ -91,23 +91,23 @@
                     <StackPanel Margin="8">
                         <TextBlock Text="Дневный прогноз пищевого баланса" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,10"/>
                         <TextBlock Text="Начальная пища:" FontWeight="SemiBold"/>
-                        <TextBlock Text="{Binding DailyFoodStartingFood}" Margin="0,0,0,6"/>
+                        <TextBlock Text="{Binding SelectedCity.DailyFoodStartingFood}" Margin="0,0,0,6"/>
                         <TextBlock Text="Потребление населения:" FontWeight="SemiBold"/>
-                        <TextBlock Text="{Binding DailyFoodPopulationConsumptionDisplay}" Margin="0,0,0,6"/>
+                        <TextBlock Text="{Binding SelectedCity.DailyFoodPopulationConsumptionDisplay}" Margin="0,0,0,6"/>
                         <TextBlock Text="Земледелие:" FontWeight="SemiBold"/>
-                        <TextBlock Text="{Binding DailyFoodAgricultureIncomeDisplay}"/>
-                        <TextBlock Text="Рыбалка:" FontWeight="SemiBold" ToolTip="{Binding FishingProductionTooltip}"/>
-                        <TextBlock Text="{Binding DailyFoodFishingIncomeDisplay}" ToolTip="{Binding FishingProductionTooltip}" Margin="0,0,0,6"/>
+                        <TextBlock Text="{Binding SelectedCity.DailyFoodAgricultureIncomeDisplay}"/>
+                        <TextBlock Text="Рыбалка:" FontWeight="SemiBold" ToolTip="{Binding SelectedCity.FishingProductionTooltip}"/>
+                        <TextBlock Text="{Binding SelectedCity.DailyFoodFishingIncomeDisplay}" ToolTip="{Binding SelectedCity.FishingProductionTooltip}" Margin="0,0,0,6"/>
                         <TextBlock Text="Охота:" FontWeight="SemiBold"/>
-                        <TextBlock Text="{Binding DailyFoodHuntingIncomeDisplay}" Margin="0,0,0,6"/>
+                        <TextBlock Text="{Binding SelectedCity.DailyFoodHuntingIncomeDisplay}" Margin="0,0,0,6"/>
                         <TextBlock Text="Поставки с материка:" FontWeight="SemiBold"/>
-                        <TextBlock Text="{Binding DailyFoodMainlandSupplyIncomeDisplay}" Margin="0,0,0,6"/>
+                        <TextBlock Text="{Binding SelectedCity.DailyFoodMainlandSupplyIncomeDisplay}" Margin="0,0,0,6"/>
                         <TextBlock Text="Влияние событий:" FontWeight="SemiBold"/>
-                        <TextBlock Text="{Binding DailyFoodEventDeltaDisplay}" Margin="0,0,0,6"/>
-                        <TextBlock Text="Дневной баланс:" FontWeight="SemiBold" ToolTip="{Binding FoodBalanceTooltip}"/>
-                        <TextBlock Text="{Binding DailyFoodTotalDeltaDisplay}" ToolTip="{Binding FoodBalanceTooltip}" Margin="0,0,0,6"/>
+                        <TextBlock Text="{Binding SelectedCity.DailyFoodEventDeltaDisplay}" Margin="0,0,0,6"/>
+                        <TextBlock Text="Дневной баланс:" FontWeight="SemiBold" ToolTip="{Binding SelectedCity.FoodBalanceTooltip}"/>
+                        <TextBlock Text="{Binding SelectedCity.DailyFoodTotalDeltaDisplay}" ToolTip="{Binding SelectedCity.FoodBalanceTooltip}" Margin="0,0,0,6"/>
                         <TextBlock Text="Ожидаемая пища после дня:" FontWeight="SemiBold"/>
-                        <TextBlock Text="{Binding DailyFoodEndingFood}" Margin="0,0,0,6"/>
+                        <TextBlock Text="{Binding SelectedCity.DailyFoodEndingFood}" Margin="0,0,0,6"/>
                     </StackPanel>
                 </ScrollViewer>
             </TabItem>
@@ -149,11 +149,11 @@
             </TabItem>
 
             <TabItem Header="Инфраструктура">
-                <views:CityInfrastructureView/>
+                <views:CityInfrastructureView DataContext="{Binding SelectedCity}"/>
             </TabItem>
 
             <TabItem Header="Рабочая сила">
-                <views:CityWorkforceView/>
+                <views:CityWorkforceView DataContext="{Binding SelectedCity}"/>
             </TabItem>
 
             <TabItem Header="Отладка">
