@@ -48,7 +48,6 @@ public sealed class WorldTradeFlowService
         var settlementStats = world.Cities.ToDictionary(c => c.Id, c => new SettlementTradeAccumulator());
 
         var cities = world.Cities.OrderBy(c => c.Id, StringComparer.Ordinal).ToList();
-        var cityById = cities.ToDictionary(c => c.Id, StringComparer.Ordinal);
         var activeCaravans = world.TradeShipments
             .Where(s => s.Status != TradeShipmentStatus.Completed)
             .Select(s => s.CaravanId)
@@ -88,20 +87,12 @@ public sealed class WorldTradeFlowService
                 }
 
                 var importerCandidate = routes
-                    .Select(route =>
+                    .Select(candidate => new
                     {
-                        var importerId = route.FromSettlementId == exporter.Id
-                            ? route.ToSettlementId
-                            : route.ToSettlementId == exporter.Id
-                                ? route.FromSettlementId
-                                : null;
-
-                        return importerId is not null && cityById.TryGetValue(importerId, out var importerCity)
-                            ? new { Route = route, City = importerCity, Deficit = TradeDemandPolicy.CalculateDeficit(importerCity, good) }
-                            : null;
+                        candidate.Route,
+                        City = candidate.Importer,
+                        Deficit = TradeDemandPolicy.CalculateDeficit(candidate.Importer, good)
                     })
-                    .Where(candidate => candidate is not null)
-                    .Select(candidate => candidate!)
                     .Where(candidate => candidate.Deficit > 0m)
                     .OrderByDescending(candidate => candidate.Deficit)
                     .ThenBy(candidate => candidate.City.Id, StringComparer.Ordinal)
