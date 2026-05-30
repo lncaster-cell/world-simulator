@@ -19,28 +19,4 @@
     <SolidColorBrush x:Key="MapDebugLabelBackgroundBrush" Color="#AA111111" />
     <SolidColorBrush x:Key="MapDebugLabelForegroundBrush" Color="White" />
 
-    <Style x:Key="MapDebugRoutePolylineStyle" TargetType="Polyline">
-        <Setter Property="Stroke" Value="{StaticResource MapDebugRouteBrush}" />
-        <Setter Property="StrokeThickness" Value="2.1" />
-        <Style.Triggers>
-            <DataTrigger Binding="{Binding IsSeaRoute}" Value="True">
-                <Setter Property="Stroke" Value="{StaticResource MapSeaRouteBrush}" />
-            </DataTrigger>
-            <DataTrigger Binding="{Binding IsActive}" Value="True">
-                <Setter Property="Stroke" Value="{StaticResource MapActiveDebugRouteBrush}" />
-                <Setter Property="StrokeThickness" Value="2.6" />
-            </DataTrigger>
-        </Style.Triggers>
-    </Style>
-
-    <Style x:Key="MapTradeRoutePolylineStyle" TargetType="Polyline">
-        <Setter Property="Stroke" Value="{StaticResource MapTradeRouteBrush}" />
-        <Setter Property="StrokeThickness" Value="2.8" />
-        <Style.Triggers>
-            <DataTrigger Binding="{Binding IsActive}" Value="True">
-                <Setter Property="Stroke" Value="{StaticResource MapActiveTradeRouteBrush}" />
-                <Setter Property="StrokeThickness" Value="3.4" />
-            </DataTrigger>
-        </Style.Triggers>
-    </Style>
 </ResourceDictionary>
