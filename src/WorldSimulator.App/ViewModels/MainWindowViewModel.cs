@@ -1,5 +1,4 @@
 using System.Collections.ObjectModel;
-using System.ComponentModel;
 using System.IO;
 using System.Windows.Input;
 using WorldSimulator.App.Infrastructure;
@@ -7,8 +6,9 @@ using WorldSimulator.App.Services;
 using WorldSimulator.Core.Cities;
 using WorldSimulator.Core.Events;
 using WorldSimulator.Core.Resources;
-using WorldSimulator.Core.Time;
 using WorldSimulator.Core.Simulation;
+using WorldSimulator.Core.Time;
+using WorldSimulator.Core.Trade;
 using WorldSimulator.Core.World;
 using WorldSimulator.Persistence.Saves;
 
@@ -18,24 +18,34 @@ public sealed class MainWindowViewModel : ViewModelBase
 {
     private const string SaveFilePath = "data/save/world_save.json";
     private const int MaxTechnicalLogEntries = 500;
+
     private SimulationWorld _world;
     private City _city;
-    private readonly SimulationClock _clock;
-    private readonly DailyFoodFlowCalculator _dailyFoodFlowCalculator;
-    private readonly FishingProductionCalculator _fishingProductionCalculator;
-    private readonly HuntingProductionCalculator _huntingProductionCalculator;
-    private readonly AgricultureProductionCalculator _agricultureProductionCalculator;
-    private readonly MainlandSupplyProductionCalculator _mainlandSupplyProductionCalculator;
-    private readonly CityStateEvaluator _cityStateEvaluator;
-    private readonly CityEventManager _eventManager;
-    private readonly CityEventEffectCalculator _eventEffectCalculator;
+    private readonly SimulationClock _clock = new();
+    private readonly DailyFoodFlowCalculator _dailyFoodFlowCalculator = new();
+    private readonly FishingProductionCalculator _fishingProductionCalculator = new();
+    private readonly HuntingProductionCalculator _huntingProductionCalculator = new();
+    private readonly AgricultureProductionCalculator _agricultureProductionCalculator = new();
+    private readonly MainlandSupplyProductionCalculator _mainlandSupplyProductionCalculator = new();
+    private readonly GoodsCraftingProductionCalculator _goodsCraftingProductionCalculator = new();
+    private readonly ResourceGatheringProductionCalculator _resourceGatheringProductionCalculator = new();
+    private readonly HouseholdConsumptionCalculator _householdConsumptionCalculator = new();
+    private readonly DailyWealthFlowCalculator _dailyWealthFlowCalculator = new();
+    private readonly WeeklyCrimeFlowCalculator _weeklyCrimeFlowCalculator = new();
+    private readonly CityStateEvaluator _cityStateEvaluator = new();
+    private readonly CityEventManager _eventManager = new();
+    private readonly CityEventEffectCalculator _eventEffectCalculator = new();
+    private readonly CityEventGenerator _eventGenerator = new(new SystemRandomProvider());
+    private readonly CityEventEffectTextFormatter _eventEffectTextFormatter = new();
+    private readonly DailySimulationPresentationService _dailySimulationPresentationService;
     private readonly WorldSimulationService _worldSimulationService;
-    private readonly JsonWorldSaveService _saveService;
+    private readonly JsonWorldSaveService _saveService = new();
     private readonly SimulationJournalService _journalService;
+
     private DailyFoodFlowResult _dailyFoodFlowResult;
     private DailyWealthFlowResult? _dailyWealthFlowResult;
     private bool _isRandomEventGenerationEnabled = true;
-    private string _lastImportantChange = "пока нет.";
+    private string _lastImportantChange = "none";
     private bool _isCityPanelVisible;
     private int _selectedCityTabIndex;
 
@@ -43,13 +53,8 @@ public sealed class MainWindowViewModel : ViewModelBase
     {
         _world = WorldPresets.CreateDefaultWorld();
         _city = _world.SelectedCity;
-        _clock = new SimulationClock();
-        _dailyFoodFlowCalculator = new DailyFoodFlowCalculator();
-        _weeklyCrimeFlowCalculator = new WeeklyCrimeFlowCalculator();
-        _cityStateEvaluator = new CityStateEvaluator();
-        _eventManager = new CityEventManager();
-        _eventEffectCalculator = new CityEventEffectCalculator();
-        _eventGenerator = new CityEventGenerator(new SystemRandomProvider());
+        _dailySimulationPresentationService = new DailySimulationPresentationService(_eventEffectTextFormatter);
+        _journalService = new SimulationJournalService(_eventEffectTextFormatter);
         _worldSimulationService = new WorldSimulationService(
             _dailyFoodFlowCalculator,
             _fishingProductionCalculator,
@@ -68,32 +73,16 @@ public sealed class MainWindowViewModel : ViewModelBase
             _eventManager,
             _eventEffectCalculator,
             _eventGenerator);
-        _saveService = new JsonWorldSaveService();
-        _eventEffectTextFormatter = new CityEventEffectTextFormatter();
-        _journalService = new SimulationJournalService(_eventEffectTextFormatter);
-        _dailySimulationPresentationService = new DailySimulationPresentationService(_eventEffectTextFormatter);
-        Journal = new SimulationJournalViewModel(_journalService, _city.Id, _city.Name);
-        _dailyFoodFlowResult = _dailyFoodFlowCalculator.Calculate(_city, BuildDailyFoodFlowInputs());
-        SelectedCity = new SelectedCityViewModel(
-            () => _world,
-            () => _city,
-            () => _dailyFoodFlowResult,
-            () => _dailyWealthFlowResult,
-            OpenSelectedCity);
 
+        _dailyFoodFlowResult = _dailyFoodFlowCalculator.Calculate(_city, BuildDailyFoodFlowInputs());
+        Journal = new SimulationJournalViewModel(_journalService, _city.Id, _city.Name);
         Control = new SimulationControlViewModel(_clock, AddTechnicalLogEntry);
         Log = new SimulationLogViewModel();
         SelectedCity = new SelectedCityViewModel(() => _world, () => _city, () => _dailyFoodFlowResult, () => _dailyWealthFlowResult);
         Summary = new SimulationSummaryViewModel(Control, SelectedCity, Log, () => IsRandomEventGenerationEnabled, () => _lastImportantChange);
-        Control.ResetRequested += ResetSimulation;
-        Control.PropertyChanged += (_, e) =>
-        {
-            if (e.PropertyName is nameof(SimulationControlViewModel.Day) or nameof(SimulationControlViewModel.Hour))
-            {
-                Summary.RefreshClock();
-            }
-        };
         Map = new MapViewModel(() => _world, _clock, AddTechnicalLogEntry);
+        TradeRouteAuthoring = new TradeRouteAuthoringViewModel(() => _world, AddTechnicalLogEntry, NotifyTradeRoutesChanged, () => Map.RefreshTradeRouteVisuals(null), new TradeRouteAuthoringService());
+
         StartCommand = Control.StartCommand;
         PauseCommand = Control.PauseCommand;
         ResetCommand = Control.ResetCommand;
@@ -102,7 +91,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         SetVeryFastSpeedCommand = Control.SetVeryFastSpeedCommand;
         SetTurboSpeedCommand = Control.SetTurboSpeedCommand;
         SelectSettlementCommand = new RelayCommand<string>(SelectSettlement);
-        OpenSelectedCityCommand = SelectedCity.OpenSelectedCityCommand;
+        OpenSelectedCityCommand = new RelayCommand(OpenSelectedCity, () => !string.IsNullOrWhiteSpace(_world.SelectedCityId));
         TriggerFireEventCommand = new RelayCommand(() => TryStartEvent(CityEventPresets.CreateFire));
         TriggerDiseaseEventCommand = new RelayCommand(() => TryStartEvent(CityEventPresets.CreateDisease));
         TriggerRatInfestationEventCommand = new RelayCommand(() => TryStartEvent(CityEventPresets.CreateRatInfestation));
@@ -111,17 +100,32 @@ public sealed class MainWindowViewModel : ViewModelBase
         ToggleRandomEventGenerationCommand = new RelayCommand(ToggleRandomEventGeneration);
         SaveCommand = new AsyncRelayCommand(SaveStateAsync);
         LoadCommand = new AsyncRelayCommand(LoadStateAsync);
-        TradeRouteAuthoring = new TradeRouteAuthoringViewModel(
-            () => _world,
-            AddTechnicalLogEntry,
-            NotifyTradeRoutesChanged,
-            () => Map.RefreshTradeRouteVisuals(null),
-            new TradeRouteAuthoringService());
 
+        Control.ResetRequested += ResetSimulation;
+        Control.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName is nameof(SimulationControlViewModel.Day) or nameof(SimulationControlViewModel.Hour))
+            {
+                OnPropertyChanged(nameof(Day));
+                OnPropertyChanged(nameof(Hour));
+                Summary.RefreshClock();
+            }
+            else if (e.PropertyName is nameof(SimulationControlViewModel.IsRunning))
+            {
+                OnPropertyChanged(nameof(IsRunning));
+            }
+            else if (e.PropertyName is nameof(SimulationControlViewModel.SimulationState))
+            {
+                OnPropertyChanged(nameof(SimulationState));
+            }
+            else if (e.PropertyName is nameof(SimulationControlViewModel.CurrentSimulationSpeedDisplay))
+            {
+                OnPropertyChanged(nameof(CurrentSimulationSpeedDisplay));
+            }
+        };
         _clock.DayAdvanced += OnDayAdvanced;
 
         TradeRouteAuthoring.SelectedTradeRouteForAuthoring = _world.TradeRoutes.FirstOrDefault();
-
         RefreshCityState();
         RefreshDailyFoodFlowPreview();
         RefreshEventEntries();
@@ -131,34 +135,22 @@ public sealed class MainWindowViewModel : ViewModelBase
     }
 
     public SimulationControlViewModel Control { get; }
-
     public SimulationLogViewModel Log { get; }
-
     public SelectedCityViewModel SelectedCity { get; }
-
     public SimulationSummaryViewModel Summary { get; }
-
     public SimulationJournalViewModel Journal { get; }
-
     public MapViewModel Map { get; }
-
-    public SelectedCityViewModel SelectedCity { get; }
+    public TradeRouteAuthoringViewModel TradeRouteAuthoring { get; }
 
     public ICommand StartCommand { get; }
-
     public ICommand PauseCommand { get; }
-
     public ICommand ResetCommand { get; }
-
     public ICommand SetNormalSpeedCommand { get; }
     public ICommand SetFastSpeedCommand { get; }
     public ICommand SetVeryFastSpeedCommand { get; }
     public ICommand SetTurboSpeedCommand { get; }
-
     public ICommand SelectSettlementCommand { get; }
-
     public ICommand OpenSelectedCityCommand { get; }
-
     public ICommand TriggerFireEventCommand { get; }
     public ICommand TriggerDiseaseEventCommand { get; }
     public ICommand TriggerRatInfestationEventCommand { get; }
@@ -167,20 +159,21 @@ public sealed class MainWindowViewModel : ViewModelBase
     public ICommand ToggleRandomEventGenerationCommand { get; }
     public ICommand SaveCommand { get; }
     public ICommand LoadCommand { get; }
-    public TradeRouteAuthoringViewModel TradeRouteAuthoring { get; }
 
     public IReadOnlyList<City> Cities => _world.Cities;
-
     public string SettlementCountText => $"Поселений: {_world.Cities.Count}";
-
     public int Day => Control.Day;
-
     public int Hour => Control.Hour;
-
     public bool IsRunning => Control.IsRunning;
-
     public string SimulationState => Control.SimulationState;
     public string CurrentSimulationSpeedDisplay => Control.CurrentSimulationSpeedDisplay;
+    public ObservableCollection<string> TechnicalLogEntries => Log.TechnicalLogEntries;
+    public ObservableCollection<string> ActiveEventEntries => Log.ActiveEventEntries;
+    public ObservableCollection<string> CompletedEventEntries => Log.CompletedEventEntries;
+    public bool HasTechnicalLogEntries => Log.HasTechnicalLogEntries;
+    public bool HasActiveEventEntries => Log.HasActiveEventEntries;
+    public bool HasCompletedEventEntries => Log.HasCompletedEventEntries;
+    public decimal DailyFoodEventDelta => SelectedCity.DailyFoodEventDelta;
 
     public bool IsCityPanelVisible
     {
@@ -199,50 +192,25 @@ public sealed class MainWindowViewModel : ViewModelBase
         get => _isRandomEventGenerationEnabled;
         private set
         {
-            if (_isRandomEventGenerationEnabled == value)
+            if (SetProperty(ref _isRandomEventGenerationEnabled, value))
             {
-                return;
+                OnPropertyChanged(nameof(RandomEventGenerationStatusDisplay));
+                OnPropertyChanged(nameof(RandomEventGenerationToggleButtonText));
             }
-
-            _isRandomEventGenerationEnabled = value;
-            OnPropertyChanged();
-            OnPropertyChanged(nameof(RandomEventGenerationStatusDisplay));
-            OnPropertyChanged(nameof(RandomEventGenerationToggleButtonText));
         }
     }
 
     public string RandomEventGenerationStatusDisplay => IsRandomEventGenerationEnabled ? "включены" : "выключены";
-
-    public string RandomEventGenerationToggleButtonText => IsRandomEventGenerationEnabled
-        ? "Выключить случайные события"
-        : "Включить случайные события";
-
-    private static string FormatSigned(decimal value)
-    {
-        return value.ToString("+0.##;-0.##;0");
-    }
-
-    private City CreatePreviewCity()
-    {
-        return new City(_city.Id, _city.Name, _city.Population, _city.Food, _city.Wealth, _city.Mood, _city.Security, _city.Crime, _city.Resources, _city.Goods, _city.CityState);
-    }
+    public string RandomEventGenerationToggleButtonText => IsRandomEventGenerationEnabled ? "Выключить случайные события" : "Включить случайные события";
 
     private void SelectSettlement(string? settlementId)
     {
-        if (string.IsNullOrWhiteSpace(settlementId))
-        {
-            return;
-        }
-
+        if (string.IsNullOrWhiteSpace(settlementId)) return;
         var selectedCity = _world.FindCity(settlementId);
-        if (selectedCity is null)
-        {
-            return;
-        }
+        if (selectedCity is null) return;
 
         _world.SelectedCityId = selectedCity.Id;
         _city = _world.SelectedCity;
-
         var selectedLocation = _world.FindSettlementMapLocation(selectedCity.Id);
         if (selectedLocation is not null)
         {
@@ -250,14 +218,12 @@ public sealed class MainWindowViewModel : ViewModelBase
         }
 
         var eventState = _worldSimulationService.ExportEventState();
-        var selectedEventManager = eventState.GetManagerOrEmpty(_world.SelectedCityId);
-        _eventManager.Restore(selectedEventManager.ActiveEvents, selectedEventManager.CompletedEvents);
-
+        var manager = eventState.GetManagerOrEmpty(_world.SelectedCityId);
+        _eventManager.Restore(manager.ActiveEvents, manager.CompletedEvents);
         Journal.SelectCity(_city.Id, _city.Name);
 
         RefreshSelectedCityProperties();
         RefreshEventEntries();
-        Map.RefreshSelectedCityProperties();
         RefreshDailyFoodFlowPreview();
         RefreshSimulationSummary();
     }
@@ -266,15 +232,12 @@ public sealed class MainWindowViewModel : ViewModelBase
     {
         IsCityPanelVisible = true;
         SelectedCityTabIndex = 0;
-        OnPropertyChanged(nameof(IsCityPanelVisible));
-        OnPropertyChanged(nameof(SelectedCityTabIndex));
     }
 
     private void ResetSimulation()
     {
         _world = WorldPresets.CreateDefaultWorld();
         _city = _world.SelectedCity;
-
         Control.ResetClock();
         Map.ResetAnimationBaseline();
         _dailyWealthFlowResult = null;
@@ -284,93 +247,49 @@ public sealed class MainWindowViewModel : ViewModelBase
         Journal.SelectCity(_city.Id, _city.Name);
         Journal.SelectedSimulationJournalFilter = SimulationJournalFilterOption.All;
         Journal.SelectedSimulationJournalEntry = null;
-
-        ClearViewModelSimulationCollections();
+        Log.ClearSimulationEntries();
+        Journal.Clear();
         Map.ClearSimulationCollections();
-        SetLastImportantChange("симуляция сброшена к началу.");
+        SetLastImportantChange("reset");
 
         RefreshWorldCollectionsAfterLoad();
         TradeRouteAuthoring.ResetForWorldReset();
         RefreshSelectedCityProperties();
         RefreshClockProperties();
-        Map.RefreshSelectedCityProperties();
         RefreshDailyFoodFlowPreview();
         RefreshEventEntries();
-        OnPropertyChanged(nameof(CurrentSimulationSpeedDisplay));
         RefreshSimulationSummary();
-
-        AddTechnicalLogEntry("Симуляция сброшена: день 1, час 0, мир возвращён к начальному состоянию.");
-    }
-
-    private void ClearViewModelSimulationCollections()
-    {
-        Log.ClearSimulationEntries();
-        Journal.Clear();
-    }
-
-    private void OnControlPropertyChanged(object? sender, PropertyChangedEventArgs e)
-    {
-        switch (e.PropertyName)
-        {
-            case nameof(SimulationControlViewModel.Day):
-            case nameof(SimulationControlViewModel.Hour):
-                OnPropertyChanged(nameof(Day));
-                OnPropertyChanged(nameof(Hour));
-                OnPropertyChanged(nameof(SimulationSummaryDayAndHour));
-                break;
-            case nameof(SimulationControlViewModel.IsRunning):
-                OnPropertyChanged(nameof(IsRunning));
-                break;
-            case nameof(SimulationControlViewModel.SimulationState):
-                OnPropertyChanged(nameof(SimulationState));
-                break;
-            case nameof(SimulationControlViewModel.CurrentSimulationSpeedDisplay):
-                OnPropertyChanged(nameof(CurrentSimulationSpeedDisplay));
-                break;
-        }
+        AddTechnicalLogEntry("Simulation reset.");
     }
 
     private void OnDayAdvanced(int day)
     {
         var populationStart = _city.Population;
         var cityStateStart = _city.CityState;
-
         var simulationResult = _worldSimulationService.AdvanceDay(_world, _city.Id, day, IsRandomEventGenerationEnabled);
-        if (simulationResult.SelectedCityResult is null)
-        {
-            return;
-        }
+        if (simulationResult.SelectedCityResult is null) return;
 
-        var eventState = _worldSimulationService.ExportEventState();
-        var selectedManager = eventState.GetManagerOrEmpty(_world.SelectedCityId);
+        var selectedManager = _worldSimulationService.ExportEventState().GetManagerOrEmpty(_world.SelectedCityId);
         _eventManager.Restore(selectedManager.ActiveEvents, selectedManager.CompletedEvents);
 
-        var result = simulationResult.SelectedCityResult.FoodFlow;
-        var resourceGathering = simulationResult.SelectedCityResult.ResourceGathering;
-        var goodsCrafting = simulationResult.SelectedCityResult.GoodsCrafting;
-        var householdConsumption = simulationResult.SelectedCityResult.HouseholdConsumption;
-        var wealthFlow = simulationResult.SelectedCityResult.WealthFlow;
-        var eventEffects = simulationResult.SelectedCityEventEffects;
-        _dailyFoodFlowResult = result;
-        _dailyWealthFlowResult = wealthFlow;
+        _dailyFoodFlowResult = simulationResult.SelectedCityResult.FoodFlow;
+        _dailyWealthFlowResult = simulationResult.SelectedCityResult.WealthFlow;
 
-        var populationEnd = _city.Population;
-        var cityStateEnd = _city.CityState;
         var presentation = _dailySimulationPresentationService.Build(new DailySimulationPresentationRequest
         {
             Day = day,
             City = _city,
             SimulationResult = simulationResult,
             PopulationStart = populationStart,
-            PopulationEnd = populationEnd,
+            PopulationEnd = _city.Population,
             CityStateStart = cityStateStart,
-            CityStateEnd = cityStateEnd,
+            CityStateEnd = _city.CityState,
             ActiveEventsCount = _eventManager.ActiveEvents.Count
         });
 
-        foreach (var technicalLogEntry in presentation.TechnicalLogEntries)
+        foreach (var entry in presentation.TechnicalLogEntries)
         {
-            AddTechnicalLogEntry(technicalLogEntry);
+            AddTechnicalLogEntry(entry);
         }
 
         if (presentation.LastImportantChange is not null)
@@ -383,40 +302,36 @@ public sealed class MainWindowViewModel : ViewModelBase
         {
             Map.RefreshTradeRouteVisuals(simulationResult.WeeklyTradeFlowResult);
         }
+
         RefreshAllCityProperties();
         RefreshEventEntries();
         RefreshDailyFoodFlowPreview();
         RefreshSimulationSummary();
-        AppendSimulationJournalEntry(day, result, eventEffects, populationStart, populationEnd, cityStateStart, cityStateEnd, simulationResult.ActiveEventNamesBeforeAdvance, journalItems);
+        Journal.Append(presentation.JournalAppendRequest);
     }
 
     private void TryStartEvent(Func<int, CityEvent> factory)
     {
         var cityEvent = factory(Day);
-        var added = _eventManager.AddEvent(cityEvent);
-
-        if (added)
+        if (_eventManager.AddEvent(cityEvent))
         {
-            AddTechnicalLogEntry($"День {Day}: запущено событие “{cityEvent.Name}”.");
-            SetLastImportantChange($"День {Day}: запущено событие “{cityEvent.Name}”.");
+            AddTechnicalLogEntry($"Day {Day}: event started: {cityEvent.Name}.");
+            SetLastImportantChange($"Day {Day}: event started: {cityEvent.Name}.");
         }
         else
         {
-            AddTechnicalLogEntry($"Событие “{cityEvent.Name}” уже активно.");
+            AddTechnicalLogEntry($"Event is already active: {cityEvent.Name}.");
         }
 
         RefreshEventEntries();
-        SelectedCity.RefreshDailyFoodFlowPreview();
+        RefreshDailyFoodFlowPreview();
         Summary.RefreshFoodBalance();
     }
-
 
     private void ToggleRandomEventGeneration()
     {
         IsRandomEventGenerationEnabled = !IsRandomEventGenerationEnabled;
-        AddTechnicalLogEntry(IsRandomEventGenerationEnabled
-            ? "Случайная генерация событий включена."
-            : "Случайная генерация событий выключена.");
+        AddTechnicalLogEntry(IsRandomEventGenerationEnabled ? "Random events enabled." : "Random events disabled.");
         RefreshSimulationSummary();
     }
 
@@ -426,7 +341,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         foreach (var activeEvent in _eventManager.ActiveEvents)
         {
             var effectSummary = _eventEffectCalculator.Calculate(_city, new[] { activeEvent });
-            Log.ActiveEventEntries.Add($"{activeEvent.Name}: осталось {activeEvent.RemainingDays} дн.; эффекты: {BuildEffectSummary(effectSummary)}");
+            Log.ActiveEventEntries.Add($"{activeEvent.Name}: осталось {activeEvent.RemainingDays} дн.; эффекты: {_eventEffectTextFormatter.Format(effectSummary)}");
         }
 
         Log.CompletedEventEntries.Clear();
@@ -437,6 +352,7 @@ public sealed class MainWindowViewModel : ViewModelBase
 
         Log.RefreshActiveAndCompletedAvailability();
         Summary.RefreshActiveEvents();
+        RefreshLogProxyProperties();
     }
 
     private async Task SaveStateAsync()
@@ -444,13 +360,13 @@ public sealed class MainWindowViewModel : ViewModelBase
         try
         {
             await _saveService.SaveAsync(SaveFilePath, _world, _clock, _worldSimulationService.ExportEventState());
-            AddTechnicalLogEntry($"Состояние сохранено: {SaveFilePath}");
-            SetLastImportantChange("состояние сохранено.");
+            AddTechnicalLogEntry($"Saved: {SaveFilePath}");
+            SetLastImportantChange("saved");
             RefreshSimulationSummary();
         }
         catch (Exception ex)
         {
-            AddTechnicalLogEntry($"Ошибка сохранения: {ex.Message}");
+            AddTechnicalLogEntry($"Save error: {ex.Message}");
         }
     }
 
@@ -460,7 +376,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         {
             if (!File.Exists(SaveFilePath))
             {
-                AddTechnicalLogEntry($"Файл сохранения не найден: {SaveFilePath}");
+                AddTechnicalLogEntry($"Save file not found: {SaveFilePath}");
                 return;
             }
 
@@ -468,52 +384,39 @@ public sealed class MainWindowViewModel : ViewModelBase
             _world = loaded.World;
             if (_world.EnsureValidSelection(out var selectionReason) && selectionReason is not null)
             {
-                AddTechnicalLogEntry($"Выбор города/региона в сохранении был исправлен: {selectionReason}");
+                AddTechnicalLogEntry($"Selection fixed after load: {selectionReason}");
             }
 
             if (!_world.TryGetSelectedCity(out var selectedCity))
             {
-                AddTechnicalLogEntry("Ошибка загрузки: в мире отсутствуют города для выбора.");
+                AddTechnicalLogEntry("Load error: world has no cities.");
                 return;
             }
 
             _city = selectedCity;
             Journal.SelectCity(_city.Id, _city.Name);
-            _clock.RestoreState(
-                loaded.Clock.Day,
-                loaded.Clock.Hour,
-                loaded.Clock.IsRunning,
-                loaded.Clock.AccumulatedRealTime,
-                loaded.Clock.RealTimePerGameHour);
+            _clock.RestoreState(loaded.Clock.Day, loaded.Clock.Hour, loaded.Clock.IsRunning, loaded.Clock.AccumulatedRealTime, loaded.Clock.RealTimePerGameHour);
             Control.RestoreTickBaseline();
-            Journal.SelectCity(_city);
-
             _worldSimulationService.ImportEventState(loaded.EventState, _world.SelectedCityId);
             var selectedCityEventManager = loaded.EventState.GetManagerOrEmpty(_world.SelectedCityId);
             _eventManager.Restore(selectedCityEventManager.ActiveEvents, selectedCityEventManager.CompletedEvents);
-            RefreshEventEntries();
-            AddTechnicalLogEntry($"События загружены: активных {selectedCityEventManager.ActiveEvents.Count}, завершённых {selectedCityEventManager.CompletedEvents.Count}.");
-            AddTechnicalLogEntry($"Состояние загружено: {SaveFilePath}");
-            SetLastImportantChange("состояние загружено.");
 
             RefreshWorldCollectionsAfterLoad();
             RefreshSelectedCityProperties();
             RefreshClockProperties();
-            Map.RefreshSelectedCityProperties();
+            RefreshEventEntries();
             RefreshDailyFoodFlowPreview();
-            OnPropertyChanged(nameof(CurrentSimulationSpeedDisplay));
             RefreshSimulationSummary();
+            SetLastImportantChange("loaded");
+            AddTechnicalLogEntry($"Loaded: {SaveFilePath}");
         }
         catch (Exception ex)
         {
-            AddTechnicalLogEntry($"Ошибка загрузки: {ex.Message}");
+            AddTechnicalLogEntry($"Load error: {ex.Message}");
         }
     }
 
-    private void NotifyTradeRoutesChanged()
-    {
-        SelectedCity.RefreshTradeRoutes();
-    }
+    private void NotifyTradeRoutesChanged() => SelectedCity.RefreshTradeRoutes();
 
     private void RefreshWorldCollectionsAfterLoad()
     {
@@ -532,34 +435,24 @@ public sealed class MainWindowViewModel : ViewModelBase
         OnPropertyChanged(nameof(Hour));
         OnPropertyChanged(nameof(IsRunning));
         OnPropertyChanged(nameof(SimulationState));
+        OnPropertyChanged(nameof(CurrentSimulationSpeedDisplay));
         Summary.RefreshClock();
-
-        if (StartCommand is RelayCommand startCommand)
-        {
-            startCommand.RaiseCanExecuteChanged();
-        }
-
-        if (PauseCommand is RelayCommand pauseCommand)
-        {
-            pauseCommand.RaiseCanExecuteChanged();
-        }
+        if (StartCommand is RelayCommand startCommand) startCommand.RaiseCanExecuteChanged();
+        if (PauseCommand is RelayCommand pauseCommand) pauseCommand.RaiseCanExecuteChanged();
     }
 
     private void RefreshSelectedCityProperties()
     {
         SelectedCity.RefreshSelectedCityPanel();
         Map.RefreshSelectedCityProperties();
-
-        if (OpenSelectedCityCommand is RelayCommand openSelectedCityCommand)
-        {
-            openSelectedCityCommand.RaiseCanExecuteChanged();
-        }
+        if (OpenSelectedCityCommand is RelayCommand openSelectedCityCommand) openSelectedCityCommand.RaiseCanExecuteChanged();
     }
 
     private void RefreshAllCityProperties()
     {
         SelectedCity.RefreshAllCityProperties();
         Map.RefreshSelectedCityProperties();
+        OnPropertyChanged(nameof(DailyFoodEventDelta));
     }
 
     private void RefreshDailyFoodFlowPreview()
@@ -567,13 +460,12 @@ public sealed class MainWindowViewModel : ViewModelBase
         _dailyFoodFlowResult = _dailyFoodFlowCalculator.Calculate(_city, BuildDailyFoodFlowInputs());
         SelectedCity.RefreshDailyFoodFlowPreview();
         Summary.RefreshFoodBalance();
+        OnPropertyChanged(nameof(DailyFoodEventDelta));
     }
-
 
     private DailyFoodFlowInputs BuildDailyFoodFlowInputs(CityEventEffectsResult? eventEffects = null)
     {
         var effects = eventEffects ?? _eventEffectCalculator.Calculate(_city, _eventManager.ActiveEvents);
-        var baseInputs = DailyFoodFlowInputs.GothaPlaceholder;
         var profile = _world.FindSettlementEconomyProfile(_city.Id);
         var fishing = _fishingProductionCalculator.Calculate(_city, _eventManager.ActiveEvents);
         var hunting = _huntingProductionCalculator.Calculate(_city);
@@ -586,98 +478,19 @@ public sealed class MainWindowViewModel : ViewModelBase
             FishingIncome = fishing.FinalOutput * (profile?.FishingMultiplier ?? 1m),
             HuntingIncome = hunting.FinalOutput * (profile?.HuntingMultiplier ?? 1m),
             MainlandSupplyIncome = mainlandSupply.FinalOutput * (profile?.MainlandSupplyMultiplier ?? 1m) + effects.MainlandSupplyDelta,
-            EventDelta = baseInputs.EventDelta + effects.FoodDelta
+            EventDelta = DailyFoodFlowInputs.GothaPlaceholder.EventDelta + effects.FoodDelta
         };
     }
 
-    private void ApplyDailyEventEffects(CityEventEffectsResult effects, int day)
+    private void RefreshCityState()
     {
-        _city.Mood += effects.MoodDelta;
-        _city.Security += effects.SecurityDelta;
-        _city.Crime += effects.CrimeDelta;
-        _city.Wealth += effects.WealthDelta;
-        _city.Resources += effects.ResourcesDelta;
-
-        if (!effects.HasAnyEffect)
-        {
-            return;
-        }
-
-        var segments = new List<string>();
-
-        if (effects.FoodDelta != 0m)
-        {
-            segments.Add($"пища {effects.FoodDelta:+0.##;-0.##;0}");
-        }
-
-        if (effects.MoodDelta != 0)
-        {
-            segments.Add($"настроение {effects.MoodDelta:+0;-0;0}");
-        }
-
-        if (effects.SecurityDelta != 0)
-        {
-            segments.Add($"безопасность {effects.SecurityDelta:+0;-0;0}");
-        }
-
-        if (effects.CrimeDelta != 0)
-        {
-            segments.Add($"преступность {effects.CrimeDelta:+0;-0;0}");
-        }
-
-        if (effects.WealthDelta != 0m)
-        {
-            segments.Add($"богатство {effects.WealthDelta:+0.##;-0.##;0}");
-        }
-
-        if (effects.ResourcesDelta != 0m)
-        {
-            segments.Add($"ресурсы {effects.ResourcesDelta:+0.##;-0.##;0}");
-        }
-
-        if (effects.MainlandSupplyDelta != 0m)
-        {
-            segments.Add($"поставки с материка {effects.MainlandSupplyDelta:+0.##;-0.##;0}");
-        }
-
-        AddTechnicalLogEntry($"День {day}: применены эффекты событий: {string.Join(", ", segments)}.");
-
-        SelectedCity.RefreshAllCityProperties();
-    }
-
-    private void RefreshCityState(int? day = null)
-    {
-        var previousState = _city.CityState;
         var newState = _cityStateEvaluator.Evaluate(_city);
-
-        if (previousState == newState)
-        {
-            return;
-        }
-
+        if (_city.CityState == newState) return;
         _city.CityState = newState;
-
-        if (newState == WorldSimulator.Core.Cities.CityState.Abandoned)
-        {
-            _city.Mood = 0;
-            _city.Security = 0;
-            _city.Crime = 0;
-
-            SelectedCity.RefreshAllCityProperties();
-        }
-
-        if (day.HasValue)
-        {
-            AddTechnicalLogEntry($"День {day.Value}: состояние города изменилось: {CityStateTextFormatter.ToRussian(previousState)} → {CityStateTextFormatter.ToRussian(newState)}.");
-            SetLastImportantChange($"День {day.Value}: состояние города изменилось: {CityStateTextFormatter.ToRussian(previousState)} → {CityStateTextFormatter.ToRussian(newState)}.");
-        }
-
         SelectedCity.RefreshAllCityProperties();
         Map.RefreshSelectedCityProperties();
         Summary.RefreshCityState();
     }
-
-
 
     private void SetLastImportantChange(string message)
     {
@@ -685,14 +498,21 @@ public sealed class MainWindowViewModel : ViewModelBase
         Summary.RefreshLastImportantChange();
     }
 
-    private void RefreshSimulationSummary()
+    private void RefreshSimulationSummary() => Summary.RefreshAll();
+
+    private void RefreshLogProxyProperties()
     {
-        Summary.RefreshAll();
+        OnPropertyChanged(nameof(TechnicalLogEntries));
+        OnPropertyChanged(nameof(ActiveEventEntries));
+        OnPropertyChanged(nameof(CompletedEventEntries));
+        OnPropertyChanged(nameof(HasTechnicalLogEntries));
+        OnPropertyChanged(nameof(HasActiveEventEntries));
+        OnPropertyChanged(nameof(HasCompletedEventEntries));
     }
 
     private void AddTechnicalLogEntry(string message)
     {
         Log.AddTechnicalEntry(message, MaxTechnicalLogEntries);
+        RefreshLogProxyProperties();
     }
-
 }
