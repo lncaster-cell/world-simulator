@@ -249,6 +249,83 @@ public sealed class JsonWorldSaveServiceTests
         finally { Cleanup(filePath); }
     }
 
+
+    [Fact]
+    public async Task LoadAsync_Legacy_World_With_CitiesById_Only_Restores_Collections_And_Selections()
+    {
+        var service = new JsonWorldSaveService();
+        var world = WorldPresets.CreateDefaultWorld();
+        var selectedCity = world.Cities[1];
+        selectedCity.Food = 654m;
+        var filePath = TempFile();
+
+        try
+        {
+            await service.SaveAsync(filePath, world, new SimulationClock(), new WorldEventState());
+            var root = await ReadSavedJsonAsync(filePath);
+            root["Version"] = 2;
+            var worldNode = root["World"]!.AsObject();
+            worldNode["Cities"] = new JsonArray();
+            worldNode["Regions"] = new JsonArray();
+            worldNode["SettlementMapLocations"] = new JsonArray();
+            worldNode["SettlementEconomyProfiles"] = new JsonArray();
+            worldNode["SettlementSectorCapacityProfiles"] = new JsonArray();
+            worldNode["Caravans"] = new JsonArray();
+            worldNode["TradeRoutes"] = new JsonArray();
+            worldNode["SelectedCityId"] = string.Empty;
+            worldNode["SelectedRegionId"] = string.Empty;
+            await File.WriteAllTextAsync(filePath, root.ToJsonString());
+
+            var loaded = await service.LoadAsync(filePath);
+
+            Assert.Equal(world.Cities.Count, loaded.World.Cities.Count);
+            Assert.Equal(654m, loaded.World.Cities.First(city => city.Id == selectedCity.Id).Food);
+            Assert.Equal(world.Regions.Count, loaded.World.Regions.Count);
+            Assert.Equal(world.SettlementMapLocations.Count, loaded.World.SettlementMapLocations.Count);
+            Assert.Equal(world.SettlementEconomyProfiles.Count, loaded.World.SettlementEconomyProfiles.Count);
+            Assert.Equal(world.SettlementSectorCapacityProfiles.Count, loaded.World.SettlementSectorCapacityProfiles.Count);
+            Assert.Equal(world.Caravans.Count, loaded.World.Caravans.Count);
+            Assert.Equal(world.TradeRoutes.Count, loaded.World.TradeRoutes.Count);
+            Assert.Equal(world.Cities[0].Id, loaded.World.SelectedCityId);
+            Assert.Equal(world.Regions[0].Id, loaded.World.SelectedRegionId);
+        }
+        finally { Cleanup(filePath); }
+    }
+
+    [Fact]
+    public async Task LoadAsync_Legacy_World_Restores_City_Infrastructure_Demographics_And_Sector_Capacity()
+    {
+        var service = new JsonWorldSaveService();
+        var world = WorldPresets.CreateDefaultWorld();
+        var city = world.Cities[0];
+        var filePath = TempFile();
+
+        try
+        {
+            await service.SaveAsync(filePath, world, new SimulationClock(), new WorldEventState());
+            var root = await ReadSavedJsonAsync(filePath);
+            root["Version"] = 3;
+            var worldNode = root["World"]!.AsObject();
+            worldNode["SettlementSectorCapacityProfiles"] = new JsonArray();
+            RemoveCityInfrastructureAndDemographics(worldNode);
+            await File.WriteAllTextAsync(filePath, root.ToJsonString());
+
+            var loaded = await service.LoadAsync(filePath);
+            var loadedCity = loaded.World.Cities.First(x => x.Id == city.Id);
+
+            Assert.NotNull(loadedCity.Infrastructure);
+            Assert.Equal(CityInfrastructure.MinLevel, loadedCity.Infrastructure.HousingLevel);
+            Assert.Equal(CityInfrastructure.MinLevel, loadedCity.Infrastructure.UrbanLevel);
+            Assert.Equal(CityInfrastructure.MinLevel, loadedCity.Infrastructure.ProductionLevel);
+            Assert.Equal(CityInfrastructure.MinLevel, loadedCity.Infrastructure.MilitaryLevel);
+            Assert.Equal(city.Population, loadedCity.Demographics.TotalPopulation);
+            Assert.Single(loadedCity.Demographics.RaceGroups);
+            Assert.Equal("human", loadedCity.Demographics.RaceGroups[0].RaceId);
+            Assert.Equal(world.SettlementSectorCapacityProfiles.Count, loaded.World.SettlementSectorCapacityProfiles.Count);
+        }
+        finally { Cleanup(filePath); }
+    }
+
     [Fact]
     public async Task LoadAsync_Restores_Missing_Route_Fields_From_Defaults()
     {
@@ -360,6 +437,31 @@ public sealed class JsonWorldSaveServiceTests
             await Assert.ThrowsAsync<InvalidDataException>(() => service.LoadAsync(filePath));
         }
         finally { Cleanup(filePath); }
+    }
+
+
+    private static void RemoveCityInfrastructureAndDemographics(JsonObject worldNode)
+    {
+        foreach (var cityNode in worldNode["Cities"]!.AsArray())
+        {
+            RemoveCityInfrastructureAndDemographics(cityNode);
+        }
+
+        foreach (var cityNode in worldNode["CitiesById"]!.AsObject().Select(pair => pair.Value))
+        {
+            RemoveCityInfrastructureAndDemographics(cityNode);
+        }
+    }
+
+    private static void RemoveCityInfrastructureAndDemographics(JsonNode? cityNode)
+    {
+        if (cityNode is not JsonObject cityObject)
+        {
+            return;
+        }
+
+        cityObject.Remove("Infrastructure");
+        cityObject.Remove("Demographics");
     }
 
     private static WorldEventState CreateEventStateWithEvents(string cityId)
