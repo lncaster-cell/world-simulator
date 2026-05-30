@@ -1,6 +1,7 @@
 <Window x:Class="WorldSimulator.App.CityWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:cityWindowViews="clr-namespace:WorldSimulator.App.Views.CityWindow"
         xmlns:views="clr-namespace:WorldSimulator.App.Views"
         Title="Город: Гота"
         Width="850"
@@ -10,202 +11,25 @@
     <Grid Margin="12">
         <TabControl SelectedIndex="{Binding SelectedCityTabIndex, Mode=OneWay}">
             <TabItem Header="Обзор">
-                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                    <StackPanel Margin="8">
-                        <TextBlock Text="Обзор города Гота" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,10"/>
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="16"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
-
-                            <TextBlock Grid.Row="0" Grid.Column="0" Text="Город:" FontWeight="SemiBold"/>
-                            <TextBlock Grid.Row="0" Grid.Column="2" Text="{Binding CityName}"/>
-
-                            <TextBlock Grid.Row="1" Grid.Column="0" Text="Профиль города:" FontWeight="SemiBold"/>
-                            <TextBlock Grid.Row="1" Grid.Column="2" Text="{Binding SelectedCityProfile}"/>
-
-                            <TextBlock Grid.Row="2" Grid.Column="0" Text="Состояние города:" FontWeight="SemiBold"/>
-                            <TextBlock Grid.Row="2" Grid.Column="2" Text="{Binding CityStateDisplay}"/>
-
-                            <TextBlock Grid.Row="3" Grid.Column="0" Text="Население:" FontWeight="SemiBold"/>
-                            <TextBlock Grid.Row="3" Grid.Column="2" Text="{Binding Population}"/>
-
-                            <TextBlock Grid.Row="4" Grid.Column="0" Text="Настроение:" FontWeight="SemiBold"/>
-                            <TextBlock Grid.Row="4" Grid.Column="2" Text="{Binding Mood}"/>
-
-                            <TextBlock Grid.Row="5" Grid.Column="0" Text="Безопасность:" FontWeight="SemiBold"/>
-                            <TextBlock Grid.Row="5" Grid.Column="2" Text="{Binding Security}"/>
-
-                            <TextBlock Grid.Row="6" Grid.Column="0" Text="Преступность:" FontWeight="SemiBold" ToolTip="{Binding CrimeFlowTooltip}"/>
-                            <TextBlock Grid.Row="6" Grid.Column="2" Text="{Binding Crime}" ToolTip="{Binding CrimeFlowTooltip}"/>
-
-                            <TextBlock Grid.Row="7" Grid.Column="0" Text="День:" FontWeight="SemiBold"/>
-                            <TextBlock Grid.Row="7" Grid.Column="2" Text="{Binding Day}"/>
-
-                            <TextBlock Grid.Row="8" Grid.Column="0" Text="Час:" FontWeight="SemiBold"/>
-                            <TextBlock Grid.Row="8" Grid.Column="2" Text="{Binding Hour}"/>
-
-                            <TextBlock Grid.Row="9" Grid.Column="0" Text="Состояние симуляции:" FontWeight="SemiBold"/>
-                            <TextBlock Grid.Row="9" Grid.Column="2" Text="{Binding SimulationState}"/>
-                        </Grid>
-                    </StackPanel>
-                </ScrollViewer>
+                <cityWindowViews:CityOverviewTabView DataContext="{Binding}"/>
             </TabItem>
-
             <TabItem Header="Запасы">
-                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                    <StackPanel Margin="8">
-                        <TextBlock Text="Текущие запасы" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,10"/>
-                        <TextBlock Text="Пища:" FontWeight="SemiBold" ToolTip="{Binding FoodBalanceTooltip}"/>
-                        <TextBlock Text="{Binding Food}" ToolTip="{Binding FoodBalanceTooltip}" Margin="0,0,0,6"/>
-                        <TextBlock Text="Благосостояние:" FontWeight="SemiBold" ToolTip="{Binding WealthTooltip}"/>
-                        <TextBlock Text="{Binding Wealth}" ToolTip="{Binding WealthTooltip}" Margin="0,0,0,6"/>
-                        <TextBlock Text="Ресурсы:" FontWeight="SemiBold"/>
-                        <TextBlock Text="{Binding Resources}" Margin="0,0,0,6"/>
-                        <TextBlock Text="Товары:" FontWeight="SemiBold"/>
-                        <TextBlock Text="{Binding Goods}" Margin="0,0,0,10"/>
-                        <TextBlock Text="Значения запасов в MVP указаны в условных единицах."
-                                   FontStyle="Italic"
-                                   Foreground="DimGray"
-                                   TextWrapping="Wrap"/>
-                    </StackPanel>
-                </ScrollViewer>
+                <cityWindowViews:CityStocksTabView DataContext="{Binding}"/>
             </TabItem>
-
             <TabItem Header="Потоки">
-                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                    <StackPanel Margin="8">
-                        <TextBlock Text="Дневный прогноз пищевого баланса" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,10"/>
-                        <TextBlock Text="Начальная пища:" FontWeight="SemiBold"/>
-                        <TextBlock Text="{Binding DailyFoodStartingFood}" Margin="0,0,0,6"/>
-                        <TextBlock Text="Потребление населения:" FontWeight="SemiBold"/>
-                        <TextBlock Text="{Binding DailyFoodPopulationConsumptionDisplay}" Margin="0,0,0,6"/>
-                        <TextBlock Text="Земледелие:" FontWeight="SemiBold"/>
-                        <TextBlock Text="{Binding DailyFoodAgricultureIncomeDisplay}"/>
-                        <TextBlock Text="Рыбалка:" FontWeight="SemiBold" ToolTip="{Binding FishingProductionTooltip}"/>
-                        <TextBlock Text="{Binding DailyFoodFishingIncomeDisplay}" ToolTip="{Binding FishingProductionTooltip}" Margin="0,0,0,6"/>
-                        <TextBlock Text="Охота:" FontWeight="SemiBold"/>
-                        <TextBlock Text="{Binding DailyFoodHuntingIncomeDisplay}" Margin="0,0,0,6"/>
-                        <TextBlock Text="Поставки с материка:" FontWeight="SemiBold"/>
-                        <TextBlock Text="{Binding DailyFoodMainlandSupplyIncomeDisplay}" Margin="0,0,0,6"/>
-                        <TextBlock Text="Влияние событий:" FontWeight="SemiBold"/>
-                        <TextBlock Text="{Binding DailyFoodEventDeltaDisplay}" Margin="0,0,0,6"/>
-                        <TextBlock Text="Дневной баланс:" FontWeight="SemiBold" ToolTip="{Binding FoodBalanceTooltip}"/>
-                        <TextBlock Text="{Binding DailyFoodTotalDeltaDisplay}" ToolTip="{Binding FoodBalanceTooltip}" Margin="0,0,0,6"/>
-                        <TextBlock Text="Ожидаемая пища после дня:" FontWeight="SemiBold"/>
-                        <TextBlock Text="{Binding DailyFoodEndingFood}" Margin="0,0,0,6"/>
-                    </StackPanel>
-                </ScrollViewer>
+                <cityWindowViews:CityFoodFlowTabView DataContext="{Binding}"/>
             </TabItem>
-
             <TabItem Header="События">
-                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                    <StackPanel Margin="8">
-                        <TextBlock Text="Активные события" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,8"/>
-                        <TextBlock Text="Активных событий пока нет." Margin="0,0,0,6">
-                            <TextBlock.Style>
-                                <Style TargetType="TextBlock">
-                                    <Setter Property="Visibility" Value="Visible"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding HasActiveEventEntries}" Value="True">
-                                            <Setter Property="Visibility" Value="Collapsed"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </TextBlock.Style>
-                        </TextBlock>
-                        <ListBox ItemsSource="{Binding ActiveEventEntries}" Margin="0,0,0,12"/>
-
-                        <TextBlock Text="Завершённые события" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,8"/>
-                        <TextBlock Text="Завершённых событий пока нет." Margin="0,0,0,6">
-                            <TextBlock.Style>
-                                <Style TargetType="TextBlock">
-                                    <Setter Property="Visibility" Value="Visible"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding HasCompletedEventEntries}" Value="True">
-                                            <Setter Property="Visibility" Value="Collapsed"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </TextBlock.Style>
-                        </TextBlock>
-                        <ListBox ItemsSource="{Binding CompletedEventEntries}"/>
-                    </StackPanel>
-                </ScrollViewer>
+                <cityWindowViews:CityEventsTabView DataContext="{Binding}"/>
             </TabItem>
-
             <TabItem Header="Инфраструктура">
-                <views:CityInfrastructureView/>
+                <views:CityInfrastructureView DataContext="{Binding}"/>
             </TabItem>
-
             <TabItem Header="Рабочая сила">
-                <views:CityWorkforceView/>
+                <views:CityWorkforceView DataContext="{Binding}"/>
             </TabItem>
-
             <TabItem Header="Отладка">
-                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                    <StackPanel Margin="8">
-                        <Border BorderBrush="DarkOrange" BorderThickness="1" Padding="12" CornerRadius="4" Background="#FFFFF7E6">
-                            <StackPanel>
-                                <TextBlock Text="Скорость симуляции" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,8"/>
-                                <TextBlock Text="Инструменты отладки предназначены только для разработки."
-                                           TextWrapping="Wrap"
-                                           Foreground="DarkRed"
-                                           Margin="0,0,0,10"/>
-                                <TextBlock Text="{Binding CurrentSimulationSpeedDisplay}" FontWeight="SemiBold" Margin="0,0,0,10"/>
-                                <WrapPanel>
-                                    <Button Content="Нормальная" Command="{Binding SetNormalSpeedCommand}" Width="110" Margin="0,0,8,8"/>
-                                    <Button Content="Быстрая" Command="{Binding SetFastSpeedCommand}" Width="110" Margin="0,0,8,8"/>
-                                    <Button Content="Очень быстро" Command="{Binding SetVeryFastSpeedCommand}" Width="120" Margin="0,0,8,8"/>
-                                    <Button Content="Турбо" Command="{Binding SetTurboSpeedCommand}" Width="110" Margin="0,0,8,8"/>
-                                </WrapPanel>
-                                <Separator Margin="0,4,0,10"/>
-                                <TextBlock Text="Запуск тестовых событий" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,8"/>
-                                <WrapPanel>
-                                    <Button Content="Запустить пожар" Command="{Binding TriggerFireEventCommand}" Margin="0,0,8,8"/>
-                                    <Button Content="Запустить болезнь" Command="{Binding TriggerDiseaseEventCommand}" Margin="0,0,8,8"/>
-                                    <Button Content="Запустить крыс" Command="{Binding TriggerRatInfestationEventCommand}" Margin="0,0,8,8"/>
-                                    <Button Content="Запустить артистов" Command="{Binding TriggerArtistsPerformanceEventCommand}" Margin="0,0,8,8"/>
-                                    <Button Content="Запустить шторм" Command="{Binding TriggerPortStormEventCommand}" Margin="0,0,8,8"/>
-                                </WrapPanel>
-                                <Separator Margin="0,4,0,10"/>
-                                <TextBlock Text="Случайные события" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,8"/>
-                                <TextBlock Text="Статус:" FontWeight="SemiBold"/>
-                                <TextBlock Text="{Binding RandomEventGenerationStatusDisplay}" Margin="0,0,0,6"/>
-                                <TextBlock Text="Шанс: 20% в день." Margin="0,0,0,4"/>
-                                <TextBlock Text="Максимум активных случайных событий: 3." Margin="0,0,0,10"/>
-                                <Button Content="{Binding RandomEventGenerationToggleButtonText}"
-                                        Command="{Binding ToggleRandomEventGenerationCommand}"
-                                        Width="250"
-                                        Margin="0,0,0,8"/>
-                                <Separator Margin="0,4,0,10"/>
-                                <TextBlock Text="Сохранение" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,8"/>
-                                <TextBlock Text="Сохранение MVP использует фиксированный файл."
-                                           TextWrapping="Wrap"
-                                           Margin="0,0,0,4"/>
-                                <TextBlock Text="data/save/world_save.json" FontFamily="Consolas" Margin="0,0,0,10"/>
-                                <WrapPanel>
-                                    <Button Content="Сохранить" Command="{Binding SaveCommand}" Width="110" Margin="0,0,8,8"/>
-                                    <Button Content="Загрузить" Command="{Binding LoadCommand}" Width="110" Margin="0,0,8,8"/>
-                                </WrapPanel>
-                            </StackPanel>
-                        </Border>
-                    </StackPanel>
-                </ScrollViewer>
+                <cityWindowViews:CityDebugTabView DataContext="{Binding}"/>
             </TabItem>
         </TabControl>
     </Grid>
