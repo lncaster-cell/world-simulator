@@ -10,7 +10,6 @@ using WorldSimulator.Core.Resources;
 using WorldSimulator.Core.Time;
 using WorldSimulator.Core.Simulation;
 using WorldSimulator.Core.World;
-using WorldSimulator.Core.Trade;
 using WorldSimulator.Persistence.Saves;
 
 namespace WorldSimulator.App.ViewModels;
@@ -28,19 +27,13 @@ public sealed class MainWindowViewModel : ViewModelBase
     private City _city;
     private readonly SimulationClock _clock;
     private readonly DailyFoodFlowCalculator _dailyFoodFlowCalculator;
-    private readonly FishingProductionCalculator _fishingProductionCalculator = new();
-    private readonly HuntingProductionCalculator _huntingProductionCalculator = new();
-    private readonly AgricultureProductionCalculator _agricultureProductionCalculator = new();
-    private readonly MainlandSupplyProductionCalculator _mainlandSupplyProductionCalculator = new();
-    private readonly GoodsCraftingProductionCalculator _goodsCraftingProductionCalculator = new();
-    private readonly ResourceGatheringProductionCalculator _resourceGatheringProductionCalculator = new();
-    private readonly HouseholdConsumptionCalculator _householdConsumptionCalculator = new();
-    private readonly DailyWealthFlowCalculator _dailyWealthFlowCalculator = new();
-    private readonly WeeklyCrimeFlowCalculator _weeklyCrimeFlowCalculator;
+    private readonly FishingProductionCalculator _fishingProductionCalculator;
+    private readonly HuntingProductionCalculator _huntingProductionCalculator;
+    private readonly AgricultureProductionCalculator _agricultureProductionCalculator;
+    private readonly MainlandSupplyProductionCalculator _mainlandSupplyProductionCalculator;
     private readonly CityStateEvaluator _cityStateEvaluator;
     private readonly CityEventManager _eventManager;
     private readonly CityEventEffectCalculator _eventEffectCalculator;
-    private readonly CityEventGenerator _eventGenerator;
     private readonly WorldSimulationService _worldSimulationService;
     private readonly JsonWorldSaveService _saveService;
     private readonly SimulationJournalService _journalService;
@@ -53,35 +46,23 @@ public sealed class MainWindowViewModel : ViewModelBase
 
     public MainWindowViewModel()
     {
-        _world = WorldPresets.CreateDefaultWorld();
-        _city = _world.SelectedCity;
-        _clock = new SimulationClock();
-        _dailyFoodFlowCalculator = new DailyFoodFlowCalculator();
-        _weeklyCrimeFlowCalculator = new WeeklyCrimeFlowCalculator();
-        _cityStateEvaluator = new CityStateEvaluator();
-        _eventManager = new CityEventManager();
-        _eventEffectCalculator = new CityEventEffectCalculator();
-        _eventGenerator = new CityEventGenerator(new SystemRandomProvider());
-        _worldSimulationService = new WorldSimulationService(
-            _dailyFoodFlowCalculator,
-            _fishingProductionCalculator,
-            _huntingProductionCalculator,
-            _agricultureProductionCalculator,
-            _mainlandSupplyProductionCalculator,
-            _goodsCraftingProductionCalculator,
-            _resourceGatheringProductionCalculator,
-            _householdConsumptionCalculator,
-            _dailyWealthFlowCalculator,
-            _weeklyCrimeFlowCalculator,
-            new WorldTradeFlowService(),
-            new CaravanHiringService(),
-            _cityStateEvaluator,
-            new PopulationChangeCalculator(),
-            _eventManager,
-            _eventEffectCalculator,
-            _eventGenerator);
-        _saveService = new JsonWorldSaveService();
-        _journalService = new SimulationJournalService();
+        var runtime = WorldSimulationRuntime.CreateDefault();
+
+        _world = runtime.World;
+        _city = runtime.SelectedCity;
+        _clock = runtime.Clock;
+        _dailyFoodFlowCalculator = runtime.DailyFoodFlowCalculator;
+        _fishingProductionCalculator = runtime.FishingProductionCalculator;
+        _huntingProductionCalculator = runtime.HuntingProductionCalculator;
+        _agricultureProductionCalculator = runtime.AgricultureProductionCalculator;
+        _mainlandSupplyProductionCalculator = runtime.MainlandSupplyProductionCalculator;
+        _cityStateEvaluator = runtime.CityStateEvaluator;
+        _eventManager = runtime.EventManager;
+        _eventEffectCalculator = runtime.EventEffectCalculator;
+        _worldSimulationService = runtime.WorldSimulationService;
+        _saveService = runtime.SaveService;
+        _journalService = runtime.JournalService;
+
         Journal = new SimulationJournalViewModel(_journalService, _city.Id, _city.Name);
         _dailyFoodFlowResult = _dailyFoodFlowCalculator.Calculate(_city, BuildDailyFoodFlowInputs());
 
