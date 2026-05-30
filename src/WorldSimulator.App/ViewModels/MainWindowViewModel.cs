@@ -322,9 +322,18 @@ public sealed class MainWindowViewModel : ViewModelBase
             return;
         }
 
-        var selectedCityResult = simulationResult.SelectedCityResult;
-        _dailyFoodFlowResult = selectedCityResult.FoodFlow;
-        _dailyWealthFlowResult = selectedCityResult.WealthFlow;
+        var eventState = _worldSimulationService.ExportEventState();
+        var selectedManager = eventState.GetManagerOrEmpty(_world.SelectedCityId);
+        _eventManager.Restore(selectedManager.ActiveEvents, selectedManager.CompletedEvents);
+
+        var result = simulationResult.SelectedCityResult.FoodFlow;
+        var resourceGathering = simulationResult.SelectedCityResult.ResourceGathering;
+        var goodsCrafting = simulationResult.SelectedCityResult.GoodsCrafting;
+        var householdConsumption = simulationResult.SelectedCityResult.HouseholdConsumption;
+        var wealthFlow = simulationResult.SelectedCityResult.WealthFlow;
+        var eventEffects = simulationResult.SelectedCityEventEffects;
+        _dailyFoodFlowResult = result;
+        _dailyWealthFlowResult = wealthFlow;
 
         var populationEnd = _city.Population;
         var cityStateEnd = _city.CityState;
