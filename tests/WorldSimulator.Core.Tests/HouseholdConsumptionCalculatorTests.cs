@@ -79,10 +79,12 @@ public sealed class HouseholdConsumptionCalculatorTests
         city.Population = 420;
         city.Goods = 12.5m;
         city.Resources = 7.75m;
+        var goodsBefore = city.Goods;
+        var resourcesBefore = city.Resources;
 
         _calculator.Calculate(city);
 
-        Assert.Equal(12.5m, city.Goods);
-        Assert.Equal(7.75m, city.Resources);
+        Assert.Equal(goodsBefore, city.Goods);
+        Assert.Equal(resourcesBefore, city.Resources);
     }
 }
