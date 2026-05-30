@@ -20,14 +20,8 @@ public sealed class TradeRouteAuthoringViewModel : INotifyPropertyChanged
     private readonly TradeRoutePointEditingService _pointEditingService;
     private readonly TradeRouteSelectionService _selectionService;
     private readonly TradeRoutePointsExportService _pointsExportService;
-    private TradeRoute? _selectedTradeRouteForAuthoring;
-    private City? _routeAuthoringOriginSettlement;
-    private City? _routeAuthoringDestinationCandidateSettlement;
-    private City? _activeRouteAuthoringDestinationSettlement;
-    private string _routeAuthoringRouteIdDisplay = "RouteId: —";
+    private readonly TradeRouteAuthoringSession _session;
     private bool _isTradeRouteAuthoringModeEnabled;
-    private decimal _selectedTradeRouteDistanceDays = 1m;
-    private string _selectedTradeRouteDistanceDaysInput = "1.0";
 
     public TradeRouteAuthoringViewModel(
         Func<SimulationWorld> getWorld,
@@ -37,7 +31,8 @@ public sealed class TradeRouteAuthoringViewModel : INotifyPropertyChanged
         TradeRouteAuthoringService? authoringService = null,
         TradeRoutePointEditingService? pointEditingService = null,
         TradeRouteSelectionService? selectionService = null,
-        TradeRoutePointsExportService? pointsExportService = null)
+        TradeRoutePointsExportService? pointsExportService = null,
+        TradeRouteAuthoringSession? session = null)
     {
         _getWorld = getWorld;
         _addTechnicalLogEntry = addTechnicalLogEntry;
@@ -47,6 +42,7 @@ public sealed class TradeRouteAuthoringViewModel : INotifyPropertyChanged
         _pointEditingService = pointEditingService ?? new TradeRoutePointEditingService();
         _selectionService = selectionService ?? new TradeRouteSelectionService();
         _pointsExportService = pointsExportService ?? new TradeRoutePointsExportService();
+        _session = session ?? new TradeRouteAuthoringSession();
 
         AddTradeRoutePointCommand = new RelayCommand<MapPointViewModel>(AddTradeRoutePoint);
         UndoTradeRoutePointCommand = new RelayCommand(UndoTradeRoutePoint);
@@ -69,15 +65,15 @@ public sealed class TradeRouteAuthoringViewModel : INotifyPropertyChanged
 
     public IReadOnlyList<City> RouteAuthoringSettlements => _getWorld().Cities;
     public IReadOnlyList<City> AvailableRouteAuthoringDestinations => _getWorld().Cities;
-    public ObservableCollection<City> RouteAuthoringDestinationSettlements { get; } = [];
+    public ObservableCollection<City> RouteAuthoringDestinationSettlements => _session.RouteAuthoringDestinationSettlements;
     public ObservableCollection<MapPointViewModel> EditedTradeRoutePoints { get; } = [];
     public int EditedTradeRoutePointCount => EditedTradeRoutePoints.Count;
     public int EditedTradeRouteIntermediatePointCount => EditedTradeRoutePoints.Count;
-    public int RouteAuthoringDestinationCount => RouteAuthoringDestinationSettlements.Count;
-    public bool CanAddMoreRouteAuthoringDestinations => RouteAuthoringDestinationSettlements.Count < TradeRouteSelectionService.MaxDestinationCount;
-    public bool HasSelectedTradeRouteForAuthoring => SelectedTradeRouteForAuthoring is not null;
+    public int RouteAuthoringDestinationCount => _session.RouteAuthoringDestinationCount;
+    public bool CanAddMoreRouteAuthoringDestinations => _session.CanAddMoreRouteAuthoringDestinations;
+    public bool HasSelectedTradeRouteForAuthoring => _session.HasSelectedTradeRouteForAuthoring;
     public List<RoutePoint> EditedTradeRoutePolylinePoints => BuildFullRoutePoints();
-    public string RouteAuthoringRouteIdDisplay => _routeAuthoringRouteIdDisplay;
+    public string RouteAuthoringRouteIdDisplay => _session.RouteAuthoringRouteIdDisplay;
 
     public bool IsTradeRouteAuthoringModeEnabled
     {
@@ -92,11 +88,10 @@ public sealed class TradeRouteAuthoringViewModel : INotifyPropertyChanged
 
     public City? RouteAuthoringOriginSettlement
     {
-        get => _routeAuthoringOriginSettlement;
+        get => _session.RouteAuthoringOriginSettlement;
         set
         {
-            if (_routeAuthoringOriginSettlement == value) return;
-            _routeAuthoringOriginSettlement = value;
+            if (!_session.SetRouteAuthoringOriginSettlement(value)) return;
             OnPropertyChanged();
             ResetRouteAuthoringOriginState();
         }
@@ -104,23 +99,22 @@ public sealed class TradeRouteAuthoringViewModel : INotifyPropertyChanged
 
     public City? RouteAuthoringDestinationCandidateSettlement
     {
-        get => _routeAuthoringDestinationCandidateSettlement;
+        get => _session.RouteAuthoringDestinationCandidateSettlement;
         set
         {
-            if (_routeAuthoringDestinationCandidateSettlement == value) return;
-            _routeAuthoringDestinationCandidateSettlement = value;
+            if (!_session.SetRouteAuthoringDestinationCandidateSettlement(value)) return;
             OnPropertyChanged();
         }
     }
 
     public City? ActiveRouteAuthoringDestinationSettlement
     {
-        get => _activeRouteAuthoringDestinationSettlement;
+        get => _session.ActiveRouteAuthoringDestinationSettlement;
         set
         {
-            if (_activeRouteAuthoringDestinationSettlement == value) return;
+            if (_session.ActiveRouteAuthoringDestinationSettlement == value) return;
             SaveCurrentActiveDraftPoints();
-            _activeRouteAuthoringDestinationSettlement = value;
+            _session.SetActiveRouteAuthoringDestinationSettlement(value);
             OnPropertyChanged();
             LoadActiveRouteDraftOrExisting();
         }
@@ -128,11 +122,10 @@ public sealed class TradeRouteAuthoringViewModel : INotifyPropertyChanged
 
     public TradeRoute? SelectedTradeRouteForAuthoring
     {
-        get => _selectedTradeRouteForAuthoring;
+        get => _session.SelectedTradeRouteForAuthoring;
         set
         {
-            if (_selectedTradeRouteForAuthoring == value) return;
-            _selectedTradeRouteForAuthoring = value;
+            if (!_session.SetSelectedTradeRouteForAuthoring(value)) return;
             ReloadEditedTradeRoutePointsFromSelectedRoute();
             OnPropertyChanged();
             OnPropertyChanged(nameof(HasSelectedTradeRouteForAuthoring));
@@ -141,22 +134,20 @@ public sealed class TradeRouteAuthoringViewModel : INotifyPropertyChanged
 
     public decimal SelectedTradeRouteDistanceDays
     {
-        get => _selectedTradeRouteDistanceDays;
+        get => _session.SelectedTradeRouteDistanceDays;
         set
         {
-            if (_selectedTradeRouteDistanceDays == value) return;
-            _selectedTradeRouteDistanceDays = value;
+            if (!_session.SetSelectedTradeRouteDistanceDays(value)) return;
             OnPropertyChanged();
         }
     }
 
     public string SelectedTradeRouteDistanceDaysInput
     {
-        get => _selectedTradeRouteDistanceDaysInput;
+        get => _session.SelectedTradeRouteDistanceDaysInput;
         set
         {
-            if (_selectedTradeRouteDistanceDaysInput == value) return;
-            _selectedTradeRouteDistanceDaysInput = value;
+            if (!_session.SetSelectedTradeRouteDistanceDaysInput(value)) return;
             OnPropertyChanged();
         }
     }
@@ -180,24 +171,11 @@ public sealed class TradeRouteAuthoringViewModel : INotifyPropertyChanged
     public void ResetForWorldReset()
     {
         _pointEditingService.ClearDrafts();
-        _routeAuthoringOriginSettlement = null;
-        _routeAuthoringDestinationCandidateSettlement = null;
-        _activeRouteAuthoringDestinationSettlement = null;
-        RouteAuthoringDestinationSettlements.Clear();
+        _session.ResetForWorldReset();
         ClearTradeRoutePoints();
-        SelectedTradeRouteDistanceDays = 1m;
-        SelectedTradeRouteDistanceDaysInput = "1.0";
-        _routeAuthoringRouteIdDisplay = "RouteId: —";
-        _selectedTradeRouteForAuthoring = null;
 
         OnPropertyChanged(nameof(RouteAuthoringOriginSettlement));
-        OnPropertyChanged(nameof(RouteAuthoringDestinationCandidateSettlement));
-        OnPropertyChanged(nameof(ActiveRouteAuthoringDestinationSettlement));
-        OnPropertyChanged(nameof(SelectedTradeRouteForAuthoring));
-        OnPropertyChanged(nameof(HasSelectedTradeRouteForAuthoring));
-        OnPropertyChanged(nameof(RouteAuthoringDestinationCount));
-        OnPropertyChanged(nameof(CanAddMoreRouteAuthoringDestinations));
-        OnPropertyChanged(nameof(RouteAuthoringRouteIdDisplay));
+        OnRouteAuthoringSessionReset();
     }
 
     public void RefreshWorldCollections()
@@ -273,8 +251,11 @@ public sealed class TradeRouteAuthoringViewModel : INotifyPropertyChanged
             _pointEditingService.BuildIntermediateRoutePoints(SelectedTradeRouteForAuthoring));
         if (SelectedTradeRouteForAuthoring is not null)
         {
-            SelectedTradeRouteDistanceDays = SelectedTradeRouteForAuthoring.DistanceDays;
-            SelectedTradeRouteDistanceDaysInput = _selectionService.FormatDistanceDaysInput(SelectedTradeRouteDistanceDays);
+            _session.ApplySelectedRouteDistance(
+                SelectedTradeRouteForAuthoring,
+                _selectionService.FormatDistanceDaysInput(SelectedTradeRouteForAuthoring.DistanceDays));
+            OnPropertyChanged(nameof(SelectedTradeRouteDistanceDays));
+            OnPropertyChanged(nameof(SelectedTradeRouteDistanceDaysInput));
         }
 
         NotifyEditedRoutePointsChanged();
@@ -313,29 +294,20 @@ public sealed class TradeRouteAuthoringViewModel : INotifyPropertyChanged
         }
 
         if (!result.ShouldAdd || result.Destination is null) return;
-        RouteAuthoringDestinationSettlements.Add(result.Destination);
+        var activeDestinationChanged = _session.AddRouteAuthoringDestination(result.Destination);
         OnPropertyChanged(nameof(RouteAuthoringDestinationCount));
         OnPropertyChanged(nameof(CanAddMoreRouteAuthoringDestinations));
-        if (ActiveRouteAuthoringDestinationSettlement is null)
+        if (activeDestinationChanged)
         {
-            ActiveRouteAuthoringDestinationSettlement = result.Destination;
+            OnPropertyChanged(nameof(ActiveRouteAuthoringDestinationSettlement));
+            LoadActiveRouteDraftOrExisting();
         }
     }
 
     private void ResetRouteAuthoringOriginState()
     {
-        _pointEditingService.ClearDrafts();
-        RouteAuthoringDestinationSettlements.Clear();
-        ActiveRouteAuthoringDestinationSettlement = null;
-        RouteAuthoringDestinationCandidateSettlement = null;
-        ClearTradeRoutePoints();
-        SelectedTradeRouteForAuthoring = null;
-        SelectedTradeRouteDistanceDays = 1m;
-        SelectedTradeRouteDistanceDaysInput = "1.0";
-        _routeAuthoringRouteIdDisplay = "RouteId: —";
-        OnPropertyChanged(nameof(RouteAuthoringRouteIdDisplay));
-        OnPropertyChanged(nameof(RouteAuthoringDestinationCount));
-        OnPropertyChanged(nameof(CanAddMoreRouteAuthoringDestinations));
+        _session.ResetRouteAuthoringOriginState(_pointEditingService, ClearTradeRoutePoints);
+        OnRouteAuthoringSessionReset();
         _addTechnicalLogEntry("Источник маршрутов изменён, список назначений очищен.");
     }
 
@@ -343,32 +315,41 @@ public sealed class TradeRouteAuthoringViewModel : INotifyPropertyChanged
 
     private void LoadActiveRouteDraftOrExisting()
     {
-        ClearTradeRoutePoints();
-        if (RouteAuthoringOriginSettlement is null || ActiveRouteAuthoringDestinationSettlement is null)
+        if (!_session.LoadActiveRouteDraftOrExisting(_pointEditingService, EditedTradeRoutePoints, ClearTradeRoutePoints))
         {
-            _pointEditingService.ResetCurrentDraftDestination();
-            _routeAuthoringRouteIdDisplay = "RouteId: —";
             OnPropertyChanged(nameof(RouteAuthoringRouteIdDisplay));
             return;
         }
 
-        _pointEditingService.SetCurrentDraftDestination(ActiveRouteAuthoringDestinationSettlement.Id);
-        _pointEditingService.TryLoadCurrentDraft(EditedTradeRoutePoints);
-
-        ResolveRouteAuthoringSelection(RouteAuthoringOriginSettlement, ActiveRouteAuthoringDestinationSettlement);
+        ResolveRouteAuthoringSelection(RouteAuthoringOriginSettlement!, ActiveRouteAuthoringDestinationSettlement!);
     }
 
     private void ApplyRouteAuthoringSelection(TradeRouteSelectionResult selection)
     {
-        SelectedTradeRouteForAuthoring = selection.SelectedRoute;
-        if (selection.SelectedRoute is null && selection.ShouldClearEditedPoints)
+        var shouldClearEditedPoints = _session.ApplyRouteAuthoringSelection(selection);
+        ReloadEditedTradeRoutePointsFromSelectedRoute();
+        if (shouldClearEditedPoints)
         {
             ClearTradeRoutePoints();
         }
 
-        SelectedTradeRouteDistanceDays = selection.DistanceDays;
-        SelectedTradeRouteDistanceDaysInput = selection.DistanceDaysInput;
-        _routeAuthoringRouteIdDisplay = selection.RouteIdDisplay;
+        OnPropertyChanged(nameof(SelectedTradeRouteForAuthoring));
+        OnPropertyChanged(nameof(HasSelectedTradeRouteForAuthoring));
+        OnPropertyChanged(nameof(SelectedTradeRouteDistanceDays));
+        OnPropertyChanged(nameof(SelectedTradeRouteDistanceDaysInput));
+    }
+
+    private void OnRouteAuthoringSessionReset()
+    {
+        OnPropertyChanged(nameof(RouteAuthoringDestinationCandidateSettlement));
+        OnPropertyChanged(nameof(ActiveRouteAuthoringDestinationSettlement));
+        OnPropertyChanged(nameof(SelectedTradeRouteForAuthoring));
+        OnPropertyChanged(nameof(HasSelectedTradeRouteForAuthoring));
+        OnPropertyChanged(nameof(SelectedTradeRouteDistanceDays));
+        OnPropertyChanged(nameof(SelectedTradeRouteDistanceDaysInput));
+        OnPropertyChanged(nameof(RouteAuthoringRouteIdDisplay));
+        OnPropertyChanged(nameof(RouteAuthoringDestinationCount));
+        OnPropertyChanged(nameof(CanAddMoreRouteAuthoringDestinations));
     }
 
     private void NotifyEditedRoutePointsChanged()
