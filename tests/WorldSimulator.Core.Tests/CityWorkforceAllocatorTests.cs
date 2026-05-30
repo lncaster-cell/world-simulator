@@ -107,6 +107,92 @@ public sealed class CityWorkforceAllocatorTests
         Assert.True(allocation.AssignedWorkers > 0);
     }
 
+    [Fact]
+    public void DemandPolicy_BuildDemands_PrioritizesFoodSectorsDuringFoodStress()
+    {
+        var stableCity = CreateCity(population: 400, food: 1000m, resources: 500m, goods: 500m, security: 60, crime: 10);
+        var hungryCity = CreateCity(population: 400, food: 20m, resources: 500m, goods: 500m, security: 60, crime: 10);
+        var capacity = CreateBroadCapacity(stableCity.Id);
+        var policy = new WorkforceSectorDemandPolicy();
+
+        var stableAgricultureDemand = policy.BuildDemands(stableCity, capacity)
+            .Single(demand => demand.Sector == WorkforceSector.Agriculture);
+        var hungryAgricultureDemand = policy.BuildDemands(hungryCity, capacity)
+            .Single(demand => demand.Sector == WorkforceSector.Agriculture);
+
+        Assert.True(hungryAgricultureDemand.DesiredWorkers > stableAgricultureDemand.DesiredWorkers);
+        Assert.True(hungryAgricultureDemand.Priority > stableAgricultureDemand.Priority);
+    }
+
+    [Fact]
+    public void DemandPolicy_BuildDemands_PrioritizesGuardsDuringSecurityProblem()
+    {
+        var stableCity = CreateCity(population: 400, food: 1000m, resources: 500m, goods: 500m, security: 70, crime: 10);
+        var unsafeCity = CreateCity(population: 400, food: 1000m, resources: 500m, goods: 500m, security: 20, crime: 70);
+        var capacity = CreateBroadCapacity(stableCity.Id, guardCapacity: 120);
+        var policy = new WorkforceSectorDemandPolicy();
+
+        var stableGuardDemand = policy.BuildDemands(stableCity, capacity)
+            .Single(demand => demand.Sector == WorkforceSector.Guards);
+        var unsafeGuardDemand = policy.BuildDemands(unsafeCity, capacity)
+            .Single(demand => demand.Sector == WorkforceSector.Guards);
+
+        Assert.True(unsafeGuardDemand.DesiredWorkers > stableGuardDemand.DesiredWorkers);
+        Assert.True(unsafeGuardDemand.Priority > stableGuardDemand.Priority);
+    }
+
+    [Fact]
+    public void Balancer_WithoutExistingAllocation_AssignsWorkersByDemandPriorityAndCapacity()
+    {
+        var capacity = CreateBroadCapacity("test");
+        var demands = new[]
+        {
+            new WorkforceSectorDemand(WorkforceSector.Crafting, 80, 90),
+            new WorkforceSectorDemand(WorkforceSector.Agriculture, 120, 80),
+            new WorkforceSectorDemand(WorkforceSector.Guards, 80, 70)
+        };
+
+        var assignments = new WorkforceAssignmentBalancer().Balance(
+            currentAllocation: null,
+            demands: demands,
+            totalWorkers: 100,
+            capacityProfile: capacity,
+            reallocationSettings: new WorkforceReallocationSettings());
+
+        Assert.Equal(80, assignments[WorkforceSector.Crafting]);
+        Assert.Equal(20, assignments[WorkforceSector.Agriculture]);
+        Assert.Equal(0, assignments[WorkforceSector.Guards]);
+        Assert.Equal(100, assignments.Values.Sum());
+    }
+
+    [Fact]
+    public void Balancer_WithExistingAllocation_LimitsDailyReallocation()
+    {
+        var capacity = CreateBroadCapacity("test", guardCapacity: 120);
+        var currentAllocation = CreateAllocation(totalWorkers: 100, agricultureWorkers: 100, guardWorkers: 0);
+        var demands = new[]
+        {
+            new WorkforceSectorDemand(WorkforceSector.Guards, 100, 100),
+            new WorkforceSectorDemand(WorkforceSector.Agriculture, 0, 10)
+        };
+        var reallocationSettings = new WorkforceReallocationSettings
+        {
+            MinimumDailyReallocationWorkers = 2,
+            MaximumDailyReallocationShare = 0.05m
+        };
+
+        var assignments = new WorkforceAssignmentBalancer().Balance(
+            currentAllocation: currentAllocation,
+            demands: demands,
+            totalWorkers: 100,
+            capacityProfile: capacity,
+            reallocationSettings: reallocationSettings);
+
+        Assert.Equal(5, assignments[WorkforceSector.Guards]);
+        Assert.Equal(95, assignments[WorkforceSector.Agriculture]);
+        Assert.Equal(100, assignments.Values.Sum());
+    }
+
     private static WorkforceLawProfile CreateFullWorkLawProfile() => new()
     {
         AdultMaleWorkRate = 1m,
@@ -115,6 +201,29 @@ public sealed class CityWorkforceAllocatorTests
         ChildLaborRate = 0m,
         GlobalWorkforceModifier = 1m
     };
+
+    private static CityWorkforceAllocation CreateAllocation(int totalWorkers, int agricultureWorkers, int guardWorkers) => new(
+        new WorkforceCalculationResult(
+            Children: 0,
+            AdultMen: totalWorkers / 2,
+            AdultWomen: totalWorkers - totalWorkers / 2,
+            Elderly: 0,
+            AdultMaleWorkers: totalWorkers / 2,
+            AdultFemaleWorkers: totalWorkers - totalWorkers / 2,
+            ElderlyWorkers: 0m,
+            ChildWorkers: 0m,
+            PotentialWorkers: totalWorkers,
+            GlobalWorkforceModifier: 1m,
+            TotalWorkers: totalWorkers),
+        agricultureWorkers,
+        FishingWorkers: 0,
+        HuntingWorkers: 0,
+        ResourceGatheringWorkers: 0,
+        CraftingWorkers: 0,
+        TradeWorkers: 0,
+        GuardWorkers: guardWorkers,
+        MaintenanceWorkers: 0,
+        IdleWorkers: Math.Max(0, totalWorkers - agricultureWorkers - guardWorkers));
 
     private static SettlementSectorCapacityProfile CreateBroadCapacity(string settlementId, int guardCapacity = 80) => new()
     {
