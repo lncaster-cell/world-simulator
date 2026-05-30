@@ -24,11 +24,17 @@ public sealed class RoutePathExtractor
         _connectorFallback = new RouteConnectorFallback(options, _pathFinder);
     }
 
-    public void Generate(string maskPath, string edgesPath, string nodesPath, string outputPath)
+    public void Generate(string maskPath, string edgesPath, string nodesPath, string settlementsPath, string outputPath)
+    {
+        Generate(maskPath, edgesPath, nodesPath, RouteDataLoader.LoadSettlements(settlementsPath), outputPath);
+    }
+
+    internal void Generate(string maskPath, string edgesPath, string nodesPath, IReadOnlyCollection<RouteSettlement> settlementData, string outputPath)
     {
         var nodes = RouteDataLoader.LoadNodes(nodesPath);
         var edges = RouteDataLoader.LoadEdges(edgesPath);
-        var settlements = RouteDataLoader.BuildSettlementCoordinates();
+        var nodeMap = RouteDataLoader.BuildNodeMap(settlementData);
+        var settlements = RouteDataLoader.BuildSettlementCoordinates(settlementData);
         using var image = Image.Load<Rgba32>(maskPath);
         var landMask = _maskBuilder.BuildMask(image, RouteMaskBuilder.IsRoad);
         var seaMask = _maskBuilder.BuildMask(image, RouteMaskBuilder.IsSea);
@@ -46,7 +52,7 @@ public sealed class RoutePathExtractor
             var logPrefix = $"[{i + 1}/{nonStubEdges.Count}] {edge.RouteId} {routeType}:";
             Console.WriteLine($"{logPrefix} starting...");
 
-            var entry = new RouteReportEntry(edge.RouteId, RouteDataLoader.BuildTradeRouteId(edge.FromNode, edge.ToNode, edge.RouteType), edge.RouteType, edge.FromNode, edge.ToNode);
+            var entry = new RouteReportEntry(edge.RouteId, RouteDataLoader.BuildTradeRouteId(edge.FromNode, edge.ToNode, edge.RouteType, nodeMap), edge.RouteType, edge.FromNode, edge.ToNode);
             reportEntries.Add(entry);
 
             if (!nodes.TryGetValue(edge.FromNode, out var fromNode) || !nodes.TryGetValue(edge.ToNode, out var toNode))
@@ -60,9 +66,10 @@ public sealed class RoutePathExtractor
             entry.StartSettlement = fromNode.Name;
             entry.EndSettlement = toNode.Name;
 
-            if (!settlements.TryGetValue(RouteDataLoader.NormalizeName(fromNode.Name), out var from) || !settlements.TryGetValue(RouteDataLoader.NormalizeName(toNode.Name), out var to))
+            if (!nodeMap.TryGetValue(edge.FromNode, out var fromSettlementId) || !nodeMap.TryGetValue(edge.ToNode, out var toSettlementId) ||
+                !settlements.TryGetValue(fromSettlementId, out var from) || !settlements.TryGetValue(toSettlementId, out var to))
             {
-                entry.Fail("Settlement coordinate missing.");
+                entry.Fail("Settlement route node mapping or coordinate missing.");
                 Console.WriteLine($"{logPrefix} FAILED reason={entry.FailureReason}");
                 Console.Out.Flush();
                 continue;

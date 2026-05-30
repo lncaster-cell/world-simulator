@@ -20,6 +20,7 @@ public sealed class RoutePathExtractorTests
             var maskPath = Path.Combine(dir.FullName, "world_map_routes_mask.png");
             var edgesPath = Path.Combine(dir.FullName, "route_edges.csv");
             var nodesPath = Path.Combine(dir.FullName, "route_nodes.csv");
+            var settlementsPath = Path.Combine(dir.FullName, "settlements.json");
             var outputPath = Path.Combine(dir.FullName, "route_paths.json");
             var reportPath = Path.Combine(dir.FullName, "route_paths_report.txt");
             var debugImagePath = Path.Combine(dir.FullName, "route_paths_debug.png");
@@ -40,7 +41,18 @@ public sealed class RoutePathExtractorTests
                 "route_id,from_node,to_node,route_type,travel_days,travel_hours,is_bidirectional,route_frequency,is_stub,comment\n" +
                 "R_BRNO_RIVENSTAL,N_BRNO,N_RIVENSTAL,road,3.0,72,True,common,False,test\n");
 
-            new RoutePathExtractorTool().Generate(maskPath, edgesPath, nodesPath, outputPath);
+            File.WriteAllText(settlementsPath, """
+                {
+                  "schema_version": "rivia_settlements_v1",
+                  "region_id": "RIVIA",
+                  "settlements": [
+                    { "id": "brno", "route_node_id": "N_BRNO", "x": 0.4527, "y": 0.7448 },
+                    { "id": "rivenstal", "route_node_id": "N_RIVENSTAL", "x": 0.4824, "y": 0.4500 }
+                  ]
+                }
+                """);
+
+            new RoutePathExtractorTool().Generate(maskPath, edgesPath, nodesPath, settlementsPath, outputPath);
 
             File.Exists(outputPath).Should().BeTrue();
             using var doc = JsonDocument.Parse(File.ReadAllText(outputPath));
@@ -121,13 +133,54 @@ public sealed class RoutePathExtractorTests
         columns.Should().Equal("N_1", "Mlynek, North", "road \"main\"", "false");
     }
 
-    [Theory]
-    [InlineData("N_HIGHROCK", "N_GAVERN", "road", "highrock_gavern_land")]
-    [InlineData("N_WODENZ", "N_TOKRUS", "sea", "wodenz_thokur_rus_sea")]
-    [InlineData("Custom-Node", "Other Node", "land", "custom_node_other_node_land")]
-    public void BuildTradeRouteId_MapsKnownNodesAndNormalizesCustomNames(string from, string to, string type, string expected)
+    [Fact]
+    public void BuildTradeRouteId_MapsRouteNodeIdsFromSettlementsJson()
     {
-        RouteDataLoader.BuildTradeRouteId(from, to, type).Should().Be(expected);
+        var settlements = new[]
+        {
+            new RouteSettlement { Id = "highrock", RouteNodeId = "N_HIGHROCK", X = 0.1579, Y = 0.2179 },
+            new RouteSettlement { Id = "gavern", RouteNodeId = "N_GAVERN", X = 0.5066, Y = 0.5963 },
+            new RouteSettlement { Id = "wodenz", RouteNodeId = "N_WODENZ", X = 0.8036, Y = 0.9604 },
+            new RouteSettlement { Id = "thokur_rus", RouteNodeId = "N_TOKRUS", X = 0.8652, Y = 0.4753 }
+        };
+        var nodeMap = RouteDataLoader.BuildNodeMap(settlements);
+
+        RouteDataLoader.BuildTradeRouteId("N_HIGHROCK", "N_GAVERN", "road", nodeMap).Should().Be("highrock_gavern_land");
+        RouteDataLoader.BuildTradeRouteId("N_WODENZ", "N_TOKRUS", "sea", nodeMap).Should().Be("wodenz_thokur_rus_sea");
+        RouteDataLoader.BuildTradeRouteId("Custom-Node", "Other Node", "land", nodeMap).Should().Be("custom_node_other_node_land");
+    }
+
+    [Fact]
+    public void LoadSettlements_BuildsRouteNodeMapAndCoordinatesFromJson()
+    {
+        var dir = Directory.CreateTempSubdirectory();
+        try
+        {
+            var settlementsPath = Path.Combine(dir.FullName, "settlements.json");
+            File.WriteAllText(settlementsPath, """
+                {
+                  "schema_version": "rivia_settlements_v1",
+                  "region_id": "RIVIA",
+                  "settlements": [
+                    { "id": "brno", "route_node_id": "N_BRNO", "x": 0.4527, "y": 0.7448 },
+                    { "id": "thokur_rus", "route_node_id": "N_TOKRUS", "x": 0.8652, "y": 0.4753 }
+                  ]
+                }
+                """);
+
+            var settlements = RouteDataLoader.LoadSettlements(settlementsPath);
+            var nodeMap = RouteDataLoader.BuildNodeMap(settlements);
+            var coordinates = RouteDataLoader.BuildSettlementCoordinates(settlements);
+
+            nodeMap.Should().ContainKey("N_BRNO").WhoseValue.Should().Be("brno");
+            nodeMap.Should().ContainKey("N_TOKRUS").WhoseValue.Should().Be("thokur_rus");
+            coordinates["brno"].Should().Be((0.4527, 0.7448));
+            coordinates["thokur_rus"].Should().Be((0.8652, 0.4753));
+        }
+        finally
+        {
+            dir.Delete(recursive: true);
+        }
     }
 
     [Fact]

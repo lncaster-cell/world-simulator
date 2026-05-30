@@ -8,6 +8,17 @@ namespace WorldSimulator.App.Services;
 public sealed class SimulationJournalService
 {
     public const int MaxSimulationJournalDays = 500;
+    private readonly CityEventEffectTextFormatter _eventEffectTextFormatter;
+
+    public SimulationJournalService()
+        : this(new CityEventEffectTextFormatter())
+    {
+    }
+
+    public SimulationJournalService(CityEventEffectTextFormatter eventEffectTextFormatter)
+    {
+        _eventEffectTextFormatter = eventEffectTextFormatter;
+    }
 
     public SimulationJournalEntry BuildEntry(SimulationJournalAppendRequest request)
     {
@@ -22,7 +33,7 @@ public sealed class SimulationJournalService
             Day = request.Day,
             CityId = request.City.Id,
             CityName = request.City.Name,
-            CityState = ToRussianCityState(request.CityStateEnd),
+            CityState = CityStateTextFormatter.ToRussian(request.CityStateEnd),
             PopulationStart = request.PopulationStart,
             PopulationEnd = request.PopulationEnd,
             PopulationDelta = request.PopulationEnd - request.PopulationStart,
@@ -63,7 +74,7 @@ public sealed class SimulationJournalService
         };
     }
 
-    private static IReadOnlyList<SimulationJournalItem> CategorizeItems(SimulationJournalAppendRequest request)
+    private IReadOnlyList<SimulationJournalItem> CategorizeItems(SimulationJournalAppendRequest request)
     {
         var items = new List<SimulationJournalItem>(request.Items);
 
@@ -73,7 +84,7 @@ public sealed class SimulationJournalService
             {
                 Category = SimulationJournalCategory.Effects,
                 Title = "Применены эффекты событий",
-                Details = $"Настроение {request.EventEffects.MoodDelta:+0;-0;0}, безопасность {request.EventEffects.SecurityDelta:+0;-0;0}, преступность {request.EventEffects.CrimeDelta:+0;-0;0}."
+                Details = _eventEffectTextFormatter.Format(request.EventEffects) + "."
             });
         }
 
@@ -93,7 +104,7 @@ public sealed class SimulationJournalService
             {
                 Category = SimulationJournalCategory.CityState,
                 Title = "Состояние города изменилось",
-                Details = $"{ToRussianCityState(request.CityStateStart)} → {ToRussianCityState(request.CityStateEnd)}."
+                Details = $"{CityStateTextFormatter.ToRussian(request.CityStateStart)} → {CityStateTextFormatter.ToRussian(request.CityStateEnd)}."
             });
         }
 
@@ -126,24 +137,6 @@ public sealed class SimulationJournalService
         return $"Пища {foodResult.TotalDelta:+0.##;-0.##;0}, событий нет.";
     }
 
-    private static string ToRussianCityState(CityState cityState)
-    {
-        return cityState switch
-        {
-            CityState.Stable => "Стабильность",
-            CityState.Prosperous => "Процветание",
-            CityState.Stagnation => "Стагнация",
-            CityState.FoodShortage => "Нехватка пищи",
-            CityState.Famine => "Голод",
-            CityState.EconomicDecline => "Экономический спад",
-            CityState.CrimeProblem => "Проблемы с преступностью",
-            CityState.Unrest => "Беспорядки",
-            CityState.Recovery => "Восстановление",
-            CityState.Collapse => "Коллапс",
-            CityState.Abandoned => "Опустевший город",
-            _ => cityState.ToString()
-        };
-    }
 }
 
 public sealed class SimulationJournalAppendRequest

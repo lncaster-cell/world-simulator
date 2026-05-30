@@ -1,0 +1,58 @@
+<UserControl x:Class="WorldSimulator.App.Views.CityWindow.CityDebugTabView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:WorldSimulator.App.ViewModels"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance Type=vm:MainWindowViewModel, IsDesignTimeCreatable=False}">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Margin="8">
+            <Border BorderBrush="DarkOrange" BorderThickness="1" Padding="12" CornerRadius="4" Background="#FFFFF7E6">
+                <StackPanel>
+                    <TextBlock Text="Скорость симуляции" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                    <TextBlock Text="Инструменты отладки предназначены только для разработки."
+                               TextWrapping="Wrap"
+                               Foreground="DarkRed"
+                               Margin="0,0,0,10"/>
+                    <TextBlock Text="{Binding CurrentSimulationSpeedDisplay}" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                    <WrapPanel>
+                        <Button Content="Нормальная" Command="{Binding SetNormalSpeedCommand}" Width="110" Margin="0,0,8,8"/>
+                        <Button Content="Быстрая" Command="{Binding SetFastSpeedCommand}" Width="110" Margin="0,0,8,8"/>
+                        <Button Content="Очень быстро" Command="{Binding SetVeryFastSpeedCommand}" Width="120" Margin="0,0,8,8"/>
+                        <Button Content="Турбо" Command="{Binding SetTurboSpeedCommand}" Width="110" Margin="0,0,8,8"/>
+                    </WrapPanel>
+                    <Separator Margin="0,4,0,10"/>
+                    <TextBlock Text="Запуск тестовых событий" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                    <WrapPanel>
+                        <Button Content="Запустить пожар" Command="{Binding TriggerFireEventCommand}" Margin="0,0,8,8"/>
+                        <Button Content="Запустить болезнь" Command="{Binding TriggerDiseaseEventCommand}" Margin="0,0,8,8"/>
+                        <Button Content="Запустить крыс" Command="{Binding TriggerRatInfestationEventCommand}" Margin="0,0,8,8"/>
+                        <Button Content="Запустить артистов" Command="{Binding TriggerArtistsPerformanceEventCommand}" Margin="0,0,8,8"/>
+                        <Button Content="Запустить шторм" Command="{Binding TriggerPortStormEventCommand}" Margin="0,0,8,8"/>
+                    </WrapPanel>
+                    <Separator Margin="0,4,0,10"/>
+                    <TextBlock Text="Случайные события" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                    <TextBlock Text="Статус:" FontWeight="SemiBold"/>
+                    <TextBlock Text="{Binding RandomEventGenerationStatusDisplay}" Margin="0,0,0,6"/>
+                    <TextBlock Text="Шанс: 20% в день." Margin="0,0,0,4"/>
+                    <TextBlock Text="Максимум активных случайных событий: 3." Margin="0,0,0,10"/>
+                    <Button Content="{Binding RandomEventGenerationToggleButtonText}"
+                            Command="{Binding ToggleRandomEventGenerationCommand}"
+                            Width="250"
+                            Margin="0,0,0,8"/>
+                    <Separator Margin="0,4,0,10"/>
+                    <TextBlock Text="Сохранение" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                    <TextBlock Text="Сохранение MVP использует фиксированный файл."
+                               TextWrapping="Wrap"
+                               Margin="0,0,0,4"/>
+                    <TextBlock Text="data/save/world_save.json" FontFamily="Consolas" Margin="0,0,0,10"/>
+                    <WrapPanel>
+                        <Button Content="Сохранить" Command="{Binding SaveCommand}" Width="110" Margin="0,0,8,8"/>
+                        <Button Content="Загрузить" Command="{Binding LoadCommand}" Width="110" Margin="0,0,8,8"/>
+                    </WrapPanel>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

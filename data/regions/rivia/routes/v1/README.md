@@ -9,7 +9,8 @@ The route durations are fixed constants, not distances calculated from map geome
 - `route_nodes.csv` — settlements, ports, piers, region exits, sea exits.
 - `route_edges.csv` — confirmed bidirectional routes with fixed durations.
 - `route_todo.csv` — known exits/stubs where duration or exact endpoint is not fixed yet.
-- `rivia_routes.json` — same data as JSON for the external simulator.
+- `rivia_routes.json` — runtime/tool JSON route graph with only `schema_version`, `region_id`, `units`, `nodes`, and `edges`.
+- `rivia_routes_meta.json` — authoring-only route TODOs and notes split away from runtime loader data.
 - `world_map_routes_mask.png` — authoring-time route mask (magenta roads, cyan sea, transparent background).
 - `route_paths.json` — generated runtime path data consumed by the app.
 
@@ -36,7 +37,7 @@ dotnet run --project tools/WorldSimulator.RoutePathExtractor/WorldSimulator.Rout
 ```
 
 3. Verify generated `route_paths.json`.
-4. Start the application (runtime only reads ready `route_paths.json`; PNG is not read in runtime).
+4. Start the application (runtime reads `rivia_routes.json` for route graph data and ready `route_paths.json` for visual paths; PNG and `rivia_routes_meta.json` are not read in runtime).
 
 ## Confirmed land routes
 

@@ -18,10 +18,10 @@
                         <TextBlock Text="{Binding SimulationSummaryTitle}" FontWeight="SemiBold" FontSize="16" Margin="0,0,0,8"/>
                         <TextBlock Text="{Binding SimulationSummaryDayAndHour}" Margin="0,0,0,4"/>
                         <TextBlock Text="{Binding SimulationSummaryCityState}" Margin="0,0,0,4"/>
-                        <TextBlock Text="{Binding SimulationSummaryFoodBalance}" ToolTip="{Binding FoodBalanceTooltip}" Margin="0,0,0,4"/>
+                        <TextBlock Text="{Binding SimulationSummaryFoodBalance}" ToolTip="{Binding SelectedCity.FoodBalanceTooltip}" Margin="0,0,0,4"/>
                         <TextBlock Text="{Binding SimulationSummaryActiveEvents}" Margin="0,0,0,4"/>
                         <TextBlock Text="{Binding SimulationSummaryRandomEventsStatus}" Margin="0,0,0,4"/>
-                        <TextBlock Text="{Binding SelectedRegionName, StringFormat=Регион: {0}}" Margin="0,0,0,4"/>
+                        <TextBlock Text="{Binding SelectedCity.SelectedRegionName, StringFormat=Регион: {0}}" Margin="0,0,0,4"/>
                         <TextBlock Text="{Binding SimulationSummaryLastImportantChange}" TextWrapping="Wrap"/>
                     </StackPanel>
                 </Border>
