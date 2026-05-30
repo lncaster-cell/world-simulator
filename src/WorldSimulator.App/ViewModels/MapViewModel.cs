@@ -2,8 +2,8 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Windows;
 using System.Windows.Input;
-using System.Windows.Threading;
 using WorldSimulator.App.Infrastructure;
+using WorldSimulator.App.Services;
 using WorldSimulator.Core.Simulation;
 using WorldSimulator.Core.Time;
 using WorldSimulator.Core.Trade;
@@ -13,15 +13,11 @@ namespace WorldSimulator.App.ViewModels;
 
 public sealed class MapViewModel : ViewModelBase
 {
-    private const int MaxVisibleCaravanMovementMarkers = 12;
-
     private readonly Func<SimulationWorld> _worldProvider;
-    private readonly SimulationClock _clock;
     private readonly Action<string> _log;
     private readonly List<TradeRouteVisualViewModel> _tradeRouteVisuals = [];
-    private readonly HashSet<string> _loadedCaravanPathRouteIds = new(StringComparer.OrdinalIgnoreCase);
-    private readonly DispatcherTimer _tradeMarkerAnimationTimer;
-    private DateTimeOffset _lastTradeMarkerAnimationTickUtc;
+    private readonly MapRouteVisualBuilder _mapRouteVisualBuilder = new();
+    private readonly CaravanMarkerAnimationService _caravanMarkerAnimationService;
     private bool _isMapCalibrationModeEnabled;
     private double? _lastMapCalibrationX;
     private double? _lastMapCalibrationY;
@@ -31,13 +27,9 @@ public sealed class MapViewModel : ViewModelBase
     public MapViewModel(Func<SimulationWorld> worldProvider, SimulationClock clock, Action<string> log)
     {
         _worldProvider = worldProvider;
-        _clock = clock;
         _log = log;
         ToggleMapCalibrationModeCommand = new RelayCommand(ToggleMapCalibrationMode);
-
-        _tradeMarkerAnimationTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
-        _tradeMarkerAnimationTimer.Tick += OnTradeMarkerAnimationTick;
-        _tradeMarkerAnimationTimer.Start();
+        _caravanMarkerAnimationService = new CaravanMarkerAnimationService(clock, ActiveCaravanMovementMarkers);
     }
 
     public ICommand ToggleMapCalibrationModeCommand { get; }
@@ -106,18 +98,17 @@ public sealed class MapViewModel : ViewModelBase
 
     public void ResetAnimationBaseline()
     {
-        _lastTradeMarkerAnimationTickUtc = DateTimeOffset.UtcNow;
+        _caravanMarkerAnimationService.ResetBaseline();
     }
 
     public void ClearSimulationCollections()
     {
-        ActiveCaravanMovementMarkers.Clear();
+        _caravanMarkerAnimationService.ClearMarkers();
         OnPropertyChanged(nameof(ActiveCaravanMovementMarkers));
     }
 
     public void LoadRoutePathsForWorld()
     {
-        _loadedCaravanPathRouteIds.Clear();
         var path = TryFindRoutePathsJsonPath();
         if (path is null)
         {
@@ -135,11 +126,6 @@ public sealed class MapViewModel : ViewModelBase
             return;
         }
 
-        foreach (var routeId in result.AppliedRouteIds)
-        {
-            _loadedCaravanPathRouteIds.Add(routeId);
-        }
-
         var unmatched = Math.Max(0, result.ParsedPathCount - result.AppliedRouteCount);
         _log($"route_paths.json parsed paths count: {result.ParsedPathCount}; applied route count: {result.AppliedRouteCount}; unmatched: {unmatched}.");
         if (result.AppliedRouteCount == 0)
@@ -151,102 +137,13 @@ public sealed class MapViewModel : ViewModelBase
     public void RefreshTradeRouteVisuals(WorldTradeFlowResult? weeklyTradeResult)
     {
         var world = _worldProvider();
-        var volumeByRoute = (weeklyTradeResult?.Transfers ?? [])
-            .GroupBy(x => x.RouteId, StringComparer.Ordinal)
-            .ToDictionary(
-                group => group.Key,
-                group => new
-                {
-                    Food = group.Where(x => x.GoodType == TradeGoodType.Food).Sum(x => x.AmountTransferred),
-                    Resources = group.Where(x => x.GoodType == TradeGoodType.Resources).Sum(x => x.AmountTransferred),
-                    Goods = group.Where(x => x.GoodType == TradeGoodType.Goods).Sum(x => x.AmountTransferred)
-                },
-                StringComparer.Ordinal);
-
         _tradeRouteVisuals.Clear();
-        foreach (var route in world.TradeRoutes)
-        {
-            var volume = volumeByRoute.GetValueOrDefault(route.Id);
-            _tradeRouteVisuals.Add(new TradeRouteVisualViewModel
-            {
-                RouteId = route.Id,
-                FromSettlementId = route.FromSettlementId,
-                ToSettlementId = route.ToSettlementId,
-                DisplayName = $"{route.FromSettlementId} → {route.ToSettlementId}",
-                Points = route.Points.Select(ToMapPoint).ToList(),
-                IsActive = volume is not null,
-                IsLoadedPath = route.HasLoadedPath,
-                IsSeaRoute = route.Type == CaravanType.Sea,
-                DebugLabelPoint = CalculateDebugLabelPoint(route.Points),
-                WeeklyFoodMoved = volume?.Food ?? 0m,
-                WeeklyResourcesMoved = volume?.Resources ?? 0m,
-                WeeklyGoodsMoved = volume?.Goods ?? 0m
-            });
-        }
-
-        ActiveCaravanMovementMarkers.Clear();
-        foreach (var routeVisual in _tradeRouteVisuals
-                     .Where(x => x.Points.Count >= 2 && world.TradeRoutes.Any(r => string.Equals(r.Id, x.RouteId, StringComparison.Ordinal) && r.HasLoadedPath))
-                     .OrderByDescending(x => x.IsActive)
-                     .ThenByDescending(x => x.TotalWeeklyVolume)
-                     .Take(MaxVisibleCaravanMovementMarkers))
-        {
-            ActiveCaravanMovementMarkers.Add(new CaravanMovementMarkerViewModel
-            {
-                RouteId = routeVisual.RouteId,
-                DisplayName = routeVisual.DisplayName,
-                Points = routeVisual.Points,
-                Progress = CalculateInitialCaravanProgress(routeVisual.RouteId),
-                FoodMoved = routeVisual.WeeklyFoodMoved,
-                ResourcesMoved = routeVisual.WeeklyResourcesMoved,
-                GoodsMoved = routeVisual.WeeklyGoodsMoved,
-                HasActiveFlow = routeVisual.IsActive && routeVisual.TotalWeeklyVolume > 0m
-            });
-        }
+        _tradeRouteVisuals.AddRange(_mapRouteVisualBuilder.BuildTradeRouteVisuals(world.TradeRoutes, weeklyTradeResult));
+        _caravanMarkerAnimationService.RefreshMarkers(_tradeRouteVisuals);
 
         OnPropertyChanged(nameof(TradeRouteVisuals));
         OnPropertyChanged(nameof(DebugLoadedRoutePathVisuals));
         OnPropertyChanged(nameof(ActiveCaravanMovementMarkers));
-    }
-
-    public static MapPointViewModel CalculatePointOnPolyline(IReadOnlyList<MapPointViewModel> points, double progress)
-    {
-        if (points.Count == 0) return new MapPointViewModel { X = 0d, Y = 0d };
-        if (points.Count == 1) return points[0];
-        var clamped = double.Clamp(progress, 0d, 1d);
-
-        var segmentLengths = new double[points.Count - 1];
-        var totalLength = 0d;
-        for (var i = 0; i < points.Count - 1; i++)
-        {
-            var dx = points[i + 1].X - points[i].X;
-            var dy = points[i + 1].Y - points[i].Y;
-            var length = Math.Sqrt(dx * dx + dy * dy);
-            segmentLengths[i] = length;
-            totalLength += length;
-        }
-
-        if (totalLength <= 0d) return points[0];
-        var targetLength = clamped * totalLength;
-        var walked = 0d;
-        for (var i = 0; i < segmentLengths.Length; i++)
-        {
-            var segmentLength = segmentLengths[i];
-            if (segmentLength <= 0d) continue;
-            if (walked + segmentLength >= targetLength)
-            {
-                var t = (targetLength - walked) / segmentLength;
-                return new MapPointViewModel
-                {
-                    X = points[i].X + ((points[i + 1].X - points[i].X) * t),
-                    Y = points[i].Y + ((points[i + 1].Y - points[i].Y) * t)
-                };
-            }
-
-            walked += segmentLength;
-        }
-
-        return points[^1];
     }
 
     private IReadOnlyList<SettlementMapMarkerViewModel> BuildSettlementMapMarkers()
@@ -277,34 +174,6 @@ public sealed class MapViewModel : ViewModelBase
         _log(IsMapCalibrationModeEnabled ? "Режим калибровки карты включен." : "Режим калибровки карты выключен.");
     }
 
-    private void OnTradeMarkerAnimationTick(object? sender, EventArgs e)
-    {
-        if (ActiveCaravanMovementMarkers.Count == 0)
-        {
-            _lastTradeMarkerAnimationTickUtc = DateTimeOffset.UtcNow;
-            return;
-        }
-
-        var now = DateTimeOffset.UtcNow;
-        if (_lastTradeMarkerAnimationTickUtc == default)
-        {
-            _lastTradeMarkerAnimationTickUtc = now;
-        }
-
-        var deltaSeconds = (now - _lastTradeMarkerAnimationTickUtc).TotalSeconds;
-        _lastTradeMarkerAnimationTickUtc = now;
-        if (!_clock.IsRunning)
-        {
-            return;
-        }
-
-        var progressDelta = deltaSeconds * 0.08d;
-        foreach (var marker in ActiveCaravanMovementMarkers)
-        {
-            marker.Progress += progressDelta;
-        }
-    }
-
     private static string? TryFindRoutePathsJsonPath()
     {
         var relativePath = Path.Combine("data", "regions", "rivia", "routes", "v1", "route_paths.json");
@@ -320,29 +189,5 @@ public sealed class MapViewModel : ViewModelBase
         }
 
         return null;
-    }
-
-    private static MapPointViewModel ToMapPoint(RoutePoint point) => new() { X = (double)point.X, Y = (double)point.Y };
-
-    private static MapPointViewModel CalculateDebugLabelPoint(IReadOnlyList<RoutePoint> points)
-    {
-        if (points.Count == 0) return new MapPointViewModel { X = 0d, Y = 0d };
-        var point = points[points.Count / 2];
-        return ToMapPoint(point);
-    }
-
-    private static double CalculateInitialCaravanProgress(string routeId)
-    {
-        unchecked
-        {
-            var hash = 17;
-            foreach (var ch in routeId)
-            {
-                hash = (hash * 31) + ch;
-            }
-
-            var normalized = Math.Abs(hash % 1000);
-            return normalized / 1000d;
-        }
     }
 }
