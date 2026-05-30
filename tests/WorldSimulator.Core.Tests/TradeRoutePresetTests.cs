@@ -71,7 +71,10 @@ public sealed class TradeRoutePresetTests
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
         while (directory is not null)
         {
-            if (Directory.Exists(Path.Combine(directory.FullName, "data", "regions", "rivia", "routes", "v1")))
+            var routeGraphPath = Path.Combine(directory.FullName, "data", "regions", "rivia", "routes", "v1", "rivia_routes.json");
+            var metaPath = Path.Combine(directory.FullName, "data", "regions", "rivia", "routes", "v1", "rivia_routes_meta.json");
+
+            if (File.Exists(routeGraphPath) && File.Exists(metaPath))
             {
                 return directory.FullName;
             }
