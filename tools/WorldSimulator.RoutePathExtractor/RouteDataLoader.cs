@@ -1,18 +1,13 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
+
 namespace WorldSimulator.RoutePathExtractor;
 
 internal static class RouteDataLoader
 {
-    public static readonly Dictionary<string, string> NodeMap = new(StringComparer.OrdinalIgnoreCase)
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {
-        ["N_HIGHROCK"] = "highrock",
-        ["N_MLYNEK"] = "mlynek",
-        ["N_WARDMARK"] = "wardmark",
-        ["N_RIVENSTAL"] = "rivenstal",
-        ["N_GAVERN"] = "gavern",
-        ["N_BRNO"] = "brno",
-        ["N_WODENZ"] = "wodenz",
-        ["N_GOTHA"] = "gotha",
-        ["N_TOKRUS"] = "thokur_rus"
+        PropertyNameCaseInsensitive = true
     };
 
     public static Dictionary<string, Node> LoadNodes(string path)
@@ -20,6 +15,25 @@ internal static class RouteDataLoader
 
     public static List<Edge> LoadEdges(string path)
         => ReadCsv(path).Skip(1).Select(c => new Edge(c[0], c[1], c[2], c[3], bool.Parse(c[8]))).ToList();
+
+    public static List<RouteSettlement> LoadSettlements(string path)
+    {
+        var json = File.ReadAllText(path);
+        var payload = JsonSerializer.Deserialize<RouteSettlementsDocument>(json, JsonOptions)
+            ?? throw new InvalidDataException($"Unable to deserialize settlements from '{path}'.");
+
+        return payload.Settlements;
+    }
+
+    public static Dictionary<string, string> BuildNodeMap(IEnumerable<RouteSettlement> settlements)
+        => settlements
+            .Where(s => !string.IsNullOrWhiteSpace(s.RouteNodeId) && !string.IsNullOrWhiteSpace(s.Id))
+            .ToDictionary(s => s.RouteNodeId, s => s.Id, StringComparer.OrdinalIgnoreCase);
+
+    public static Dictionary<string, (double X, double Y)> BuildSettlementCoordinates(IEnumerable<RouteSettlement> settlements)
+        => settlements
+            .Where(s => !string.IsNullOrWhiteSpace(s.Id))
+            .ToDictionary(s => s.Id, s => (s.X, s.Y), StringComparer.OrdinalIgnoreCase);
 
     public static IEnumerable<string[]> ReadCsv(string path)
     {
@@ -71,25 +85,36 @@ internal static class RouteDataLoader
         };
 
     public static string BuildTradeRouteId(string from, string to, string type)
+        => BuildTradeRouteId(from, to, type, new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase));
+
+    public static string BuildTradeRouteId(string from, string to, string type, IReadOnlyDictionary<string, string> nodeMap)
     {
         var suffix = type.Equals("sea", StringComparison.OrdinalIgnoreCase) ? "sea" : "land";
-        return $"{MapNodeOrName(from)}_{MapNodeOrName(to)}_{suffix}";
+        return $"{MapNodeOrName(from, nodeMap)}_{MapNodeOrName(to, nodeMap)}_{suffix}";
     }
 
     public static string NormalizeRouteType(string routeType) => routeType.Equals("sea", StringComparison.OrdinalIgnoreCase) ? "sea" : "road";
 
-    public static Dictionary<string, (double X, double Y)> BuildSettlementCoordinates() => new(StringComparer.OrdinalIgnoreCase)
-    {
-        ["gotha"] = (0.6664, 0.2322),
-        ["rivenstal"] = (0.4824, 0.45),
-        ["gavern"] = (0.5066, 0.5963),
-        ["mlynek"] = (0.2833, 0.2487),
-        ["brno"] = (0.4527, 0.7448),
-        ["wodenz"] = (0.8036, 0.9604),
-        ["wardmark"] = (0.0380, 0.4027),
-        ["highrock"] = (0.1579, 0.2179),
-        ["thokur_rus"] = (0.8652, 0.4753)
-    };
+    private static string MapNodeOrName(string value, IReadOnlyDictionary<string, string> nodeMap) => nodeMap.GetValueOrDefault(value, NormalizeName(value));
+}
 
-    private static string MapNodeOrName(string value) => NodeMap.GetValueOrDefault(value, NormalizeName(value));
+internal sealed class RouteSettlementsDocument
+{
+    [JsonPropertyName("settlements")]
+    public List<RouteSettlement> Settlements { get; init; } = [];
+}
+
+internal sealed class RouteSettlement
+{
+    [JsonPropertyName("id")]
+    public required string Id { get; init; }
+
+    [JsonPropertyName("route_node_id")]
+    public required string RouteNodeId { get; init; }
+
+    [JsonPropertyName("x")]
+    public double X { get; init; }
+
+    [JsonPropertyName("y")]
+    public double Y { get; init; }
 }
