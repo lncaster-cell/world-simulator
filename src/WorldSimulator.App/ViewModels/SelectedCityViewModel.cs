@@ -1,84 +1,58 @@
-using System.Windows.Input;
+using System;
+using System.Collections.Generic;
 using WorldSimulator.Core.Cities;
 using WorldSimulator.Core.Events;
 using WorldSimulator.Core.Resources;
+using WorldSimulator.Core.Trade;
 using WorldSimulator.Core.World;
 
 namespace WorldSimulator.App.ViewModels;
 
 public sealed class SelectedCityViewModel : ViewModelBase
 {
-    private readonly Func<SimulationWorld> _getWorld;
-    private readonly Func<City> _getCity;
-    private readonly Func<DailyFoodFlowResult> _getDailyFoodFlowResult;
-    private readonly Func<DailyWealthFlowResult?> _getDailyWealthFlowResult;
-    private readonly Action _openCityPanel;
+    private readonly Func<SimulationWorld> _worldProvider;
+    private readonly Func<City> _cityProvider;
+    private readonly Func<DailyFoodFlowResult> _dailyFoodFlowProvider;
+    private readonly Func<DailyWealthFlowResult?> _dailyWealthFlowProvider;
 
     public SelectedCityViewModel(
-        Func<SimulationWorld> getWorld,
-        Func<City> getCity,
-        Func<DailyFoodFlowResult> getDailyFoodFlowResult,
-        Func<DailyWealthFlowResult?> getDailyWealthFlowResult,
-        Action openCityPanel)
+        Func<SimulationWorld> worldProvider,
+        Func<City> cityProvider,
+        Func<DailyFoodFlowResult> dailyFoodFlowProvider,
+        Func<DailyWealthFlowResult?> dailyWealthFlowProvider)
     {
-        _getWorld = getWorld;
-        _getCity = getCity;
-        _getDailyFoodFlowResult = getDailyFoodFlowResult;
-        _getDailyWealthFlowResult = getDailyWealthFlowResult;
-        _openCityPanel = openCityPanel;
-
-        OpenSelectedCityCommand = new RelayCommand(OpenCityPanel, () => !string.IsNullOrWhiteSpace(World.SelectedCityId));
+        _worldProvider = worldProvider;
+        _cityProvider = cityProvider;
+        _dailyFoodFlowProvider = dailyFoodFlowProvider;
+        _dailyWealthFlowProvider = dailyWealthFlowProvider;
     }
 
-    public ICommand OpenSelectedCityCommand { get; }
+    public string SelectedCityName => CurrentCity.Name;
+    public string SelectedRegionName => CurrentWorld.SelectedRegion.DisplayName;
+    public string CityName => CurrentCity.Name;
+    public string SelectedCityProfile => $"{CurrentCity.Name} — профиль поселения";
+    public CityState CityState => CurrentCity.CityState;
+    public string CityStateDisplay => ToRussianCityState(CityState);
+    public int Population => CurrentCity.Population;
+    public decimal Food => CurrentCity.Food;
+    public decimal Wealth => CurrentCity.Wealth;
+    public int Mood => CurrentCity.Mood;
+    public int Security => CurrentCity.Security;
+    public int Crime => CurrentCity.Crime;
+    public decimal Resources => CurrentCity.Resources;
+    public decimal Goods => CurrentCity.Goods;
+    public string FoodDisplay => FormatOneDecimal(Food);
+    public string WealthDisplay => FormatOneDecimal(Wealth);
+    public string ResourcesDisplay => FormatOneDecimal(Resources);
+    public string GoodsDisplay => FormatOneDecimal(Goods);
+    public decimal DailyFoodConsumption => CurrentCity.CalculateDailyFoodConsumption();
+    public IReadOnlyList<TradeRoute> TradeRoutes => CurrentWorld.TradeRoutes;
 
-    public SimulationWorld World => _getWorld();
-
-    public City City => _getCity();
-
-    public new string SelectedCityName => City.Name;
-
-    public new string SelectedRegionName => World.SelectedRegion.DisplayName;
-
-    public new string CityName => City.Name;
-
-    public string SelectedCityProfile => $"{City.Name} — профиль поселения";
-
-    public new CityState CityState => City.CityState;
-
-    public new string CityStateDisplay => ToRussianCityState(CityState);
-
-    public new int Population => City.Population;
-
-    public new decimal Food => City.Food;
-
-    public new string FoodDisplay => FormatOneDecimal(Food);
-
-    public new decimal Resources => City.Resources;
-
-    public new string ResourcesDisplay => FormatOneDecimal(Resources);
-
-    public new decimal Goods => City.Goods;
-
-    public new string GoodsDisplay => FormatOneDecimal(Goods);
-
-    public new decimal Wealth => City.Wealth;
-
-    public new string WealthDisplay => FormatOneDecimal(Wealth);
-
-    public new int Mood => City.Mood;
-
-    public new int Security => City.Security;
-
-    public new int Crime => City.Crime;
-
-    public new decimal DailyFoodConsumption => City.CalculateDailyFoodConsumption();
-
-    public new IReadOnlyList<CityInfrastructureRowViewModel> CityInfrastructureRows
+    public IReadOnlyList<CityInfrastructureRowViewModel> CityInfrastructureRows
     {
         get
         {
-            var infrastructure = City.Infrastructure;
+            var infrastructure = CurrentCity.Infrastructure;
             return
             [
                 new CityInfrastructureRowViewModel("Жилая инфраструктура", infrastructure.HousingLevel, "Жильё, дворы, бытовые постройки и вместимость поселения."),
@@ -89,26 +63,26 @@ public sealed class SelectedCityViewModel : ViewModelBase
         }
     }
 
-    public new decimal DailyFoodStartingFood => DailyFoodResult.StartingFood;
-    public new decimal DailyFoodPopulationConsumption => DailyFoodResult.PopulationConsumption;
-    public new decimal DailyFoodAgricultureIncome => DailyFoodResult.AgricultureIncome;
-    public new decimal DailyFoodFishingIncome => DailyFoodResult.FishingIncome;
-    public new decimal DailyFoodHuntingIncome => DailyFoodResult.HuntingIncome;
-    public new decimal DailyFoodMainlandSupplyIncome => DailyFoodResult.MainlandSupplyIncome;
-    public new decimal DailyFoodEventDelta => DailyFoodResult.EventDelta;
-    public new decimal DailyFoodTotalDelta => DailyFoodResult.TotalDelta;
-    public new decimal DailyFoodEndingFood => DailyFoodResult.EndingFood;
+    public decimal DailyFoodStartingFood => DailyFoodResult.StartingFood;
+    public decimal DailyFoodPopulationConsumption => DailyFoodResult.PopulationConsumption;
+    public decimal DailyFoodAgricultureIncome => DailyFoodResult.AgricultureIncome;
+    public decimal DailyFoodFishingIncome => DailyFoodResult.FishingIncome;
+    public decimal DailyFoodHuntingIncome => DailyFoodResult.HuntingIncome;
+    public decimal DailyFoodMainlandSupplyIncome => DailyFoodResult.MainlandSupplyIncome;
+    public decimal DailyFoodEventDelta => DailyFoodResult.EventDelta;
+    public decimal DailyFoodTotalDelta => DailyFoodResult.TotalDelta;
+    public decimal DailyFoodEndingFood => DailyFoodResult.EndingFood;
 
-    public new string DailyFoodPopulationConsumptionDisplay => $"-{FormatOneDecimal(DailyFoodPopulationConsumption)}";
-    public new string DailyFoodAgricultureIncomeDisplay => FormatSigned(DailyFoodAgricultureIncome);
-    public new string DailyFoodFishingIncomeDisplay => FormatSigned(DailyFoodFishingIncome);
-    public new string DailyFoodHuntingIncomeDisplay => FormatSigned(DailyFoodHuntingIncome);
-    public new string DailyFoodMainlandSupplyIncomeDisplay => FormatSigned(DailyFoodMainlandSupplyIncome);
-    public new string DailyFoodEventDeltaDisplay => FormatSigned(DailyFoodEventDelta);
-    public new string DailyFoodTotalDeltaDisplay => FormatSigned(DailyFoodTotalDelta);
+    public string DailyFoodPopulationConsumptionDisplay => $"-{FormatOneDecimal(DailyFoodPopulationConsumption)}";
+    public string DailyFoodAgricultureIncomeDisplay => FormatSigned(DailyFoodAgricultureIncome);
+    public string DailyFoodFishingIncomeDisplay => FormatSigned(DailyFoodFishingIncome);
+    public string DailyFoodHuntingIncomeDisplay => FormatSigned(DailyFoodHuntingIncome);
+    public string DailyFoodMainlandSupplyIncomeDisplay => FormatSigned(DailyFoodMainlandSupplyIncome);
+    public string DailyFoodEventDeltaDisplay => FormatSigned(DailyFoodEventDelta);
+    public string DailyFoodTotalDeltaDisplay => FormatSigned(DailyFoodTotalDelta);
 
-    public new string FoodBalanceTooltip =>
-        $"Дневной баланс пищи:{Environment.NewLine}" +
+    public string FoodBalanceTooltip =>
+        $"Пищевой баланс:{Environment.NewLine}" +
         $"Начало дня: {FormatOneDecimal(DailyFoodStartingFood)}{Environment.NewLine}" +
         $"Потребление: -{FormatOneDecimal(DailyFoodPopulationConsumption)}{Environment.NewLine}" +
         $"Земледелие: {FormatSigned(DailyFoodAgricultureIncome)}{Environment.NewLine}" +
@@ -118,55 +92,53 @@ public sealed class SelectedCityViewModel : ViewModelBase
         $"События: {FormatSigned(DailyFoodEventDelta)}{Environment.NewLine}" +
         $"Итог: {FormatSigned(DailyFoodTotalDelta)}";
 
-    public new string FishingProductionTooltip => "Рыбалка зависит от локального профиля поселения, работников сектора и текущих модификаторов.";
-
-    public new string ResourcesTooltip => $"Ресурсы: {ResourcesDisplay}";
-
-    public new string GoodsTooltip => $"Товары: {GoodsDisplay}";
-
-    public new string CrimeFlowTooltip => "Преступность пересчитывается недельным шагом симуляции.";
-
-    public new string WealthTooltip => BuildWealthTooltip();
-
+    public string FishingProductionTooltip => "Рыбалка зависит от локального профиля поселения, работников сектора и текущих модификаторов.";
+    public string ResourcesTooltip => $"Ресурсы: {ResourcesDisplay}";
+    public string GoodsTooltip => $"Товары: {GoodsDisplay}";
+    public string CrimeFlowTooltip => "Преступность пересчитывается недельным шагом симуляции.";
+    public string WealthTooltip => BuildWealthTooltip();
     public string EconomyStocksTooltip => $"{ResourcesTooltip}{Environment.NewLine}{Environment.NewLine}{GoodsTooltip}";
 
-    public void RefreshSelectedCity()
+    public void RefreshSelectedCityPanel()
     {
         OnPropertyChanged(nameof(SelectedCityName));
         OnPropertyChanged(nameof(SelectedRegionName));
+        OnPropertyChanged(nameof(SelectedCityProfile));
+        OnPropertyChanged(nameof(CityStateDisplay));
+    }
+
+    public void RefreshAllCityProperties()
+    {
         OnPropertyChanged(nameof(CityName));
+        OnPropertyChanged(nameof(SelectedCityName));
+        OnPropertyChanged(nameof(SelectedRegionName));
         OnPropertyChanged(nameof(SelectedCityProfile));
         OnPropertyChanged(nameof(CityInfrastructureRows));
         OnPropertyChanged(nameof(CityState));
         OnPropertyChanged(nameof(CityStateDisplay));
         OnPropertyChanged(nameof(Population));
-        RefreshCityStocksAndFlows();
+        OnPropertyChanged(nameof(Food));
+        OnPropertyChanged(nameof(FoodDisplay));
+        OnPropertyChanged(nameof(FoodBalanceTooltip));
+        OnPropertyChanged(nameof(FishingProductionTooltip));
+        OnPropertyChanged(nameof(ResourcesTooltip));
+        OnPropertyChanged(nameof(GoodsTooltip));
+        OnPropertyChanged(nameof(EconomyStocksTooltip));
+        OnPropertyChanged(nameof(Wealth));
+        OnPropertyChanged(nameof(WealthDisplay));
         OnPropertyChanged(nameof(Mood));
         OnPropertyChanged(nameof(Security));
         OnPropertyChanged(nameof(Crime));
         OnPropertyChanged(nameof(CrimeFlowTooltip));
-        RaiseOpenCommandCanExecuteChanged();
-    }
-
-    public void RefreshCityStocksAndFlows()
-    {
-        OnPropertyChanged(nameof(Food));
-        OnPropertyChanged(nameof(FoodDisplay));
         OnPropertyChanged(nameof(Resources));
         OnPropertyChanged(nameof(ResourcesDisplay));
         OnPropertyChanged(nameof(Goods));
         OnPropertyChanged(nameof(GoodsDisplay));
-        OnPropertyChanged(nameof(Wealth));
-        OnPropertyChanged(nameof(WealthDisplay));
         OnPropertyChanged(nameof(DailyFoodConsumption));
-        RefreshFlowProperties();
-        OnPropertyChanged(nameof(ResourcesTooltip));
-        OnPropertyChanged(nameof(GoodsTooltip));
-        OnPropertyChanged(nameof(EconomyStocksTooltip));
         OnPropertyChanged(nameof(WealthTooltip));
     }
 
-    public void RefreshFlowProperties()
+    public void RefreshDailyFoodFlowPreview()
     {
         OnPropertyChanged(nameof(DailyFoodStartingFood));
         OnPropertyChanged(nameof(DailyFoodPopulationConsumption));
@@ -186,34 +158,24 @@ public sealed class SelectedCityViewModel : ViewModelBase
         OnPropertyChanged(nameof(DailyFoodTotalDeltaDisplay));
         OnPropertyChanged(nameof(FoodBalanceTooltip));
         OnPropertyChanged(nameof(FishingProductionTooltip));
+        OnPropertyChanged(nameof(ResourcesTooltip));
+        OnPropertyChanged(nameof(GoodsTooltip));
+        OnPropertyChanged(nameof(EconomyStocksTooltip));
     }
 
-    public void RefreshCityState()
+    public void RefreshTradeRoutes()
     {
-        OnPropertyChanged(nameof(CityState));
-        OnPropertyChanged(nameof(CityStateDisplay));
-        OnPropertyChanged(nameof(Mood));
-        OnPropertyChanged(nameof(Security));
-        OnPropertyChanged(nameof(Crime));
-        OnPropertyChanged(nameof(FishingProductionTooltip));
-        OnPropertyChanged(nameof(WealthTooltip));
+        OnPropertyChanged(nameof(TradeRoutes));
     }
 
-    public void RaiseOpenCommandCanExecuteChanged()
-    {
-        if (OpenSelectedCityCommand is RelayCommand command)
-        {
-            command.RaiseCanExecuteChanged();
-        }
-    }
+    private City CurrentCity => _cityProvider();
+    private SimulationWorld CurrentWorld => _worldProvider();
 
-    private DailyFoodFlowResult DailyFoodResult => _getDailyFoodFlowResult();
-
-    private void OpenCityPanel() => _openCityPanel();
+    private DailyFoodFlowResult DailyFoodResult => _dailyFoodFlowProvider();
 
     private string BuildWealthTooltip()
     {
-        var flow = _getDailyWealthFlowResult() ?? new DailyWealthFlowResult
+        var flow = _dailyWealthFlowProvider() ?? new DailyWealthFlowResult
         {
             StartingWealth = Wealth,
             PortTradeBonus = 0m,
@@ -230,20 +192,20 @@ public sealed class SelectedCityViewModel : ViewModelBase
         };
 
         return $"Благосостояние:{Environment.NewLine}" +
-               $"Текущее значение: {Wealth:0.##}{Environment.NewLine}{Environment.NewLine}" +
+               $"Текущее значение: {FormatOneDecimal(Wealth)}{Environment.NewLine}{Environment.NewLine}" +
                $"Прогноз на день:{Environment.NewLine}" +
-               $"Портовая торговля: {flow.PortTradeBonus:+0.##;-0.##;0}{Environment.NewLine}" +
-               $"Производство товаров: {flow.GoodsProductionBonus:+0.##;-0.##;0}{Environment.NewLine}" +
-               $"Покрытие бытовых потребностей: {flow.ConsumptionCoverageBonus:+0.##;-0.##;0}{Environment.NewLine}{Environment.NewLine}" +
+               $"Портовая торговля: {FormatSigned(flow.PortTradeBonus)}{Environment.NewLine}" +
+               $"Производство товаров: {FormatSigned(flow.GoodsProductionBonus)}{Environment.NewLine}" +
+               $"Покрытие бытовых потребностей: {FormatSigned(flow.ConsumptionCoverageBonus)}{Environment.NewLine}{Environment.NewLine}" +
                $"Штрафы:{Environment.NewLine}" +
-               $"Нехватка еды: {flow.FoodShortagePenalty:+0.##;-0.##;0}{Environment.NewLine}" +
-               $"Дефицит товаров: {flow.GoodsShortagePenalty:+0.##;-0.##;0}{Environment.NewLine}" +
-               $"Дефицит ресурсов: {flow.ResourcesShortagePenalty:+0.##;-0.##;0}{Environment.NewLine}" +
-               $"Безопасность: {flow.SecurityModifierDelta:+0.##;-0.##;0}{Environment.NewLine}" +
-               $"Преступность: {flow.CrimePenalty:+0.##;-0.##;0}{Environment.NewLine}" +
-               $"Состояние города: {flow.CityStateDelta:+0.##;-0.##;0}{Environment.NewLine}{Environment.NewLine}" +
-               $"Итоговый баланс: {flow.TotalDelta:+0.##;-0.##;0}{Environment.NewLine}" +
-               $"Ожидаемое благосостояние после дня: {flow.EndingWealth:0.##}";
+               $"Нехватка еды: {FormatSigned(flow.FoodShortagePenalty)}{Environment.NewLine}" +
+               $"Дефицит товаров: {FormatSigned(flow.GoodsShortagePenalty)}{Environment.NewLine}" +
+               $"Дефицит ресурсов: {FormatSigned(flow.ResourcesShortagePenalty)}{Environment.NewLine}" +
+               $"Безопасность: {FormatSigned(flow.SecurityModifierDelta)}{Environment.NewLine}" +
+               $"Преступность: {FormatSigned(flow.CrimePenalty)}{Environment.NewLine}" +
+               $"Состояние города: {FormatSigned(flow.CityStateDelta)}{Environment.NewLine}{Environment.NewLine}" +
+               $"Итоговый баланс: {FormatSigned(flow.TotalDelta)}{Environment.NewLine}" +
+               $"Ожидаемое благосостояние после дня: {FormatOneDecimal(flow.EndingWealth)}";
     }
 
     private static string FormatOneDecimal(decimal value) => Math.Round(value, 1, MidpointRounding.AwayFromZero).ToString("0.#");

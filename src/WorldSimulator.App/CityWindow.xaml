@@ -11,16 +11,139 @@
     <Grid Margin="12">
         <TabControl SelectedIndex="{Binding SelectedCityTabIndex, Mode=OneWay}">
             <TabItem Header="Обзор">
-                <cityWindowViews:CityOverviewTabView DataContext="{Binding}"/>
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel Margin="8">
+                        <TextBlock Text="Обзор города Гота" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="16"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Grid.Row="0" Grid.Column="0" Text="Город:" FontWeight="SemiBold"/>
+                            <TextBlock Grid.Row="0" Grid.Column="2" Text="{Binding SelectedCity.CityName}"/>
+
+                            <TextBlock Grid.Row="1" Grid.Column="0" Text="Профиль города:" FontWeight="SemiBold"/>
+                            <TextBlock Grid.Row="1" Grid.Column="2" Text="{Binding SelectedCity.SelectedCityProfile}"/>
+
+                            <TextBlock Grid.Row="2" Grid.Column="0" Text="Состояние города:" FontWeight="SemiBold"/>
+                            <TextBlock Grid.Row="2" Grid.Column="2" Text="{Binding SelectedCity.CityStateDisplay}"/>
+
+                            <TextBlock Grid.Row="3" Grid.Column="0" Text="Население:" FontWeight="SemiBold"/>
+                            <TextBlock Grid.Row="3" Grid.Column="2" Text="{Binding SelectedCity.Population}"/>
+
+                            <TextBlock Grid.Row="4" Grid.Column="0" Text="Настроение:" FontWeight="SemiBold"/>
+                            <TextBlock Grid.Row="4" Grid.Column="2" Text="{Binding SelectedCity.Mood}"/>
+
+                            <TextBlock Grid.Row="5" Grid.Column="0" Text="Безопасность:" FontWeight="SemiBold"/>
+                            <TextBlock Grid.Row="5" Grid.Column="2" Text="{Binding SelectedCity.Security}"/>
+
+                            <TextBlock Grid.Row="6" Grid.Column="0" Text="Преступность:" FontWeight="SemiBold" ToolTip="{Binding SelectedCity.CrimeFlowTooltip}"/>
+                            <TextBlock Grid.Row="6" Grid.Column="2" Text="{Binding SelectedCity.Crime}" ToolTip="{Binding SelectedCity.CrimeFlowTooltip}"/>
+
+                            <TextBlock Grid.Row="7" Grid.Column="0" Text="День:" FontWeight="SemiBold"/>
+                            <TextBlock Grid.Row="7" Grid.Column="2" Text="{Binding Day}"/>
+
+                            <TextBlock Grid.Row="8" Grid.Column="0" Text="Час:" FontWeight="SemiBold"/>
+                            <TextBlock Grid.Row="8" Grid.Column="2" Text="{Binding Hour}"/>
+
+                            <TextBlock Grid.Row="9" Grid.Column="0" Text="Состояние симуляции:" FontWeight="SemiBold"/>
+                            <TextBlock Grid.Row="9" Grid.Column="2" Text="{Binding SimulationState}"/>
+                        </Grid>
+                    </StackPanel>
+                </ScrollViewer>
             </TabItem>
             <TabItem Header="Запасы">
-                <cityWindowViews:CityStocksTabView DataContext="{Binding}"/>
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel Margin="8">
+                        <TextBlock Text="Текущие запасы" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                        <TextBlock Text="Пища:" FontWeight="SemiBold" ToolTip="{Binding SelectedCity.FoodBalanceTooltip}"/>
+                        <TextBlock Text="{Binding SelectedCity.Food}" ToolTip="{Binding SelectedCity.FoodBalanceTooltip}" Margin="0,0,0,6"/>
+                        <TextBlock Text="Благосостояние:" FontWeight="SemiBold" ToolTip="{Binding SelectedCity.WealthTooltip}"/>
+                        <TextBlock Text="{Binding SelectedCity.Wealth}" ToolTip="{Binding SelectedCity.WealthTooltip}" Margin="0,0,0,6"/>
+                        <TextBlock Text="Ресурсы:" FontWeight="SemiBold"/>
+                        <TextBlock Text="{Binding SelectedCity.Resources}" Margin="0,0,0,6"/>
+                        <TextBlock Text="Товары:" FontWeight="SemiBold"/>
+                        <TextBlock Text="{Binding SelectedCity.Goods}" Margin="0,0,0,10"/>
+                        <TextBlock Text="Значения запасов в MVP указаны в условных единицах."
+                                   FontStyle="Italic"
+                                   Foreground="DimGray"
+                                   TextWrapping="Wrap"/>
+                    </StackPanel>
+                </ScrollViewer>
             </TabItem>
             <TabItem Header="Потоки">
-                <cityWindowViews:CityFoodFlowTabView DataContext="{Binding}"/>
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel Margin="8">
+                        <TextBlock Text="Дневный прогноз пищевого баланса" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                        <TextBlock Text="Начальная пища:" FontWeight="SemiBold"/>
+                        <TextBlock Text="{Binding SelectedCity.DailyFoodStartingFood}" Margin="0,0,0,6"/>
+                        <TextBlock Text="Потребление населения:" FontWeight="SemiBold"/>
+                        <TextBlock Text="{Binding SelectedCity.DailyFoodPopulationConsumptionDisplay}" Margin="0,0,0,6"/>
+                        <TextBlock Text="Земледелие:" FontWeight="SemiBold"/>
+                        <TextBlock Text="{Binding SelectedCity.DailyFoodAgricultureIncomeDisplay}"/>
+                        <TextBlock Text="Рыбалка:" FontWeight="SemiBold" ToolTip="{Binding SelectedCity.FishingProductionTooltip}"/>
+                        <TextBlock Text="{Binding SelectedCity.DailyFoodFishingIncomeDisplay}" ToolTip="{Binding SelectedCity.FishingProductionTooltip}" Margin="0,0,0,6"/>
+                        <TextBlock Text="Охота:" FontWeight="SemiBold"/>
+                        <TextBlock Text="{Binding SelectedCity.DailyFoodHuntingIncomeDisplay}" Margin="0,0,0,6"/>
+                        <TextBlock Text="Поставки с материка:" FontWeight="SemiBold"/>
+                        <TextBlock Text="{Binding SelectedCity.DailyFoodMainlandSupplyIncomeDisplay}" Margin="0,0,0,6"/>
+                        <TextBlock Text="Влияние событий:" FontWeight="SemiBold"/>
+                        <TextBlock Text="{Binding SelectedCity.DailyFoodEventDeltaDisplay}" Margin="0,0,0,6"/>
+                        <TextBlock Text="Дневной баланс:" FontWeight="SemiBold" ToolTip="{Binding SelectedCity.FoodBalanceTooltip}"/>
+                        <TextBlock Text="{Binding SelectedCity.DailyFoodTotalDeltaDisplay}" ToolTip="{Binding SelectedCity.FoodBalanceTooltip}" Margin="0,0,0,6"/>
+                        <TextBlock Text="Ожидаемая пища после дня:" FontWeight="SemiBold"/>
+                        <TextBlock Text="{Binding SelectedCity.DailyFoodEndingFood}" Margin="0,0,0,6"/>
+                    </StackPanel>
+                </ScrollViewer>
             </TabItem>
             <TabItem Header="События">
-                <cityWindowViews:CityEventsTabView DataContext="{Binding}"/>
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel Margin="8">
+                        <TextBlock Text="Активные события" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                        <TextBlock Text="Активных событий пока нет." Margin="0,0,0,6">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Log.HasActiveEventEntries}" Value="True">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                        <ListBox ItemsSource="{Binding Log.ActiveEventEntries}" Margin="0,0,0,12"/>
+
+                        <TextBlock Text="Завершённые события" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                        <TextBlock Text="Завершённых событий пока нет." Margin="0,0,0,6">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Log.HasCompletedEventEntries}" Value="True">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                        <ListBox ItemsSource="{Binding Log.CompletedEventEntries}"/>
+                    </StackPanel>
+                </ScrollViewer>
             </TabItem>
             <TabItem Header="Инфраструктура">
                 <views:CityInfrastructureView DataContext="{Binding}"/>
