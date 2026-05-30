@@ -188,6 +188,7 @@ public sealed class MainWindowViewModel : ViewModelBase
 
     public string SimulationSummaryTitle => "Сводка симуляции";
     public string SelectedCityProfile => $"{_city.Name} — профиль поселения";
+    public CityWorkforceDiagnosticsViewModel CityWorkforceDiagnostics => new(_world, _city);
 
     public string EconomyStocksTooltip => $"{ResourcesTooltip}{Environment.NewLine}{Environment.NewLine}{GoodsTooltip}";
 
@@ -600,6 +601,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         OnPropertyChanged(nameof(SelectedCityName));
         OnPropertyChanged(nameof(SelectedRegionName));
         OnPropertyChanged(nameof(SelectedCityProfile));
+        OnPropertyChanged(nameof(CityWorkforceDiagnostics));
         OnPropertyChanged(nameof(CityStateDisplay));
         Map.RefreshSelectedCityProperties();
 
@@ -613,6 +615,7 @@ public sealed class MainWindowViewModel : ViewModelBase
     {
         OnPropertyChanged(nameof(CityName));
         OnPropertyChanged(nameof(CityInfrastructureRows));
+        OnPropertyChanged(nameof(CityWorkforceDiagnostics));
         OnPropertyChanged(nameof(CityState));
         OnPropertyChanged(nameof(CityStateDisplay));
         OnPropertyChanged(nameof(Population));
