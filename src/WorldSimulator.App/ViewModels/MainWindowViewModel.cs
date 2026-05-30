@@ -44,6 +44,8 @@ public sealed class MainWindowViewModel : ViewModelBase
     private readonly WorldSimulationService _worldSimulationService;
     private readonly JsonWorldSaveService _saveService;
     private readonly SimulationJournalService _journalService;
+    private readonly CityEventEffectTextFormatter _eventEffectTextFormatter;
+    private readonly DailySimulationPresentationService _dailySimulationPresentationService;
     private readonly DispatcherTimer _timer;
     private DateTimeOffset _lastTickUtc;
     private DailyFoodFlowResult _dailyFoodFlowResult;
@@ -81,7 +83,9 @@ public sealed class MainWindowViewModel : ViewModelBase
             _eventEffectCalculator,
             _eventGenerator);
         _saveService = new JsonWorldSaveService();
-        _journalService = new SimulationJournalService();
+        _eventEffectTextFormatter = new CityEventEffectTextFormatter();
+        _journalService = new SimulationJournalService(_eventEffectTextFormatter);
+        _dailySimulationPresentationService = new DailySimulationPresentationService(_eventEffectTextFormatter);
         Journal = new SimulationJournalViewModel(_journalService, _city.Id, _city.Name);
         _dailyFoodFlowResult = _dailyFoodFlowCalculator.Calculate(_city, BuildDailyFoodFlowInputs());
 
@@ -378,70 +382,58 @@ public sealed class MainWindowViewModel : ViewModelBase
             return;
         }
 
-        var result = simulationResult.SelectedCityResult.FoodFlow;
-        var resourceGathering = simulationResult.SelectedCityResult.ResourceGathering;
-        var goodsCrafting = simulationResult.SelectedCityResult.GoodsCrafting;
-        var householdConsumption = simulationResult.SelectedCityResult.HouseholdConsumption;
-        var wealthFlow = simulationResult.SelectedCityResult.WealthFlow;
-        var eventEffects = simulationResult.SelectedCityEventEffects;
-        _dailyFoodFlowResult = result;
-        _dailyWealthFlowResult = wealthFlow;
-
-        if (simulationResult.SelectedCityCrimeFlow?.Changed == true)
-        {
-            AddTechnicalLogEntry($"День {day}: преступность {simulationResult.SelectedCityCrimeFlow.StartingCrime} → {simulationResult.SelectedCityCrimeFlow.EndingCrime}; недельный баланс {simulationResult.SelectedCityCrimeFlow.ClampedDelta:+0;-0;0}.");
-        }
-
-        if (wealthFlow.TotalDelta != 0m)
-        { AddTechnicalLogEntry($"День {day}: благосостояние {wealthFlow.StartingWealth:0.##} → {wealthFlow.EndingWealth:0.##}; баланс {wealthFlow.TotalDelta:+0.##;-0.##;0}." +
-                                 $" Дефициты: еда {wealthFlow.FoodShortagePenalty:+0.##;-0.##;0}, товары {wealthFlow.GoodsShortagePenalty:+0.##;-0.##;0}, ресурсы {wealthFlow.ResourcesShortagePenalty:+0.##;-0.##;0}."); }
-
-        if (goodsCrafting.GoodsProduced > 0m || goodsCrafting.ResourcesConsumed > 0m)
-        { AddTechnicalLogEntry($"День {day}: товары +{goodsCrafting.GoodsProduced:0.##} произведены из ресурсов -{goodsCrafting.ResourcesConsumed:0.##}."); }
-        else if (goodsCrafting.ResourcesAvailable <= 0m)
-        { AddTechnicalLogEntry($"День {day}: производство товаров остановлено — нет ресурсов."); }
-
-        if (householdConsumption.GoodsConsumed > 0m || householdConsumption.ResourcesConsumed > 0m)
-        { AddTechnicalLogEntry($"День {day}: население потребило товары -{householdConsumption.GoodsConsumed:0.##} и ресурсы -{householdConsumption.ResourcesConsumed:0.##}."); }
-
-        if (householdConsumption.HasAnyShortage)
-        { AddTechnicalLogEntry($"День {day}: бытовой дефицит: товары не хватает {householdConsumption.GoodsShortage:0.##}, ресурсы не хватает {householdConsumption.ResourcesShortage:0.##}."); }
-
-        var journalItems = new List<SimulationJournalItem>();
-        foreach (var completedEvent in simulationResult.CompletedEvents)
-        {
-            AddTechnicalLogEntry($"День {day}: завершено событие “{completedEvent.Name}”.");
-            SetLastImportantChange($"День {day}: событие “{completedEvent.Name}” завершилось.");
-            journalItems.Add(new SimulationJournalItem { Category = SimulationJournalCategory.Event, Title = $"Завершилось событие: {completedEvent.Name}", Details = $"Событие “{completedEvent.Name}” завершилось на дне {day}." });
-        }
-
-        if (simulationResult.SelectedCityPopulationChange?.PopulationDelta is int delta && delta != 0)
-        {
-            var p = simulationResult.SelectedCityPopulationChange;
-            AddTechnicalLogEntry($"День {day}: население изменилось {p.StartingPopulation} → {p.EndingPopulation} ({p.PopulationDelta:+0;-0;0}), причина: {p.Reason}.");
-            SetLastImportantChange($"День {day}: население изменилось {p.StartingPopulation} → {p.EndingPopulation} ({p.PopulationDelta:+0;-0;0}), причина: {p.Reason}.");
-        }
-
-        if (simulationResult.GeneratedEvent is not null)
-        {
-            AddTechnicalLogEntry($"День {day}: случайное событие “{simulationResult.GeneratedEvent.Name}” началось в городе.");
-            SetLastImportantChange($"День {day}: случайное событие “{simulationResult.GeneratedEvent.Name}” началось в городе.");
-            journalItems.Add(new SimulationJournalItem { Category = SimulationJournalCategory.Event, Title = $"Началось событие: {simulationResult.GeneratedEvent.Name}", Details = $"Случайное событие “{simulationResult.GeneratedEvent.Name}” началось в городе." });
-        }
-
-        AddTechnicalLogEntry($"День {day}: пища {result.StartingFood:0.##} → {result.EndingFood:0.##}; баланс {result.TotalDelta:+0.##;-0.##;0} (потребление -{result.PopulationConsumption:0.##}, земледелие {result.AgricultureIncome:+0.##;-0.##;0}, рыбалка {result.FishingIncome:+0.##;-0.##;0}, охота {result.HuntingIncome:+0.##;-0.##;0}, поставки {result.MainlandSupplyIncome:+0.##;-0.##;0}, события {result.EventDelta:+0.##;-0.##;0}).");
+        var selectedCityResult = simulationResult.SelectedCityResult;
+        _dailyFoodFlowResult = selectedCityResult.FoodFlow;
+        _dailyWealthFlowResult = selectedCityResult.WealthFlow;
 
         var populationEnd = _city.Population;
         var cityStateEnd = _city.CityState;
+        var presentation = _dailySimulationPresentationService.Build(new DailySimulationPresentationRequest
+        {
+            Day = day,
+            City = _city,
+            SimulationResult = simulationResult,
+            PopulationStart = populationStart,
+            PopulationEnd = populationEnd,
+            CityStateStart = cityStateStart,
+            CityStateEnd = cityStateEnd,
+            ActiveEventsCount = _eventManager.ActiveEvents.Count
+        });
+
+        foreach (var technicalLogEntry in presentation.TechnicalLogEntries)
+        {
+            AddTechnicalLogEntry(technicalLogEntry);
+        }
+
+        if (presentation.LastImportantChange is not null)
+        {
+            SetLastImportantChange(presentation.LastImportantChange);
+        }
+
         _city = _world.SelectedCity;
         if (simulationResult.WeeklyTradeFlowResult is not null)
         {
             Map.RefreshTradeRouteVisuals(simulationResult.WeeklyTradeFlowResult);
         }
+
         RefreshAllCityProperties();
-        OnPropertyChanged(nameof(Food)); OnPropertyChanged(nameof(Resources)); OnPropertyChanged(nameof(Wealth)); OnPropertyChanged(nameof(WealthTooltip)); Map.RefreshSelectedCityProperties(); OnPropertyChanged(nameof(FoodBalanceTooltip)); OnPropertyChanged(nameof(FishingProductionTooltip)); OnPropertyChanged(nameof(ResourcesTooltip)); OnPropertyChanged(nameof(GoodsTooltip)); OnPropertyChanged(nameof(CrimeFlowTooltip)); OnPropertyChanged(nameof(EconomyStocksTooltip)); OnPropertyChanged(nameof(Resources)); OnPropertyChanged(nameof(Goods));
-        RefreshEventEntries(); RefreshDailyFoodFlowPreview(); RefreshSimulationSummary();
-        AppendSimulationJournalEntry(day, result, eventEffects, populationStart, populationEnd, cityStateStart, cityStateEnd, simulationResult.ActiveEventNamesBeforeAdvance, journalItems);
+        OnPropertyChanged(nameof(Food));
+        OnPropertyChanged(nameof(Resources));
+        OnPropertyChanged(nameof(Wealth));
+        OnPropertyChanged(nameof(WealthTooltip));
+        Map.RefreshSelectedCityProperties();
+        OnPropertyChanged(nameof(FoodBalanceTooltip));
+        OnPropertyChanged(nameof(FishingProductionTooltip));
+        OnPropertyChanged(nameof(ResourcesTooltip));
+        OnPropertyChanged(nameof(GoodsTooltip));
+        OnPropertyChanged(nameof(CrimeFlowTooltip));
+        OnPropertyChanged(nameof(EconomyStocksTooltip));
+        OnPropertyChanged(nameof(Resources));
+        OnPropertyChanged(nameof(Goods));
+        RefreshEventEntries();
+        RefreshDailyFoodFlowPreview();
+        RefreshSimulationSummary();
+        Journal.Append(presentation.JournalAppendRequest);
     }
 
     private void TryStartEvent(Func<int, CityEvent> factory)
@@ -482,7 +474,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         foreach (var activeEvent in _eventManager.ActiveEvents)
         {
             var effectSummary = _eventEffectCalculator.Calculate(_city, new[] { activeEvent });
-            ActiveEventEntries.Add($"{activeEvent.Name}: осталось {activeEvent.RemainingDays} дн.; эффекты: {BuildEffectSummary(effectSummary)}");
+            ActiveEventEntries.Add($"{activeEvent.Name}: осталось {activeEvent.RemainingDays} дн.; эффекты: {_eventEffectTextFormatter.Format(effectSummary)}");
         }
 
         CompletedEventEntries.Clear();
@@ -700,67 +692,6 @@ public sealed class MainWindowViewModel : ViewModelBase
         };
     }
 
-    private void ApplyDailyEventEffects(CityEventEffectsResult effects, int day)
-    {
-        _city.Mood += effects.MoodDelta;
-        _city.Security += effects.SecurityDelta;
-        _city.Crime += effects.CrimeDelta;
-        _city.Wealth += effects.WealthDelta;
-        _city.Resources += effects.ResourcesDelta;
-
-        if (!effects.HasAnyEffect)
-        {
-            return;
-        }
-
-        var segments = new List<string>();
-
-        if (effects.FoodDelta != 0m)
-        {
-            segments.Add($"пища {effects.FoodDelta:+0.##;-0.##;0}");
-        }
-
-        if (effects.MoodDelta != 0)
-        {
-            segments.Add($"настроение {effects.MoodDelta:+0;-0;0}");
-        }
-
-        if (effects.SecurityDelta != 0)
-        {
-            segments.Add($"безопасность {effects.SecurityDelta:+0;-0;0}");
-        }
-
-        if (effects.CrimeDelta != 0)
-        {
-            segments.Add($"преступность {effects.CrimeDelta:+0;-0;0}");
-        }
-
-        if (effects.WealthDelta != 0m)
-        {
-            segments.Add($"богатство {effects.WealthDelta:+0.##;-0.##;0}");
-        }
-
-        if (effects.ResourcesDelta != 0m)
-        {
-            segments.Add($"ресурсы {effects.ResourcesDelta:+0.##;-0.##;0}");
-        }
-
-        if (effects.MainlandSupplyDelta != 0m)
-        {
-            segments.Add($"поставки с материка {effects.MainlandSupplyDelta:+0.##;-0.##;0}");
-        }
-
-        AddTechnicalLogEntry($"День {day}: применены эффекты событий: {string.Join(", ", segments)}.");
-
-        OnPropertyChanged(nameof(Mood));
-        OnPropertyChanged(nameof(Security));
-        OnPropertyChanged(nameof(Crime));
-        OnPropertyChanged(nameof(Wealth));
-        OnPropertyChanged(nameof(Resources));
-        OnPropertyChanged(nameof(ResourcesTooltip));
-        OnPropertyChanged(nameof(GoodsTooltip));
-    }
-
     private void RefreshCityState(int? day = null)
     {
         var previousState = _city.CityState;
@@ -786,8 +717,8 @@ public sealed class MainWindowViewModel : ViewModelBase
 
         if (day.HasValue)
         {
-            AddTechnicalLogEntry($"День {day.Value}: состояние города изменилось: {ToRussianCityState(previousState)} → {ToRussianCityState(newState)}.");
-            SetLastImportantChange($"День {day.Value}: состояние города изменилось: {ToRussianCityState(previousState)} → {ToRussianCityState(newState)}.");
+            AddTechnicalLogEntry($"День {day.Value}: состояние города изменилось: {CityStateTextFormatter.ToRussian(previousState)} → {CityStateTextFormatter.ToRussian(newState)}.");
+            SetLastImportantChange($"День {day.Value}: состояние города изменилось: {CityStateTextFormatter.ToRussian(previousState)} → {CityStateTextFormatter.ToRussian(newState)}.");
         }
 
         OnPropertyChanged(nameof(CityState));
@@ -840,94 +771,6 @@ public sealed class MainWindowViewModel : ViewModelBase
         OnPropertyChanged(nameof(SimulationSummaryActiveEvents));
         OnPropertyChanged(nameof(SimulationSummaryRandomEventsStatus));
         OnPropertyChanged(nameof(SimulationSummaryLastImportantChange));
-    }
-
-    private void AppendSimulationJournalEntry(
-        int day,
-        DailyFoodFlowResult foodResult,
-        CityEventEffectsResult eventEffects,
-        int populationStart,
-        int populationEnd,
-        WorldSimulator.Core.Cities.CityState cityStateStart,
-        WorldSimulator.Core.Cities.CityState cityStateEnd,
-        IReadOnlyList<string> activeEventNamesBeforeAdvance,
-        List<SimulationJournalItem> items)
-    {
-        Journal.Append(new SimulationJournalAppendRequest
-        {
-            Day = day,
-            City = _city,
-            FoodResult = foodResult,
-            EventEffects = eventEffects,
-            PopulationStart = populationStart,
-            PopulationEnd = populationEnd,
-            CityStateStart = cityStateStart,
-            CityStateEnd = cityStateEnd,
-            ActiveEventsCount = _eventManager.ActiveEvents.Count,
-            ActiveEventNamesBeforeAdvance = activeEventNamesBeforeAdvance,
-            Items = items
-        });
-    }
-
-    private static string ToRussianCityState(WorldSimulator.Core.Cities.CityState cityState)
-    {
-        return cityState switch
-        {
-            WorldSimulator.Core.Cities.CityState.Stable => "Стабильность",
-            WorldSimulator.Core.Cities.CityState.Prosperous => "Процветание",
-            WorldSimulator.Core.Cities.CityState.Stagnation => "Стагнация",
-            WorldSimulator.Core.Cities.CityState.FoodShortage => "Нехватка пищи",
-            WorldSimulator.Core.Cities.CityState.Famine => "Голод",
-            WorldSimulator.Core.Cities.CityState.EconomicDecline => "Экономический спад",
-            WorldSimulator.Core.Cities.CityState.CrimeProblem => "Проблемы с преступностью",
-            WorldSimulator.Core.Cities.CityState.Unrest => "Беспорядки",
-            WorldSimulator.Core.Cities.CityState.Recovery => "Восстановление",
-            WorldSimulator.Core.Cities.CityState.Collapse => "Коллапс",
-            WorldSimulator.Core.Cities.CityState.Abandoned => "Опустевший город",
-            _ => cityState.ToString()
-        };
-    }
-
-    private static string BuildEffectSummary(CityEventEffectsResult effects)
-    {
-        var segments = new List<string>();
-
-        if (effects.FoodDelta != 0m)
-        {
-            segments.Add($"пища {effects.FoodDelta:+0.##;-0.##;0}");
-        }
-
-        if (effects.MoodDelta != 0)
-        {
-            segments.Add($"настроение {effects.MoodDelta:+0;-0;0}");
-        }
-
-        if (effects.SecurityDelta != 0)
-        {
-            segments.Add($"безопасность {effects.SecurityDelta:+0;-0;0}");
-        }
-
-        if (effects.CrimeDelta != 0)
-        {
-            segments.Add($"преступность {effects.CrimeDelta:+0;-0;0}");
-        }
-
-        if (effects.WealthDelta != 0m)
-        {
-            segments.Add($"богатство {effects.WealthDelta:+0.##;-0.##;0}");
-        }
-
-        if (effects.ResourcesDelta != 0m)
-        {
-            segments.Add($"ресурсы {effects.ResourcesDelta:+0.##;-0.##;0}");
-        }
-
-        if (effects.MainlandSupplyDelta != 0m)
-        {
-            segments.Add($"поставки с материка {effects.MainlandSupplyDelta:+0.##;-0.##;0}");
-        }
-
-        return segments.Count == 0 ? "без эффектов" : string.Join(", ", segments);
     }
 
     private void AddTechnicalLogEntry(string message)
