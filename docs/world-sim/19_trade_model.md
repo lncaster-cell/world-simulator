@@ -79,6 +79,13 @@ It is planned to be replaced/removed in a future phase as caravan trade deepens 
 - Trade-route travel time stays authored in `TradeRoute.TravelDays` (sea is not automatically faster).
 - Risk systems (loss/robbery/destruction) are deferred to future work.
 
+## Canonical route graph data
+
+- `data/regions/rivia/routes/v1/rivia_routes.json` is the runtime/tool route graph source.
+- Its top-level fields are intentionally limited to `schema_version`, `region_id`, `units`, `nodes`, and `edges`.
+- Authoring-only TODOs and narrative notes live in `data/regions/rivia/routes/v1/rivia_routes_meta.json` so runtime loaders can consume only the route graph.
+- Runtime route creation goes through `TradeRoutePresets.CreateDefaultRoutes()`, which delegates JSON parsing to `TradeRouteDataLoader` and then applies fallback endpoint points for display.
+
 ## Visual trade routes
 
 - На карте отображаются линии всех торговых маршрутов (trade network overlay).
